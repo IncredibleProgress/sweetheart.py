@@ -22,13 +22,16 @@ import os, subprocess
 # - some modules import from standard libs are within relevant objects
 
 
-_project_ = "incredible"
-
 # hardcoded default settings:
 # allow setting of 2 webservers respectively for data and statics
 async_host = "http://127.0.0.1:8000"# uvicorn webserver
 static_host = "http://127.0.0.1:8080"# cherrypy webserver
 mongo_disabled = False # mongo database normally enabled
+
+
+# allow dedicated config for dev purpose
+if os.environ["PWD"]=="/opt/incredible": _project_="incredible"
+else: _project_="sweetheart"
 
 # provide the default configuration:
 # should be updated using _config_.update({ "key": value })
@@ -77,7 +80,7 @@ _config_ = {
         "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
         "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
 
-        # pcloud (dev purpose only):
+        # pcloud (for dev purpose):
         "_local_": "/mnt/p/Public Folder/sweetheart",
         "_public_": "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetheart/",
     },
@@ -277,7 +280,7 @@ def init():
     for file, path in _config_["copyfiles"].items():
         if file.startswith("_"): continue
         print("download file:", pcloud(file))
-        os.chdir(path.replace(_project_, "sweetheart"))#FIXME: not good
+        os.chdir(path.replace(_project_, "sweetheart"))#!
         subproc.run(["wget","-q","--no-check-certificate", pcloud(file)])
 
     print("\nINIT step5: downloading node modules...\n")
@@ -713,6 +716,26 @@ webapp = WebApp()
 routing = lambda routes: webapp.extend(routes)
 welcome = lambda request: html("WELCOME")
 
+
+  #############################################################################
+ ##########  DOCUMENTATION FACILITIES ########################################
+#############################################################################
+#TODO: still to implement
+
+def docmaker(source: str, dest: str):
+
+    with open(source,'r') as fi:
+
+        tpl = template(
+            os.path.join(_["webapp.templates_dir"],"document.txt"),
+            text= markdown(fi.read()),
+            **_config_["webapp"]["settings"])
+
+    with open(dest,'w') as fo: fo.write(tpl)
+
+
+###############################################################################
+###############################################################################
 
 if __name__ == "__main__":
     """sweetheart provides a convenient command line interface (CLI)
