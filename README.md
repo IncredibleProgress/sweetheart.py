@@ -3,7 +3,7 @@ a supercharged heart for building incredible full-stacked webapps at the speedli
 
 ## Introduction
 
-Since Ubuntu20.04 can be installed as a usual softwares within Windows10, it provides an incredible way for any organization to develop, administrate and deploy **powerfull responsive webapps** on its own local network including high capabilities of integration with the already existing tools like databases, excel, SAP...
+Since Ubuntu20.04 can be installed as a usual softwares within Windows10, it provides an incredible way for any organization to develop, administrate and deploy **powerfull responsive webapps** on its own local network including high capabilities of integration with the already existing tools like databases, ms-excel, sap...
 
 The sweetheart.py script propose a simple and efficient approach to do it in a python/html/css centric way leading you to the best components and coding practices. Due to the current place of the python language regarding to calculations and ai, this makes sweetheart.py a fast and ideal support for evoluting to the **Industry4.0** precepts.
 
@@ -25,13 +25,13 @@ The sweetheart.py script propose a simple and efficient approach to do it in a p
 - responsive user interfaces: Html
 - backend language: Python3
 - frontend language: Typescript
-- provided libs for going fast: Knacss, W3css
+- provided libs for going fast: **Knacss**, W3css
 - provided libs for high-level featuring: Bootstrap4, **Vue.js**
 - all others nice things you wish using apt, pip and npm
 
 start now using same raw materials of gafam and go farer ahead !
 
-## Write your first webapp
+## Code examples
 
 ### your first standalone webpage conroller
 
@@ -45,9 +45,7 @@ def welcome():
 sweet.quickstart(welcome)
 ```
 
-open a terminal and launch ```sweet my-first-webapp```
-
-### your first pythonic html webpage
+### your first *sweet* html webpage
 
 ``` html
 % rebase("sweet.HTML")
