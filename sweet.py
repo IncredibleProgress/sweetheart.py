@@ -1,5 +1,5 @@
-""" sweet.py
-get coding full power at the speedlight for building webapps
+"""sweet.py
+get coding full power for building webapps at the speedlight
 
 - easy to learn, easy to use
 - full documentation provided
@@ -9,8 +9,10 @@ get coding full power at the speedlight for building webapps
 - ready for datacenters, big-data and ai
 - ready for inovation and creativity
 """
+
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
+
 
 import os, subprocess
 
@@ -20,15 +22,15 @@ import os, subprocess
 # - some modules import from standard libs are within relevant objects
 
 
+_project_ = "incredible"
+
 # hardcoded default settings:
 # allow setting of 2 webservers respectively for data and statics
-_project_ = "incredible"
 async_host = "http://127.0.0.1:8000"# uvicorn webserver
 static_host = "http://127.0.0.1:8080"# cherrypy webserver
-mongo_disabled = False
+mongo_disabled = False # mongo database normally enabled
 
-
-# provide default configuration:
+# provide the default configuration:
 # should be updated using _config_.update({ "key": value })
 _config_ = {
     "database": {
@@ -43,7 +45,7 @@ _config_ = {
         "templates_dir": "bottle_templates",
 
         "settings": {
-            "_default_libs_": "knacss",
+            "_default_libs_": "knacss py",
             "_static_": "",# ""=disabled
             "_async_": async_host,
         }
@@ -54,8 +56,30 @@ _config_ = {
     "bash": {
         "echolabel": "[SWEETHEART]",
         "display": "DISPLAY=:0",
-        "service": "wterm",
+        "service": "winterm",# xterm|winterm
         "webapp": f"cmd.exe /c start msedge.exe --app={async_host}",
+    },
+    "copyfiles": {# related to the init() function
+
+        # provided config files:
+        "cherrypy.conf": f"/opt/{_project_}/configuration",
+        "config.xlaunch": f"/opt/{_project_}/configuration",
+
+        # provided templates:
+        "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
+        "document.txt": f"/opt/{_project_}/webpages/bottle_templates",
+
+        # provided documents:
+        "welcome.md": f"/opt/{_project_}/webpages/markdown_docs",
+
+        # provided resources:
+        "sweet.HTML": f"/opt/{_project_}/webpages",
+        "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
+        "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
+
+        # pcloud (dev purpose only):
+        "_local_": "/mnt/p/Public Folder/sweetheart",
+        "_public_": "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetheart/",
     },
 }
 # provide a convenient _config_ accessor tool:
@@ -101,7 +125,7 @@ class subproc:
             % (_config_["bash"]["display"], cmd) )
 
     @classmethod
-    def wterm(cls, cmd:str):
+    def winterm(cls, cmd:str):
         """start an external service within Windows Terminal"""
         os.system(f'cmd.exe /c start wt.exe ubuntu.exe run {cmd}')
 
@@ -151,6 +175,12 @@ def cli():
             "--cherrypy",
             action="store_true",
             help="start the cherrypy webserver" )
+        parser.add_argument(
+            #FIXME: for dev only
+            "-U",
+            "--update-files",
+            action="store_true",
+            help="update provided files before init" )
         
     # shared cli optionnal arguments:
     #NOTE: can be re-used for module including sweet import
@@ -183,9 +213,7 @@ def init():
     # start install process:
     print("\n[SWEETHEART] init process start now !")
     print("root privileges are required to continue")
-    print("and an internet connexion is required for downloads")
-    # print("(press Ctrl-C to quit within next 5 seconds)")
-    # subproc.bash("sleep 5")
+    print("an internet connexion is required for downloads")
     print("\nINIT step1: install required packages...\n")
     subproc.run([
         "sudo","apt","install",
@@ -213,7 +241,6 @@ def init():
     subproc.bash("sudo mkdir /opt/sweetheart/webpages/bottle_templates")
     subproc.bash("sudo mkdir /opt/sweetheart/webpages/markdown_docs")
     subproc.bash("sudo mkdir /opt/sweetheart/webpages/usual_resources")
-    # subproc.bash("sudo mkdir /opt/sweetheart/webpages/asgi_scripts")
     subproc.bash("sudo chmod 777 -R /opt/sweetheart")
 
     subproc.bash(
@@ -237,29 +264,21 @@ def init():
             *_["webapp.framework"].split()
         ])
     print("\nINIT step4: downloading resources...\n")
+
     os.chdir("/opt/sweetheart/webpages/usual_resources")
-
-    pcloud = lambda filename: urljoin(
-        "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetheart/",
-        filename )
-
     for url in [
         "https://raw.githubusercontent.com/alsacreations/KNACSS/master/css/knacss.css",
-        "https://www.w3schools.com/w3css/4/w3.css",
-        pcloud("sweet.HTML"),
-        pcloud("favicon.ico"),
-        pcloud("sweetheart-logo.png"),
-        pcloud("document.txt"),
-        pcloud("welcome.md"),
-        pcloud("cherrypy.conf"),
-        pcloud("config.xlaunch") ]:
+        "https://www.w3schools.com/w3css/4/w3.css" ]:
+        print("file download:", url)
         subproc.run(["wget","-q","--no-check-certificate",url])
 
-    subproc.bash("mv sweet.HTML ../")
-    subproc.bash("mv document.txt ../bottle_templates/")
-    subproc.bash("mv welcome.md ../markdown_docs/")
-    subproc.bash("mv cherrypy.conf /opt/sweetheart/configuration/")
-    subproc.bash("mv config.xlaunch /opt/sweetheart/configuration/")
+    pcloud = lambda file: urljoin(_["copyfiles._public_"], file)
+
+    for file, path in _config_["copyfiles"].items():
+        if file.startswith("_"): continue
+        print("download file:", pcloud(file))
+        os.chdir(path.replace(_project_, "sweetheart"))#FIXME: not good
+        subproc.run(["wget","-q","--no-check-certificate", pcloud(file)])
 
     print("\nINIT step5: downloading node modules...\n")
     os.chdir("/opt/sweetheart/webpages")
@@ -287,6 +306,22 @@ if __name__ == "__main__":
 
     argv = cli()
 
+    # update pcloud files before init if required:
+    if argv.update_files:
+
+        echo("update init pcloud files to local drive")
+
+        for filename, path in _config_["copyfiles"].items():
+            if filename.startswith("_"): continue
+
+            source = os.path.join(path, filename)
+            dest = _config_["copyfiles"]["_local_"]
+
+            if argv.verbosity:
+                print(" ", source, " -> ", dest)
+
+            subproc.run(["cp", source, dest])
+
     # init before mongo settings and python modules imports:
     if argv.action == "init":
         init()
@@ -303,8 +338,9 @@ if not mongo_disabled:
     from pymongo import MongoClient
     
     echo("try for getting mongodb client...")
-    _dbpath = _config_["database"]["dbpath"]
-    subproc.service(f'mongod --dbpath="{_dbpath}" &')
+    subproc.service(
+        'mongod --dbpath="%s"'\
+        % _config_["database"]["dbpath"] )
 
     mongoclient = MongoClient(
         host=_config_["database"]["host"],
@@ -546,7 +582,7 @@ def html(source:str= "WELCOME", **kwargs):
         # render html content from given markdown file:
         with open(document_path) as file:
             return HTMLResponse(template(
-                os.path.join(_["webapp.templates_dir"], "document.txt"),
+                os.path.join(_["webapp.templates_dir"],"document.txt"),
                 text= markdown(file.read()),
                 **_config_["webapp"]["settings"],
                 **kwargs ))
@@ -679,9 +715,8 @@ welcome = lambda request: html("WELCOME")
 
 
 if __name__ == "__main__":
-    """sweetheart provide a convenient command line interface (CLI)
-    dedicated to dev/admin tasks and available calling 'sweet'
-    """
+    """sweetheart provides a convenient command line interface (CLI)
+    dedicated to dev/admin tasks and available calling 'sweet'"""
 
     if argv.webapp:
         os.system( _config_["bash"]["webapp"] )
@@ -698,7 +733,7 @@ if __name__ == "__main__":
         pprint.pprint(objects)
     
     elif argv.action == "run-cherrypy":
-        #FIXME: only for testing
+        #FIXME: only for test
         echo("start cherrypy as standalone webserver")
         CherryPy.start(webapp)
         

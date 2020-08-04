@@ -2,23 +2,35 @@ from setuptools import setup
 
 setup(
     name="sweetheart",
-    version= "0.1.dev5",
+    version= "0.1.dev6",
     license= "CeCILL-C",
     packages=[""],
+    scripts=["sweet.py"],
 
     # metadata to display on PyPI
     author="Nicolas Champion",
     author_email="champion.nicolas@gmail.com",
     description="a supercharged heart for the non-expert hands",
+
+    keywords="ubuntu mongodb starlette webapp industry4.0",
+    # url="http://example.com/HelloWorld/",
+    project_urls={
+        # "Bug Tracker": "https://bugs.example.com/HelloWorld/",
+        # "Documentation": "https://docs.example.com/HelloWorld/",
+        "Source Code": "https://github.com/IncredibleProgress/sweetheart.py",
+    },
+
     long_description = """
+=============
 sweetheart.py
 =============
 
-Since Ubuntu 20.04 can be installed as usual softwares within windows 10, it provides an incredible way for any organization to develop, administrate, deploy powerfull webapps on its own local network and giving high capabilities of integration with already existing tools. Sweetheart will propose a simple and efficient approach to do it leading you to the best coding practices.
+Sweetheart propose a simple approach for buiding webapps leading you to the best coding practices.
+
+It runs on Ubuntu 20.04 LTS and Windows10 through the WSL.
 
 sweetheart provides highest quality components and aims to be adopted by newbies:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+`````````````````````````````````````````````````````````````````````````````````
 - easy to learn, easy to use
 - full documentation provided
 - quick and clean prototyping
@@ -27,11 +39,8 @@ sweetheart provides highest quality components and aims to be adopted by newbies
 - ready for datacenters, big-data and ai
 - ready for inovation and creativity
 
-sweetheart is python/html/css centric meaning that you can do a lot by yourself and you will find support and skilled people everywhere for lowest costs (e.g. projects with studients)
-
-sweetheart provides supercharged basis available for your non-expert hands:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+sweetheart provides a supercharged heart for the non-expert hands:
+``````````````````````````````````````````````````````````````````
 - provided database server: MongoDB
 - provided webservers: Uvicorn, CherryPy
 - responsive user interfaces: Html
@@ -41,9 +50,6 @@ sweetheart provides supercharged basis available for your non-expert hands:
 - provided libs for high-level featuring: Bootstrap4, Vue.js
 - all others nice things you wish using apt, pip and npm
     """,
-
-    keywords="ubuntu mongodb starlette webapp industry4.0",
-    plateformes = "Ubuntu 20.04",
 
     classifiers = [
         "Environment :: Web Environment",
