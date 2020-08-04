@@ -1,30 +1,32 @@
 # sweetheart.py
+a supercharged heart for building incredible full-stacked webapps at the speedlight
 
 ## Introduction
 
-Since Ubuntu 20.04 can be installed as usual softwares within windows 10, it provides an incredible way for any organization to develop, administrate, deploy powerfull webapps on its own local network and giving high capabilities of integration with already existing tools. Sweetheart will propose a simple and efficient approach to do it leading you to the best coding practices.
+Since Ubuntu20.04 can be installed as a usual softwares within Windows10, it provides an incredible way for any organization to develop, administrate and deploy **powerfull responsive webapps** on its own local network including high capabilities of integration with the already existing tools like databases, excel, SAP...
 
-### sweetheart provides highest quality components and aims to be adopted by newbies:
+The sweetheart.py script propose a simple and efficient approach to do it in a python/html/css centric way leading you to the best components and coding practices. Due to the current place of the python language regarding to calculations and ai, this makes sweetheart.py a fast and ideal support for evoluting to the **Industry4.0** precepts.
+
+### The highest quality components that can be adopted by newbies
 
 - easy to learn, easy to use
 - full documentation provided
+- built-in reponsive user interfaces
 - quick and clean prototyping
 - quick and clean deployement
 - ready for maintenable great code quality
-- ready for datacenters, big-data and ai
+- **ready for datacenters, big-data and ai**
 - ready for inovation and creativity
 
-sweetheart is python/html/css centric meaning that you can do a lot by yourself and you will find support and skilled people everywhere for lowest costs (e.g. projects with studients)
+### A supercharged basis available for the non-expert hands
 
-### sweetheart provides supercharged basis available for your non-expert hands :
-
-- provided database server: MongoDB
+- provided database server: **MongoDB**
 - provided webservers: Uvicorn, CherryPy
 - responsive user interfaces: Html
 - backend language: Python3
 - frontend language: Typescript
 - provided libs for going fast: Knacss, W3css
-- provided libs for high-level featuring: Bootstrap4, Vue.js
+- provided libs for high-level featuring: Bootstrap4, **Vue.js**
 - all others nice things you wish using apt, pip and npm
 
 start now using same raw materials of gafam and go farer ahead !
@@ -33,7 +35,7 @@ start now using same raw materials of gafam and go farer ahead !
 
 ### your first standalone webpage conroller
 
-``` python
+```python
 import sweet
 
 def welcome():
@@ -51,20 +53,7 @@ open a terminal and launch ```sweet my-first-webapp```
 % rebase("sweet.HTML")
 
 <div class="txtcenter">
-    <br>
     <h1>Welcome!</h1>
-    <br>
-    <p>get now coding full power at the speedlight</p>
-    <p><button id="btn" class="btn" onclick="click()">click here</button></p>
+    <p>get coding full power at the speedlight</p>
 </div>
-
-<script type="text/python">
-from browser import document
-
-def click(event):
-    # change text within the button when clicked
-    event.target.text = "fired!"
-
-document["btn"].bind("click", click)
-</script>
 ```
