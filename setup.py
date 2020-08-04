@@ -1,4 +1,9 @@
+import os
 from setuptools import setup
+
+readme = os.path.join(os.getcwd(),"README.md")
+with open(readme) as file:
+    long_description = file.read()
 
 setup(
     name="sweetheart",
@@ -11,45 +16,16 @@ setup(
     author="Nicolas Champion",
     author_email="champion.nicolas@gmail.com",
     description="a supercharged heart for the non-expert hands",
+    long_description = long_description,
+    long_description_content_type = "text/markdown",
 
     keywords="ubuntu mongodb starlette webapp industry4.0",
-    # url="http://example.com/HelloWorld/",
+    # url="http://",
     project_urls={
-        # "Bug Tracker": "https://bugs.example.com/HelloWorld/",
-        # "Documentation": "https://docs.example.com/HelloWorld/",
+        # "Bug Tracker": "https://",
+        # "Documentation": "https://",
         "Source Code": "https://github.com/IncredibleProgress/sweetheart.py",
     },
-
-    long_description = """
-=============
-sweetheart.py
-=============
-
-Sweetheart propose a simple approach for buiding webapps leading you to the best coding practices.
-
-It runs on Ubuntu 20.04 LTS and Windows10 through the WSL.
-
-sweetheart provides highest quality components and aims to be adopted by newbies:
-`````````````````````````````````````````````````````````````````````````````````
-- easy to learn, easy to use
-- full documentation provided
-- quick and clean prototyping
-- quick and clean deployement
-- ready for maintenable great code quality
-- ready for datacenters, big-data and ai
-- ready for inovation and creativity
-
-sweetheart provides a supercharged heart for the non-expert hands:
-``````````````````````````````````````````````````````````````````
-- provided database server: MongoDB
-- provided webservers: Uvicorn, CherryPy
-- responsive user interfaces: Html
-- backend language: Python3
-- frontend language: Typescript
-- provided libs for going fast: Knacss, W3css
-- provided libs for high-level featuring: Bootstrap4, Vue.js
-- all others nice things you wish using apt, pip and npm
-    """,
 
     classifiers = [
         "Environment :: Web Environment",

@@ -30,7 +30,7 @@ mongo_disabled = False # mongo database normally enabled
 
 
 # allow dedicated config for dev purpose
-if os.environ["PWD"]=="/opt/incredible": _project_="incredible"
+if os.environ["PWD"].startswith("/opt/incredible"): _project_="incredible"
 else: _project_="sweetheart"
 
 # provide the default configuration:
@@ -163,6 +163,7 @@ def cli():
                 "init",
                 "start",
                 "objects",
+                "build-doc",
                 "run-cherrypy",
             ),
             help="set of convenient admin tools" )
@@ -722,16 +723,23 @@ welcome = lambda request: html("WELCOME")
 #############################################################################
 #TODO: still to implement
 
-def docmaker(source: str, dest: str):
+def docmaker(source_dir:str, dest_dir:str):
 
-    with open(source,'r') as fi:
+    with os.scandir(source_dir) as it:
+        for entry in it:
+            if entry.is_file() and entry.name.endswith('.md'):
 
-        tpl = template(
-            os.path.join(_["webapp.templates_dir"],"document.txt"),
-            text= markdown(fi.read()),
-            **_config_["webapp"]["settings"])
+                source= entry.path
+                dest= os.path.join(dest_dir,entry.name.replace('.md','.html'))
+                
+                with open(source,'r') as fi:
+                    tpl = template(
+                        os.path.join(_["webapp.templates_dir"],"document.txt"),
+                        text= markdown(fi.read()),
+                        **_config_["webapp"]["settings"])
 
-    with open(dest,'w') as fo: fo.write(tpl)
+                with open(dest,'w') as fo:
+                    fo.write(tpl)
 
 
 ###############################################################################
@@ -744,7 +752,8 @@ if __name__ == "__main__":
     if argv.webapp:
         os.system( _config_["bash"]["webapp"] )
     
-    if argv.action == "start": quickstart()
+    if argv.action == "start":
+        quickstart()
     
     elif argv.action == "objects":
 
@@ -755,6 +764,12 @@ if __name__ == "__main__":
         import pprint
         pprint.pprint(objects)
     
+    elif argv.action == "build-doc":
+        #FIXME: only for test
+        docmaker(
+            source_dir= f"/opt/{_project_}/webpages/markdown_docs",
+            dest_dir= f"/opt/{_project_}/documentation" )
+
     elif argv.action == "run-cherrypy":
         #FIXME: only for test
         echo("start cherrypy as standalone webserver")
