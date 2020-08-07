@@ -1,15 +1,7 @@
 """sweet.py
-get coding full power for building webapps at the speedlight
+get coding full power for building webapps at the speedlight"""
 
-- easy to learn, easy to use
-- full documentation provided
-- quick and clean prototyping
-- quick and clean deployement
-- ready for maintenable great code quality
-- ready for datacenters, big-data and ai
-- ready for inovation and creativity
-"""
-
+__version__ = "0.1.dev7"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -26,7 +18,7 @@ import os, subprocess
 # allow setting of 2 webservers respectively for data and statics
 async_host = "http://127.0.0.1:8000"# uvicorn webserver
 static_host = "http://127.0.0.1:8080"# cherrypy webserver
-mongo_disabled = False # mongo database normally enabled
+mongo_disabled = False
 
 
 # allow dedicated config for dev purpose
@@ -93,8 +85,10 @@ ksplit = lambda k: "".join([ f"['{key}']" for key in k.split(".") ])
 class _config_accessor_:
     def __getitem__(self, keys:str):
         return eval( f"_config_{ksplit(keys)}" )
-    def __setitem__(self, keys:str, item):
-        eval( f"_config_{ksplit(keys)} = {item}" )
+    # def __setitem__(self, keys:str, item):
+    #     #FIXME:
+    #     eval(f"_config_{ksplit(keys)}") = item
+
 
 _ = CONF = _config_accessor_()
 # _["key1.key2"] -> _config_["key1"]["key2"]
@@ -121,20 +115,46 @@ class subproc:
     bash = lambda s: subprocess.run(s.split())
     run = subprocess.run
 
-    @classmethod
-    def xterm(cls, cmd:str):
+    @staticmethod
+    def xterm(cmd:str):
         """start an external service within xterm"""
         os.system("%s xterm -C -geometry 190x19 -e %s &"
-            % (_config_["bash"]["display"], cmd) )
+            % (_config_["bash"]["display"], cmd))
 
-    @classmethod
-    def winterm(cls, cmd:str):
+    @staticmethod
+    def winterm(cmd:str):
         """start an external service within Windows Terminal"""
         os.system(f'cmd.exe /c start wt.exe ubuntu.exe run {cmd}')
 
     # select the way for starting external service:
     # used for starting mongod and cherrypy within external terminal
     service = eval(_config_["bash"]["service"])
+
+    @classmethod
+    def mongod(cls):
+        """abstract mongoDB settings"""
+        global mongoclient, database
+
+        from pymongo import MongoClient
+        
+        echo("try for getting mongodb client...")
+        cls.service(
+            'mongod --dbpath="%s"'\
+            % _config_["database"]["dbpath"] )
+
+        mongoclient = MongoClient(
+            host=_config_["database"]["host"],
+            port=_config_["database"]["port"] )
+
+        echo("available databases given by mongoclient:",
+            mongoclient.list_database_names() )
+
+        database = mongoclient[_config_["database"]["select"]]
+        
+        echo("connected to the default database:",
+            "'%s'"% _config_["database"]["select"] )
+        echo("existing mongodb collections:",
+            database.list_collection_names() )
 
 
   #############################################################################
@@ -201,10 +221,8 @@ def cli():
 
     argv = parser.parse_args()
     
-    if (hasattr(argv,"action") and "-" in argv.action) \
-        or argv.mongo_disabled: 
-        # disable mongoclient setting when required:
-        mongo_disabled = True
+    # disable mongoclient setting when required:
+    if argv.mongo_disabled: mongo_disabled=True
 
     return argv
 
@@ -313,7 +331,7 @@ if __name__ == "__main__":
     # update pcloud files before init if required:
     if argv.update_files:
 
-        echo("update init pcloud files to local drive")
+        echo("update init files provided from pcloud")
 
         for filename, path in _config_["copyfiles"].items():
             if filename.startswith("_"): continue
@@ -330,38 +348,6 @@ if __name__ == "__main__":
     if argv.action == "init":
         init()
         quit()
-
-
-  #############################################################################
- ########## MONGODB FACILITIES ###############################################
-#############################################################################
-
-# abstract mongoDB settings:
-if not mongo_disabled:
-
-    from pymongo import MongoClient
-    
-    echo("try for getting mongodb client...")
-    subproc.service(
-        'mongod --dbpath="%s"'\
-        % _config_["database"]["dbpath"] )
-
-    mongoclient = MongoClient(
-        host=_config_["database"]["host"],
-        port=_config_["database"]["port"] )
-
-    echo("available databases given by mongoclient:",
-        mongoclient.list_database_names() )
-
-    database = mongoclient[_config_["database"]["select"]]
-    
-    echo("connected to the default database:",
-        "'%s'"% _config_["database"]["select"] )
-    echo("existing mongodb collections:",
-        database.list_collection_names() )
-
-else:
-    echo("MongoDB client is DISABLED")
 
 
   #############################################################################
@@ -546,11 +532,6 @@ from starlette.staticfiles import StaticFiles
 ###############################################################################
 ###############################################################################
 
-# set the current working directory:
-os.chdir(_config_["webapp"]["working_dir"])
-echo("set working directory:", os.getcwd())
-
-
 # convenient function for rendering html content:
 def html(source:str= "WELCOME", **kwargs):
 
@@ -571,8 +552,6 @@ def html(source:str= "WELCOME", **kwargs):
             </div>""")
 
     template_path = os.path.join(_["webapp.templates_dir"],source)
-    document_path = source
-
     if os.path.isfile(template_path):
 
         # render html content from given bottle template:
@@ -581,10 +560,10 @@ def html(source:str= "WELCOME", **kwargs):
             **_config_["webapp"]["settings"],
             **kwargs ))
 
-    elif os.path.isfile(document_path):
+    elif source.endswith(".md") and os.path.isfile(source):
 
         # render html content from given markdown file:
-        with open(document_path) as file:
+        with open(source) as file:
             return HTMLResponse(template(
                 os.path.join(_["webapp.templates_dir"],"document.txt"),
                 text= markdown(file.read()),
@@ -599,13 +578,21 @@ def html(source:str= "WELCOME", **kwargs):
     raise ValueError("invalid source argument calling html()")
 
 
-# convenient function for testing a webapp
+# convenient function for starting a webapp
 def quickstart(routes=None, endpoint=None):
     """start webapp on ASGI web server
     include a default routing settings for the webpages directory"""
     global webapp
 
-    # build routing depending of given arguments:
+    # at first set and start mongo database service:
+    if not mongo_disabled: subproc.mongod()
+    else: echo("MongoDB client is DISABLED")
+
+    # set the current working directory:
+    os.chdir(_config_["webapp"]["working_dir"])
+    echo("set working directory:", os.getcwd())
+    
+    # then build routing depending of given arguments:
     if isinstance(routes, dict):
         echo("create and route starlette objects from dict")
         for segment,endpoint in routes.items():
@@ -647,8 +634,12 @@ def quickstart(routes=None, endpoint=None):
         echo("list of routed objects type for check: ")
         for i, route in enumerate(webapp):
             print(" ",i, "  type:", type(route))
+    
+    # auto start the webapp within webbrowser:
+    if hasattr(argv,"webapp") and argv.webapp:
+        subproc.bash( _config_["bash"]["webapp"] )
 
-    # at last start the uvicorn server:
+    # at last start the uvicorn webserver:
     echo("quickstart: uvicorn multi-threading is not available here")
     uvicorn.run(webapp.star, log_level="info")
 
@@ -748,9 +739,6 @@ def docmaker(source_dir:str, dest_dir:str):
 if __name__ == "__main__":
     """sweetheart provides a convenient command line interface (CLI)
     dedicated to dev/admin tasks and available calling 'sweet'"""
-
-    if argv.webapp:
-        os.system( _config_["bash"]["webapp"] )
     
     if argv.action == "start":
         quickstart()
@@ -766,6 +754,8 @@ if __name__ == "__main__":
     
     elif argv.action == "build-doc":
         #FIXME: only for test
+        os.chdir(f"/opt/{_project_}/webpages")
+        # _["webapp.settings._static_"] = "../webpages/usual_"
         docmaker(
             source_dir= f"/opt/{_project_}/webpages/markdown_docs",
             dest_dir= f"/opt/{_project_}/documentation" )

@@ -1,4 +1,5 @@
 import os
+from sweet import __version__, __license__
 from setuptools import setup
 
 readme = os.path.join(os.getcwd(),"README.md")
@@ -7,15 +8,15 @@ with open(readme) as file:
 
 setup(
     name="sweetheart",
-    version= "0.1.dev6",
-    license= "CeCILL-C",
+    version= __version__,
+    license= __license__,
     packages=[""],
     scripts=["sweet.py"],
 
     # metadata to display on PyPI
     author="Nicolas Champion",
     author_email="champion.nicolas@gmail.com",
-    description="a supercharged heart for the non-expert hands",
+    description="for building incredible full-stacked webapps including AI at the speedlight",
     long_description = long_description,
     long_description_content_type = "text/markdown",
 
