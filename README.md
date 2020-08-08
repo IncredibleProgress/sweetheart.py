@@ -8,6 +8,8 @@ Since Ubuntu20.04 can be installed as a usual softwares within Windows10, it pro
 
 The sweet(heart) script provides a simple and efficient approach to do it in a python/html/css centric way leading you to the best components and best coding practices. Due to the current place of the python language regarding to data handling, calculations and AI, this makes sweetheart a fast and ideal toolkit for evoluting towards the **Industry4.0** precepts .
 
+Sweetheart is shared under the [CeCILL-C FREE SOFTWARE LICENSE AGREEMENT](https://github.com/IncredibleProgress/sweetheart.py/blob/master/LICENSE).
+
 ## A supercharged heart for the non-expert hands
 
 Sweetheart help you to get coding full power from scratch:
@@ -29,7 +31,7 @@ Included features for starting your projects:
 - provided database server: [**MongoDB**](https://www.mongodb.com/)
 - provided asynchronous webserver: [Uvicorn](https://www.uvicorn.org/)
 - optionnal webserver for static contents: [CherryPy](https://cherrypy.org/)
-- provided asgi frameworks that shines: [**Starlette**](https://www.starlette.io/)
+- provided asgi framework that shines: [**Starlette**](https://www.starlette.io/)
 - optionnal asgi framework for big projects: [FastApi](https://fastapi.tiangolo.com/)
 - responsive user interfaces: [Html](https://www.w3schools.com/)
 - provided web libs for going fast: [**Knacss**](https://www.knacss.com/), [W3css](https://www.w3schools.com/w3css/)
