@@ -42,7 +42,7 @@ Included features for starting your projects:
 
 ## Code examples
 
-### your first standalone webpage conroller written with Python
+### your first standalone webpage controller written in Python
 
 ```python
 import sweet
@@ -78,6 +78,4 @@ Next table allow to evaluate coding and costs efforts at the statement of sweeth
 | Improve code quality and reinforce security  | EXPERT        | CHEAP        |
 | Implement AI capabilities                    | MIDDLE        | MODERATE     |
 | Implement SAP gateway                        | MIDDLE        | MODERATE     |
-| Erect and run a dedicated datacenter[^1]     | EXPERT        | HIGH         |
-
-[^1]: This needs sponsors at this early step
+| Erect and run a dedicated datacenter         | EXPERT        | HIGH         |
