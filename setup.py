@@ -16,7 +16,7 @@ setup(
     # metadata to display on PyPI
     author="Nicolas Champion",
     author_email="champion.nicolas@gmail.com",
-    description="for building incredible full-stacked webapps including AI at the speedlight",
+    description="allow building of full-stacked webapps including AI at the speedlight",
     long_description = long_description,
     long_description_content_type = "text/markdown",
 

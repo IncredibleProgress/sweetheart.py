@@ -1,4 +1,4 @@
-# sweetheart
+# Sweetheart
 
 allow building of full-stacked webapps including AI at the speedlight
 
@@ -8,7 +8,9 @@ Since Ubuntu20.04 can be installed as a usual softwares within Windows10, it pro
 
 The sweet(heart) script provides a simple and efficient approach to do it in a python/html/css centric way leading you to the best components and best coding practices. Due to the current place of the python language regarding to data handling, calculations and AI, this makes sweetheart a fast and ideal toolkit for evoluting towards the **Industry4.0** precepts .
 
-## The highest quality components that can be adopted by newbies
+## A supercharged heart for the non-expert hands
+
+Sweetheart help you to get coding full power from scratch:
 
 - easy to learn, easy to use
 - full documentation provided
@@ -19,7 +21,9 @@ The sweet(heart) script provides a simple and efficient approach to do it in a p
 - **ready for datacenters, big-data and AI**
 - **ready for inovation and creativity**
 
-## A supercharged heart for the non-expert hands
+## The highest quality components that can be adopted by newbies
+
+Included features for starting your projects:
 
 - backend language: [**Python3**](https://www.python.org/)
 - provided database server: [**MongoDB**](https://www.mongodb.com/)
@@ -32,7 +36,7 @@ The sweet(heart) script provides a simple and efficient approach to do it in a p
 - provided web libs for high-level featuring: [Bootstrap4](https://getbootstrap.com/), [Vue.js](https://vuejs.org/)
 - optionnal frontend language: [Typescript](https://www.typescriptlang.org/)
 
-**And all other nice things you wish using apt, pip and npm:** sweetheart comes with the above mentionned package to support you saving a lot of time. Your are not forced to use these components, but these are what you should highly consider at first for starting new projects.
+**And all other nice things you wish using apt, pip and npm:** sweetheart comes with the above mentionned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider at first for starting new projects.
 
 ## Code examples
 
@@ -48,7 +52,7 @@ def welcome():
 sweet.quickstart(welcome)
 ```
 
-### your first *sweet* html webpage including a bit of KNACss
+### your first *sweet* Html webpage including a bit of KNACss
 
 ``` html
 % rebase("sweet.HTML")
