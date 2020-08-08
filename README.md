@@ -63,15 +63,15 @@ sweet.quickstart(welcome)
 
 Next table allow to evaluate coding and costs efforts at the statement of sweetheart today.
 
-|Matters                                     |||||Coding effort|||||Costs effort|
-|:-------------------------------------------||||| :----------:|||||:----------:|
-|Build responsive webapp with default libs   |||||FAST         |||||FREE        |
-|Build responsive webapp with bootstrap4     |||||MIDDLE       |||||FREE        |
-|Run MongoDB/webserver on local network      |||||FAST         |||||FREE        |
-|Run MongoDB/webserver as internet services  |||||MIDDLE       |||||MODERATE    |
-|Improve code quality and reinforce security |||||EXPERT       |||||CHEAP       |
-|Implement AI capabilities                   |||||MIDDLE       |||||MODERATE    |
-|Implement SAP gateway                       |||||MIDDLE       |||||MODERATE    |
-|Erect and run a dedicated datacenter[^1]    |||||EXPERT       |||||HIGH        |
+| Matters                                      | Coding effort | Costs effort |
+| :------------------------------------------- | :-----------: | :----------: |
+| Build responsive webapp with default libs    | FAST          | FREE         |
+| Build responsive webapp with bootstrap4      | MIDDLE        | FREE         |
+| Run MongoDB/webserver on local network       | FAST          | FREE         |
+| Run MongoDB/webserver as internet services   | MIDDLE        | MODERATE     |
+| Improve code quality and reinforce security  | EXPERT        | CHEAP        |
+| Implement AI capabilities                    | MIDDLE        | MODERATE     |
+| Implement SAP gateway                        | MIDDLE        | MODERATE     |
+| Erect and run a dedicated datacenter[^1]     | EXPERT        | HIGH         |
 
 [^1]: This needs sponsors at this early step
