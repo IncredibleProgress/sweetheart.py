@@ -44,7 +44,7 @@ Included features for starting your projects:
 
 ### your first standalone webpage controller written in Python
 
-```python
+``` python
 import sweet
 
 def welcome():
@@ -79,3 +79,19 @@ Next table allow to evaluate coding and costs efforts at the statement of sweeth
 | Implement AI capabilities                    | MIDDLE        | MODERATE     |
 | Implement SAP gateway                        | MIDDLE        | MODERATE     |
 | Erect and run a dedicated datacenter         | EXPERT        | HIGH         |
+
+## Install sweetheart
+
+On Windows10 you have first to open the Windows Store for installing 'Ubuntu 20.04 LTS' and the 'Windows Terminal'.
+
+Generally speaking sweetheart runs on 'Ubuntu 20.04 LTS'. It will works on other Linux OS but it requires in this case some manual tasks for installing usefull dependencies.
+
+Afterwards opening an Ubuntu terminal, the 3 following lines will install all what is needed:
+
+``` bash
+sudo apt install python3-pip
+pip3 install sweetheart
+python3 -m sweet --init
+```
+
+Note that all resources are now located within the '/opt/sweetheart' directory. Have a look on it now could help you in the next steps for quicker understanding.
