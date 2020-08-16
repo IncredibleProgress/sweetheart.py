@@ -1,7 +1,7 @@
 """sweet.py
 get coding full power at the speedlight"""
 
-__version__ = "0.1.0-dev8"
+__version__ = "0.1.0-alpha0"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -15,18 +15,24 @@ import os, subprocess
 # - some modules import from standard libs are within relevant objects
 
 
-# hardcoded default settings:
+# hardcoded default settings for services:
 # allow setting of 2 webservers respectively for data and statics
+
 async_host = "http://127.0.0.1:8000"# uvicorn webserver
 static_host = "http://127.0.0.1:8080"# cherrypy webserver
+
 mongo_disabled = False
+cherrypy_enabled = False
+multi_threading = False
 
 
-# provide messages function for convenience:
-#NOTE: allow message management improvements later
 def echo(*args):
     """convenient function for printing messages"""
-    print(_config_["bash"]["echolabel"], *args)
+    print("[%s]"% _config_["bash"]["echolabel"].upper(),*args)
+
+def verbose(*args):
+    """convenient function for verbose messages"""
+    if _.verbosity: print(" ", *args)
 
 
   #############################################################################
@@ -34,8 +40,14 @@ def echo(*args):
 #############################################################################
 
 # allow dedicated config for dev purpose
-if os.environ["PWD"].startswith("/opt/incredible"): _project_="incredible"
-else: _project_="sweetheart"
+#FIXME: to implement for any project
+
+if os.environ["PWD"].startswith("/opt/incredible"):
+    _project_ = "incredible"
+else:
+    _project_ = "sweetheart"
+
+_py3_ = f"/opt/{_project_}/programs/envPy/bin/python3"
 
 # provide the default configuration:
 # should be updated using _config_.update({ "key": value })
@@ -63,54 +75,57 @@ _config_ = {
         "/": f"/opt/{_project_}/configuration/cherrypy.conf",
     },
     "bash": {
-        "echolabel": "[SWEETHEART]",
+        "echolabel": _project_,
         "display": "DISPLAY=:0",
         "service": "winterm",# xterm|winterm
+
         "webapp": f"cmd.exe /c start msedge.exe --app={async_host}",
-        "cherry": f"/opt/{_project_}/programs/envPy/bin/python3 -m\
-            sweet run-cherrypy",
+        "cherrypy": f"/opt/{_project_}/programs/envPy/bin/python3 -m\
+             sweet run-cherrypy",
+
+        "scripts":{
+            "pyenv": _py3_,
+            "pmount": "sudo mount -t drvfs p: /mnt/p",
+            "bdist": f"{_py3_} setup.py sdist bdist_wheel",
+            "upload": "twine upload dist/*",
+            "dev-pkg": f"{_py3_} -m pip install setuptools twine wheel",
+        },
     },
-    "copyfiles": {
-        # used within the init() function
-        # provided config files:
-        "cherrypy.conf": f"/opt/{_project_}/configuration",
-        "config.xlaunch": f"/opt/{_project_}/configuration",
-        # provided templates:
-        "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
-        "document.txt": f"/opt/{_project_}/webpages/bottle_templates",
-        # provided documents:
-        "welcome.md": f"/opt/{_project_}/webpages/markdown_docs",
-        # provided resources:
-        "sweet.HTML": f"/opt/{_project_}/webpages",
-        "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
-        "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
-    },
-    "pcloud": {
+    "cloud": {
         # pcloud settings (for dev purpose):
         "local": "/mnt/p/Public Folder/sweetheart",
         "public": "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetheart/",
-        "mount": "sudo mount -t drvfs p: /mnt/p",
+
+        "copyfiles": {
+            # used within the init() function
+            # provided config files:
+            "cherrypy.conf": f"/opt/{_project_}/configuration",
+            "config.xlaunch": f"/opt/{_project_}/configuration",
+            # provided templates:
+            "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
+            "document.txt": f"/opt/{_project_}/webpages/bottle_templates",
+            # provided documents:
+            "welcome.md": f"/opt/{_project_}/webpages/markdown_docs",
+            # provided resources:
+            "sweet.HTML": f"/opt/{_project_}/webpages",
+            "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
+            "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
+        },
     },
 }
 
+class _config_accessor_:
+    """provide a convenient _config_ accessor tool"""
 
-class config_accessor:
-
-    def __init__(self, config_object_name:str):
-        """provide a convenient config accessor tool"""
-
-        self.config = config_object_name
-        self.verbosity = None
+    # settings related to CLI: 
+    verbosity = False
+    webapp = False
 
     def __getitem__(self, keys:str):
-        """
-        "key1.key2" -> self.config["key1"]["key2"]
-        "key1.key2.key3" -> self.config["key1"]["key2"]["key3"]
-        """
-        item = f"{self.config}{self.ksplit(keys)}"
+        ''' _["key1.key2"] -> _config_["key1"]["key2"] '''
 
-        if self.verbosity:
-            echo("get item via config_accessor", item)
+        item = f"_config_{self.ksplit(keys)}"
+        verbose("get config item:", item)
 
         return eval(item)
     
@@ -119,14 +134,7 @@ class config_accessor:
         # ksplit("key1.key2") -> str: "['key1']['key2']"
         return "".join([f"['{key}']" for key in keys.split(".")])
 
-
-_ = CONF = config_accessor("_config_")
-# _["key1.key2"] -> _config_["key1"]["key2"]
-
-
-# provide some config shorcuts for readability:
-# set pre-defined config values with readable names for better clarity
-static_host_disabled = _config_["webapp"]["settings"]["_static_"]==""
+_ = conf = _config_accessor_()
 
 
   #############################################################################
@@ -151,7 +159,7 @@ class subproc:
     @staticmethod
     def winterm(cmd:str):
         """start an external service within Windows Terminal"""
-        subproc.bash(f'cmd.exe /c start wt.exe ubuntu.exe run {cmd}')
+        os.system(f'cmd.exe /c start wt.exe ubuntu.exe run {cmd} &')
 
     # select the way for starting external service:
     # used for starting mongod and cherrypy within external terminal
@@ -184,23 +192,22 @@ class subproc:
             database.list_collection_names() )
 
 
-class pcloud:
-
+class cloud:
+    
     @staticmethod
     def update_files():
+        #FIXME: dev tool
         echo("update init files provided from pcloud")
 
-        for filename, path in _config_["copyfiles"].items():
-            if filename.startswith("_"): continue
+        for filename, path in _config_["cloud"]["copyfiles"].items():
 
             source = os.path.join(path, filename)
-            dest = _config_["pcloud"]["local"]
+            dest = _config_["cloud"]["local"]
 
-            if argv.verbosity:
-                print(" ", source, " -> ", dest)
+            verbose(source, " -> ", dest)
 
-            if not os.path.isdir(_config_["pcloud"]["local"]):
-                subproc.bash(_config_["pcloud"]["mount"])
+            if not os.path.isdir(_config_["cloud"]["local"]):
+                subproc.bash(_config_["bash"]["scripts"]["pmount"])
 
             subproc.run(["cp", source, dest])
 
@@ -213,13 +220,12 @@ def cli():
     """build the sweetheart command line interface (CLI)"""
 
     import argparse
-    global argv, mongo_disabled
 
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
-    parser.set_defaults(func= lambda args:\
-        print("for getting some help use the '--help' option"))
+    parser.set_defaults(func= lambda args: print("sweet.py: \
+use the '--help' or '-h' option for getting some help"))
 
     parser.add_argument("-v","--verbosity",action="store_true",
         help="get some additional messages about processing" )
@@ -228,8 +234,21 @@ def cli():
         help="launch the init process for building the sweetheart venv")
 
 
-    # FIXME: ugly dev tools:
+    #FIXME: dev tools
     parser.add_argument("--update-pcloud",action="store_true")
+
+    dev = subparsers.add_parser("cmd",
+        help="execute a script given by the current config")
+
+    dev.add_argument("script",
+        help="name of the given script within _config_ to execute")
+
+    def _exec(args):
+        cmd = _[f"bash.scripts.{args.script}"]
+        echo("cmd:$", cmd)
+        subproc.bash(cmd)
+
+    dev.set_defaults(func= _exec)
 
 
     # create the parser for the "start" command:
@@ -244,6 +263,9 @@ def cli():
 
     start.add_argument("-c","--cherrypy",action="store_true",
         help="start running cherrypy as an extra webserver for statics")
+    
+    start.add_argument("-m","--multi-threading",action="store_true",
+        help="start uvicorn webserver as a service allowing multi-threading")
 
     start.set_defaults(func= lambda args: quickstart())
 
@@ -262,14 +284,18 @@ def cli():
     cherry.set_defaults(func= lambda args: CherryPy.start(webapp))
 
 
+    global argv
     argv = parser.parse_args()
 
-    # disable mongoclient setting when required:
-    if hasattr(argv,"mongo_disabled") and argv.mongo_disabled:
-        mongo_disabled = True
-    
-    # update config_accessor attributes:
-    config_accessor.verbosity = argv.verbosity
+    # update current settings when required:
+    global mongo_disabled, cherrypy_enabled, multi_threading
+
+    _.verbosity = getattr(argv, "verbosity", _.verbosity)
+    _.webapp = getattr(argv, "webapp", _.webapp)
+
+    mongo_disabled = getattr(argv, "mongo_disabled", mongo_disabled)
+    cherrypy_enabled = getattr(argv, "cherrypy", cherrypy_enabled)
+    multi_threading = getattr(argv, "multi_threading", multi_threading)
     
     return argv
 
@@ -341,10 +367,9 @@ def init():
         print("download file:", url)
         subproc.run(["wget","-q","--no-check-certificate",url])
 
-    pcloud = lambda file: urljoin(_["pcloud.public"], file)
+    pcloud = lambda file: urljoin(_["cloud.public"], file)
 
-    for file, path in _config_["copyfiles"].items():
-        if file.startswith("_"): continue
+    for file, path in _config_["cloud"]["copyfiles"].items():
         print("download file:", pcloud(file))
         os.chdir(path.replace(_project_, "sweetheart"))#!
         subproc.run(["wget","-q","--no-check-certificate", pcloud(file)])
@@ -362,22 +387,44 @@ def init():
     os.chdir("/opt/sweetheart/programs/scripts")
 
     with open("sweet","w") as fo:
-        L1= "#!/bin/sh"
-        L2= "/opt/sweetheart/programs/envPy/bin/python3 -m sweet $*"
-        fo.write(f"{L1}\n{L2}")
+        fo.write("\n".join((
+            "#!/bin/sh",
+            "/opt/sweetheart/programs/envPy/bin/python3 -m sweet $*",
+        )) )
 
     subproc.bash("sudo ln --symbolic \
         /opt/sweetheart/programs/scripts/sweet /usr/local/bin/")
     subproc.bash("sudo chmod 777 /usr/local/bin/sweet")
 
+    # start uvicorn webserver allowing multi-threading
+    # $ uvicorn sweet:app
+    with open("uvicorn","w") as fo:
+        fo.write("\n".join((
+            "#!/opt/sweetheart/programs/envPy/bin/python3",
+            "from os import chdir",
+            "from sys import argv",
+            "from uvicorn import run",
+            "chdir('%s')"% _config_["webapp"]["working_dir"],
+            "run(argv[1])",
+        )) )
+
+    subproc.bash("sudo ln --symbolic \
+        /opt/sweetheart/programs/scripts/uvicorn /usr/local/bin/")
+    subproc.bash("sudo chmod 777 /usr/local/bin/uvicorn")
+
 
 if __name__ == "__main__":
 
     # build the Command Line Interface
-    # launch the "init" process if required before modules import
+    # will launch the "init" process if required before modules import
     argv = cli()
-    if argv.update_pcloud: pcloud.update_files()
-    if argv.init: init()
+
+    if argv.update_pcloud:
+        cloud.update_files()
+
+    if argv.init:
+        init()
+        quit()
 
 
   #############################################################################
@@ -481,8 +528,7 @@ try:
         # start web apps and listen for requests:
         @classmethod
         def start(cls, route=None, url="/", config=None):
-            """
-            start the previously mounted apps with mount()
+            """start the previously mounted apps with mount()
 
             OR when the route argument is given this function is
             equivalent to cherrypy.quickstart(route, url, config)
@@ -490,7 +536,7 @@ try:
 
             AT LAST use stop() to stop de server started with start()
             """
-            print("press ctrl-C to quit")
+            print("run cherrypy webserver: press ctrl-C to quit")
 
             if route is None:
                 # cherrypy.config.update({'server.socket_host': '0.0.0.0', })
@@ -628,8 +674,7 @@ def quickstart(routes=None, endpoint=None):
         for segment,endpoint in routes.items():
             webapp.append( Route(segment,endpoint) )
 
-            if argv.verbosity:
-                print("  callable segment:",callable(endpoint),"",segment)
+            verbose("callable segment:",callable(endpoint),"",segment)
 
     elif isinstance(routes, str) and callable(endpoint) :
         echo("route directly given html content at /")
@@ -645,33 +690,29 @@ def quickstart(routes=None, endpoint=None):
     else:
         raise ValueError("invalid given arguments")
 
-    if argv.cherrypy:
+    if cherrypy_enabled:
         # start cherrypy as external service:
         # this will happen with bash command 'sweet -c start'
         echo("try running cherrypy webserver as external service")
-        subproc.service(_config_["bash"]["cherry"])
-
-        if static_host_disabled:
-            _config_["webapp"]["settings"]["_static_"] = static_host
-
-        echo("run static host with given config:",
-            _config_["webapp"]["settings"]["_static_"])
+        subproc.service(_config_["bash"]["cherrypy"])
 
     # set routing and create Starlette object:
     webapp.mount(route_options=True)
 
-    if argv.verbosity:
-        echo("list of routed objects type for check: ")
-        for i, route in enumerate(webapp):
-            print(" ",i+1, "  type:", type(route))
+    for i, route in enumerate(webapp):
+        verbose(i+1,"  type:", type(route))
+        assert isinstance(route,Route) or isinstance(route,Mount)
     
     # auto start the webapp within webbrowser:
-    if hasattr(argv,"webapp") and argv.webapp:
-        subproc.bash( _config_["bash"]["webapp"] )
+    if _.webapp: os.system(_config_["bash"]["webapp"])
 
     # at last start the uvicorn webserver:
-    echo("quickstart: uvicorn multi-threading is not available here")
-    uvicorn.run(webapp.star, log_level="info")
+    if multi_threading:
+        #FIXME: not implemented, only for test
+        subproc.service("uvicorn sweet:webapp.star")
+    else:
+        echo("quickstart: uvicorn multi-threading is not available here")
+        uvicorn.run(webapp.star, log_level="info")
 
 
 class WebApp(UserList):
@@ -729,7 +770,7 @@ class WebApp(UserList):
 
     @cherrypy.expose
     def static(self):
-        #FIXME: not yet implemented
+        #FIXME: not implemented
         return CherryPy.serve_file()
 
 
@@ -744,7 +785,7 @@ welcome = lambda request: html("WELCOME")
 #############################################################################
 
 def docmaker():
-    """FIXME: only for test"""
+    """FIXME: not implemented, only for test"""
 
     source_dir = f"/opt/{_project_}/webpages/markdown_docs"
     dest_dir = f"/opt/{_project_}/documentation"
@@ -772,16 +813,27 @@ def docmaker():
 ###############################################################################
 
 if __name__ == "__main__":
-
-    # provide the available public objects list:
-    if argv.verbosity:
-
-        objects = dict( (k,v) for k,v in globals().items() \
-            if k[0] != "_" and not repr(v).startswith("<module") )
-
-        echo("available objects provided by sweet.py:")
-        import pprint
-        pprint.pprint(objects)
     
+    if not hasattr(argv,"script") and not argv.update_pcloud:
+
+        # inform about current version:
+        print("[SWEETHEART] running version:", __version__)
+        print("[SWEETHEART] written by ", __author__)
+        print("[SWEETHEART] shared under CeCILL-C FREE SOFTWARE LICENSE AGREEMENT")
+
+        # provide the available public objects list:
+        if _.verbosity:
+
+            objects = dict( (k,v) for k,v in globals().items() \
+                if k[0] != "_" and not repr(v).startswith("<module") )
+
+            echo("available objects provided by sweet.py:")
+            import pprint
+            print(); pprint.pprint(objects); print()
+
+        # inform about config status:
+        if _project_ != "sweetheart":
+            echo(f"set '_config_' for the '{_project_}' project directory")
+
     # execute dedicated function related to the cli:
     argv.func(argv)
