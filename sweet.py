@@ -1,6 +1,6 @@
 '''
 sweet.py
-provide simple use of highest quality components
+provide simple use of the highest quality components
 
 1. install components:
 

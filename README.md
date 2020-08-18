@@ -4,9 +4,9 @@ allow building full-stacked webapps including AI at the speedlight
 
 ## Introduction
 
-Since *Ubuntu 20.04* can be installed as a usual softwares within *Windows 10*, it provides an incredible way for any organization to develop, administrate and deploy **powerfull responsive webapps** on its own local network **including AI** keeping high capabilities of integration with the already existing tools like databases, ms-excel, sap...
+Since *Ubuntu 20.04* can be installed as a usual softwares within *Windows 10*, it provides an incredible way for any organization to develop, administrate and deploy **powerfull responsive webapps including AI** on its own local network keeping high capabilities of integration with the already existing tools like databases, ms-excel, sap...
 
-The sweet(heart) script provides a simple and efficient approach to do it in a python/html/css centric way leading you to the best components and **best coding practices**. Due to the current place of the python language regarding to data handling, calculations and AI, this makes sweetheart a fast and ideal toolkit for evoluting towards the **Industry4.0** precepts .
+The sweet(heart) script provides a simple and efficient approach to do it in a python/html/css centric way leading you to the best components and **best coding practices**. Due to the current top-rated place of the python language regarding to data handling, calculations and AI, this makes sweetheart a fast and ideal toolkit for evoluting towards **Industry4.0** precepts.
 
 Sweetheart is shared under the [CeCILL-C FREE SOFTWARE LICENSE AGREEMENT](https://github.com/IncredibleProgress/sweetheart.py/blob/master/LICENSE).
 
@@ -25,7 +25,7 @@ Sweetheart help you to get coding full power from scratch:
 
 ## The highest quality components that can be adopted by newbies
 
-Ready to use features for starting your projects:
+Ready-to-use features for starting your new projects:
 
 - backend language: [**Python3**](https://www.python.org/)
 - provided database server: [**MongoDB**](https://www.mongodb.com/)
@@ -38,7 +38,9 @@ Ready to use features for starting your projects:
 - provided web libs for high-level featuring: [Bootstrap4](https://getbootstrap.com/), [Vue.js](https://vuejs.org/)
 - optionnal frontend language: [Typescript](https://www.typescriptlang.org/)
 
-**And all other nice things you wish using apt, pip and npm:** sweetheart comes with the above mentionned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider at first for starting new projects.
+**And all other nice things you wish using apt, pip and npm:** sweetheart comes with the above mentionned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting new projects.
+
+In a first approach you can consider that sweetheart provides to you **an incredible full-stacked sandbox**.
 
 ## The sweetheart developpement chart
 
@@ -80,13 +82,13 @@ sweet.quickstart(welcome)
 </div>
 ```
 
-## Install sweetheart
+## Install and run sweetheart
 
 On *Windows 10* you have first to open the *Windows Store* for installing **Ubuntu 20.04 LTS** and the **Windows Terminal**.
 
 Generally speaking sweetheart runs on *Ubuntu 20.04 LTS*. It will works on other *Linux OS* but it requires in this case some manual tasks for installing usefull dependencies.
 
-Opening an Ubuntu terminal, the 3 following lines will do all what is needed:
+Opening an Ubuntu terminal, the 3 following lines will do for you all what is needed:
 
 ``` sh
 sudo apt install python3-pip
@@ -94,12 +96,16 @@ pip3 install sweetheart
 python3 -m sweet --init
 ```
 
-Main resources are now located within the `/opt/sweetheart` directory. Have a look on it could help you in the next steps for quicker understanding of what is doing sweetheart under the hood.
+Main resources are now located within the `/opt/sweetheart` directory. Have a look on it could help you later for quicker understanding of what is doing sweetheart under the hood.
 
-Now start a standalone welcome webapp to ensure that everything is working well. With the provided initial config the following command will work only on *Windows 10* with *Windows Terminal* and *Edge* installed.
+Now start the standalone welcome webapp providing the link to documentation. With the given initial config the following command will work on *Windows 10* up-to-date with *Windows Terminal* and *Edge* installed.
 
 ``` sh
 sweet start --webapp
 ```
 
 In other cases omit the `--webapp` option and open manually the indicated url in a webbrowser.
+
+## Epilog: your new incredible life starts now !
+
+Even at this early step, sweetheart allows to make a lot by yourself. Enjoy discovering and learning how coding can help and support you today, using best raw materials widely used by GAFAM and others!
