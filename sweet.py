@@ -1,12 +1,6 @@
 '''
-sweet.py
-provide simple use of the highest quality components
-
-1. install components:
-
-    $ python3 -m sweet --init
-
-2. write supercharged webapp:
+provide simple use of high quality components
+for building full-stacked webapps including AI
 
     import sweet
 
@@ -17,7 +11,7 @@ provide simple use of the highest quality components
     sweet.quickstart(welcome)
 '''
 
-__version__ = "0.1.0-alpha2"
+__version__ = "0.1.0-alpha3"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -42,19 +36,19 @@ cherrypy_enabled = False
 multi_threading = False
 
 
-_stack_ = []
+_msg_ = []
 def echo(*args, mode="default"):
     """convenient function for printing messages
     mode = default|stack|release"""
 
     if mode == "stack":
-        global _stack_
-        _stack_.append(" ".join(args))
+        global _msg_
+        _msg_.append(" ".join(args))
 
     elif mode == "release":
-        for msg in _stack_:
+        for msg in _msg_:
             print("[%s]"% _config_["bash"]["echolabel"].upper(), msg)
-        _stack_ = []
+        _msg_ = []
     else:
         print("[%s]"% _config_["bash"]["echolabel"].upper(),*args)
 
@@ -185,7 +179,7 @@ class subproc:
         os.system(f'cmd.exe /c start wt.exe ubuntu.exe run {cmd} &')
 
     # select the way for starting external service:
-    # used for starting mongod and cherrypy within external terminal
+    # used for starting mongod, cherrypy, uvicorn within external terminal
     service = eval(_config_["bash"]["service"])
 
     @classmethod
@@ -257,7 +251,7 @@ use the '--help' or '-h' option for getting some help"))
         help="launch the init process for building the sweetheart venv")
 
 
-    #FIXME: dev tools
+    #FIXME: provisional dev tools
     parser.add_argument("--update-pcloud",action="store_true")
 
     dev = subparsers.add_parser("cmd",
@@ -268,7 +262,7 @@ use the '--help' or '-h' option for getting some help"))
 
     def _exec(args):
         cmd = _[f"bash.scripts.{args.script}"]
-        echo("cmd:$", cmd)
+        echo("bash:$", cmd)
         subproc.bash(cmd)
 
     dev.set_defaults(func=_exec)
@@ -328,8 +322,12 @@ def init():
 
     from urllib.parse import urljoin
 
+    # ensure relevant _config_ init:
+    #FIXME: allow custom project initialization
+    assert _project_ == "sweetheart"
+
     # start install process:
-    print("\n[SWEETHEART] init process start now !")
+    print("\n[SWEETHEART] init process is starting now")
     print("root privileges are required to continue")
     print("an internet connexion is required for downloads")
     print("\nINIT step1: install required packages...\n")
@@ -646,7 +644,7 @@ def html(source:str= "WELCOME", **kwargs):
             <link rel="stylesheet" href="/resources/knacss.css">
             <div class="txtcenter">
             <h1><br><br>Welcome {user} !<br><br></h1>
-            <h3>sweetheart.py</h3>
+            <h3>sweetheart</h3>
             <p>a supercharged heart for the non-expert hands</p>
             <p>be aware that you could fall in love with it</p>
             <p><a href="{async_host}/document/welcome" 
@@ -793,12 +791,12 @@ class WebApp(UserList):
         <div class="txtcenter">
         <h1><br><br>I'm Ready<br><br></h1>
         <h3>cherrypy server is running</h3>
-        <p>for better performances serving static files</p>
+        <p>provide better performances serving static files</p>
         </div>"""
 
     @cherrypy.expose
     def static(self):
-        #FIXME: not implemented
+        #FIXME: not yet implemented
         return CherryPy.serve_file()
 
 
@@ -813,7 +811,7 @@ welcome = lambda request: html("WELCOME")
 #############################################################################
 
 def docmaker():
-    """FIXME: not implemented, only for test"""
+    """FIXME: only for test"""
 
     source_dir = f"/opt/{_project_}/webpages/markdown_docs"
     dest_dir = f"/opt/{_project_}/documentation"
