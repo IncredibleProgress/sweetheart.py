@@ -258,7 +258,8 @@ use the '--help' or '-h' option for getting some help"))
         help="execute a script given by the current config")
 
     dev.add_argument("script",
-        help="name of the given script within _config_ to execute")
+        help=f'name of a script given in _config_:\
+            {[i for i in _["bash.scripts"].keys()]}')
 
     def _exec(args):
         cmd = _[f"bash.scripts.{args.script}"]
