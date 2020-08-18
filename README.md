@@ -12,7 +12,7 @@ Sweetheart is shared under the [CeCILL-C FREE SOFTWARE LICENSE AGREEMENT](https:
 
 ## A supercharged heart for the non-expert hands
 
-Sweetheart help you to get coding full power from scratch:
+Sweetheart help you getting coding full power from scratch:
 
 - easy to learn, easy to use
 - full documentation provided
@@ -25,7 +25,7 @@ Sweetheart help you to get coding full power from scratch:
 
 ## The highest quality components that can be adopted by newbies
 
-Ready-to-use features for starting your new projects:
+Sweetheart delivers ready-to-use features for new projects:
 
 - backend language: [**Python3**](https://www.python.org/)
 - optionnal AI library: [scikit-learn](https://scikit-learn.org/stable/index.html)
@@ -47,7 +47,7 @@ In a first approach you can consider that sweetheart provides to you **an incred
 
 Next table allows to evaluate coding and costs efforts at the statement of sweetheart today.
 
-| Matters                                      | Coding effort | Costs effort |
+|                                              | Coding effort | Costs effort |
 | :------------------------------------------- | :-----------: | :----------: |
 | Build responsive webapp with default libs    | FAST          | FREE         |
 | Build responsive webapp with bootstrap4      | MIDDLE        | FREE         |
@@ -99,7 +99,7 @@ python3 -m sweet --init
 
 Main resources are now located within the `/opt/sweetheart` directory. Have a look on it could help you later for quicker understanding of what is doing sweetheart under the hood.
 
-Now start the standalone welcome webapp providing the link to documentation. With the given initial config the following command will work on *Windows 10* up-to-date with *Windows Terminal* and *Edge* installed.
+Now start the standalone welcome webapp providing the link to documentation. With the given initial config the following command will work on *Windows 10* up-to-date, *Windows Terminal* and *Edge* installed.
 
 ``` sh
 sweet start --webapp

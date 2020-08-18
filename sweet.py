@@ -271,7 +271,7 @@ use the '--help' or '-h' option for getting some help"))
         echo("cmd:$", cmd)
         subproc.bash(cmd)
 
-    dev.set_defaults(func= _exec)
+    dev.set_defaults(func=_exec)
 
 
     # create the parser for the "start" command:
@@ -837,8 +837,9 @@ def docmaker():
                     fo.write(tpl)
 
 
-###############################################################################
-###############################################################################
+  #############################################################################
+ ########## COMMAND LINE & MESSAGES SETUP ####################################
+#############################################################################
 
 if __name__ == "__main__":
     
@@ -865,7 +866,7 @@ if __name__ == "__main__":
         # inform about config status:
         if _project_ != "sweetheart":
             echo(f"'_config_' built for the '{_project_}' project directory")
-            verbose("configuration initialized from 'PWD':", _dir_)
+            verbose("configuration initialized from PWD:", _dir_)
 
     # execute dedicated function related to the cli:
     argv.func(argv)
