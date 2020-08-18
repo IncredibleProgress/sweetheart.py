@@ -111,8 +111,8 @@ _config_ = {
         "scripts":{
             "pyenv": _py3_,
             "pmount": "sudo mount -t drvfs p: /mnt/p",
-            "bdist": f"{_py3_} setup.py sdist bdist_wheel",
-            "upload": f"{_py3_} -m twine upload dist/*",
+            #"bdist": f"{_py3_} setup.py sdist bdist_wheel",
+            #"upload": f"{_py3_} -m twine upload dist/*",
             "dev-pkg": f"{_py3_} -m pip install setuptools twine wheel",
         },
     },
