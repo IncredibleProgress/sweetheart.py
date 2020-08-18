@@ -33,7 +33,7 @@ Ready to use features for starting your projects:
 - optionnal webserver for static contents: [CherryPy](https://cherrypy.org/)
 - provided asgi framework that shines: [**Starlette**](https://www.starlette.io/)
 - optionnal asgi framework built on Starlette: [FastApi](https://fastapi.tiangolo.com/)
-- responsive user interfaces: [Html](https://www.w3schools.com/)
+- responsive user interfaces: [Html5](https://www.w3schools.com/)
 - provided web libs for going fast: [**Knacss**](https://www.knacss.com/), [W3css](https://www.w3schools.com/w3css/)
 - provided web libs for high-level featuring: [Bootstrap4](https://getbootstrap.com/), [Vue.js](https://vuejs.org/)
 - optionnal frontend language: [Typescript](https://www.typescriptlang.org/)
@@ -94,7 +94,7 @@ pip3 install sweetheart
 python3 -m sweet --init
 ```
 
-Note that all resources are now located within the `/opt/sweetheart` directory. Have a look on it now could help you in the next steps for quicker understanding of what is doing sweetheart under the hood.
+Main resources are now located within the `/opt/sweetheart` directory. Have a look on it could help you in the next steps for quicker understanding of what is doing sweetheart under the hood.
 
 Now start a standalone welcome webapp to ensure that everything is working well. With the provided initial config the following command will work only on *Windows 10* with *Windows Terminal* and *Edge* installed.
 

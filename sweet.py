@@ -1,7 +1,23 @@
-"""sweet.py
-get coding full power at the speedlight"""
+'''
+sweet.py
+provide simple use of highest quality components
 
-__version__ = "0.1.0-alpha0"
+1. install components:
+
+    $ python3 -m sweet --init
+
+2. write supercharged webapp:
+
+    import sweet
+
+    def welcome():
+        """render a welcome message"""
+        return sweet.html()
+
+    sweet.quickstart(welcome)
+'''
+
+__version__ = "0.1.0-alpha1"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -40,13 +56,9 @@ def verbose(*args):
 #############################################################################
 
 # allow dedicated config for dev purpose
-#FIXME: to implement for any project
-
-if os.environ["PWD"].startswith("/opt/incredible"):
-    _project_ = "incredible"
-else:
-    _project_ = "sweetheart"
-
+_dir_ = os.path.split(os.environ["PWD"])
+if _dir_[0] == "/opt" and _dir_[1]: _project_ = _dir_[1]
+else: _project_ = "sweetheart"
 _py3_ = f"/opt/{_project_}/programs/envPy/bin/python3"
 
 # provide the default configuration:
@@ -97,7 +109,7 @@ _config_ = {
         "public": "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetheart/",
 
         "copyfiles": {
-            # used within the init() function
+            # given here for the init() function
             # provided config files:
             "cherrypy.conf": f"/opt/{_project_}/configuration",
             "config.xlaunch": f"/opt/{_project_}/configuration",
@@ -123,10 +135,8 @@ class _config_accessor_:
 
     def __getitem__(self, keys:str):
         ''' _["key1.key2"] -> _config_["key1"]["key2"] '''
-
         item = f"_config_{self.ksplit(keys)}"
         verbose("get config item:", item)
-
         return eval(item)
     
     @staticmethod
