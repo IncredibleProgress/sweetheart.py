@@ -28,6 +28,7 @@ Sweetheart help you to get coding full power from scratch:
 Ready-to-use features for starting your new projects:
 
 - backend language: [**Python3**](https://www.python.org/)
+- optionnal AI library: [scikit-learn](https://scikit-learn.org/stable/index.html)
 - provided database server: [**MongoDB**](https://www.mongodb.com/)
 - provided asynchronous webserver: [Uvicorn](https://www.uvicorn.org/)
 - optionnal webserver for static contents: [CherryPy](https://cherrypy.org/)
@@ -44,7 +45,7 @@ In a first approach you can consider that sweetheart provides to you **an incred
 
 ## The sweetheart developpement chart
 
-Next table allow to evaluate coding and costs efforts at the statement of sweetheart today.
+Next table allows to evaluate coding and costs efforts at the statement of sweetheart today.
 
 | Matters                                      | Coding effort | Costs effort |
 | :------------------------------------------- | :-----------: | :----------: |
@@ -108,4 +109,4 @@ In other cases omit the `--webapp` option and open manually the indicated url in
 
 ## Epilog: your new incredible life starts now !
 
-Even at this early step, sweetheart allows to make a lot by yourself. Enjoy discovering and learning how coding can help and support you today, using best raw materials widely used by GAFAM and others!
+Even at this early step, sweetheart allows to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using best raw materials widely used by GAFAM and others!

@@ -17,7 +17,7 @@ provide simple use of the highest quality components
     sweet.quickstart(welcome)
 '''
 
-__version__ = "0.1.0-alpha1"
+__version__ = "0.1.0-alpha2"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -42,9 +42,22 @@ cherrypy_enabled = False
 multi_threading = False
 
 
-def echo(*args):
-    """convenient function for printing messages"""
-    print("[%s]"% _config_["bash"]["echolabel"].upper(),*args)
+_stack_ = []
+def echo(*args, mode="default"):
+    """convenient function for printing messages
+    mode = default|stack|release"""
+
+    if mode == "stack":
+        global _stack_
+        _stack_.append(" ".join(args))
+
+    elif mode == "release":
+        for msg in _stack_:
+            print("[%s]"% _config_["bash"]["echolabel"].upper(), msg)
+        _stack_ = []
+    else:
+        print("[%s]"% _config_["bash"]["echolabel"].upper(),*args)
+
 
 def verbose(*args):
     """convenient function for verbose messages"""
@@ -99,7 +112,7 @@ _config_ = {
             "pyenv": _py3_,
             "pmount": "sudo mount -t drvfs p: /mnt/p",
             "bdist": f"{_py3_} setup.py sdist bdist_wheel",
-            "upload": "twine upload dist/*",
+            "upload": f"{_py3_} -m twine upload dist/*",
             "dev-pkg": f"{_py3_} -m pip install setuptools twine wheel",
         },
     },
@@ -593,7 +606,7 @@ try:
 
 
 except:
-    echo("cherrypy is not implemented for current config")
+    echo("cherrypy not implemented within current config", mode="stack")
     class cherrypy:
         """implement cherrypy.expose as a ghost method"""
         @classmethod
@@ -614,6 +627,11 @@ from starlette.applications import Starlette
 from starlette.responses import HTMLResponse, FileResponse
 from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
+
+try: import sklearn
+except: echo(
+    "machine learning (AI) not implemented within current config",
+    mode="stack" )
 
 ###############################################################################
 ###############################################################################
@@ -837,13 +855,17 @@ if __name__ == "__main__":
             objects = dict( (k,v) for k,v in globals().items() \
                 if k[0] != "_" and not repr(v).startswith("<module") )
 
-            echo("available objects provided by sweet.py:")
+            print("[SWEETHEART] available objects provided by sweet.py:")
             import pprint
             print(); pprint.pprint(objects); print()
 
+        # release stacked messages:
+        echo(mode="release")
+
         # inform about config status:
         if _project_ != "sweetheart":
-            echo(f"set '_config_' for the '{_project_}' project directory")
+            echo(f"'_config_' built for the '{_project_}' project directory")
+            verbose("configuration initialized from 'PWD':", _dir_)
 
     # execute dedicated function related to the cli:
     argv.func(argv)
