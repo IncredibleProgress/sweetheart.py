@@ -107,6 +107,6 @@ sweet start --webapp
 
 In other cases omit the `--webapp` option and open manually the indicated url in a webbrowser.
 
-## Epilog: your new incredible life starts now !
+## Epilog: a new incredible life starts now
 
-Even at this early step, sweetheart allows to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using best raw materials widely used by GAFAM and others!
+Even at this early step, sweetheart allows you to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using amazing raw materials widely used by GAFAM and others!
