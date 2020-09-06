@@ -1,5 +1,5 @@
 '''
-provide simple use of high quality components
+provide simple use of highest quality components
 for building full-stacked webapps including AI
 
     import sweet
@@ -140,6 +140,9 @@ class _config_accessor_:
     verbosity = False
     webapp = False
 
+    # settings related to modules import:
+    cherrypy = False
+
     def __getitem__(self, keys:str):
         ''' _["key1.key2"] -> _config_["key1"]["key2"] '''
         item = f"_config_{self.ksplit(keys)}"
@@ -213,8 +216,8 @@ class cloud:
     
     @staticmethod
     def update_files():
-        #FIXME: dev tool
-        echo("update init files provided from pcloud")
+        #FIXME: dev tool not for use
+        echo("updating init files provided from pcloud...")
 
         for filename, path in _config_["cloud"]["copyfiles"].items():
 
@@ -227,6 +230,7 @@ class cloud:
                 subproc.bash(_config_["bash"]["scripts"]["pmount"])
 
             subproc.run(["cp", source, dest])
+        echo("all updates done to the pcloud drive")
 
 
   #############################################################################
@@ -345,7 +349,6 @@ def init():
             "libjs-vue",
             "libjs-highlight.js",
             "libjs-bootstrap4",  
-            "libjs-jquery",
         ])
     print("\nINIT step2: creating directories...")
     subproc.bash("sudo mkdir /opt/sweetheart")
@@ -455,6 +458,7 @@ if __name__ == "__main__":
 
 try:
     import cherrypy
+    _.cherrypy = True
 
     class CherryPy:
         """provide a namespace for cherrypy facilities
@@ -861,6 +865,10 @@ if __name__ == "__main__":
 
         # release stacked messages:
         echo(mode="release")
+
+        # adjust config and settings:
+        if cherrypy_enabled and not _.cherrypy:
+            cherrypy_enabled = False
 
         # inform about config status:
         if _project_ != "sweetheart":
