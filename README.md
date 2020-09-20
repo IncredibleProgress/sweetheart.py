@@ -39,9 +39,7 @@ Sweetheart delivers ready-to-use features for any projects:
 - provided web libs for high-level featuring: [Bootstrap4](https://getbootstrap.com/), [Vue.js](https://vuejs.org/)
 - optionnal frontend language: [Typescript](https://www.typescriptlang.org/)
 
-**And all other nice things you wish using [apt](https://en.wikipedia.org/wiki/APT_(software)), [pip](https://pip.pypa.io/en/stable/) and [npm](https://docs.npmjs.com/about-npm/):** sweetheart comes with the above mentionned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting new project.
-
-In a first approach consider these provide to you **an incredible full-stacked sandbox**.
+**And all other nice things you wish using [apt](https://en.wikipedia.org/wiki/APT_(software)), [pip](https://pip.pypa.io/en/stable/) and [npm](https://docs.npmjs.com/about-npm/):** sweetheart comes with the above mentionned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting new project. In a first approach consider these provide to you **an incredible full-stacked sandbox**.
 
 ## The sweetheart developpement chart
 

@@ -11,12 +11,12 @@ for building full-stacked webapps including AI
     sweet.quickstart(welcome)
 '''
 
-__version__ = "0.1.0-alpha3"
+__version__ = "0.1.0-beta1"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
 
-import os, subprocess
+import os, subprocess, json
 
 #NOTE: import
 # - main modules import are within the WEBAPP FACILITIES section
@@ -79,7 +79,8 @@ _config_ = {
     },
     "webapp": {
         "framework": "starlette",# starlette|responder|fastapi
-        #"AI": "scikit-learn",
+        #"AI": "sklearn",
+        "config_dir": f"/opt/{_project_}/configuration",
         "working_dir": f"/opt/{_project_}/webpages",
         "templates_dir": "bottle_templates",
 
@@ -99,8 +100,7 @@ _config_ = {
         "service": "winterm",# xterm|winterm
 
         "webapp": f"cmd.exe /c start msedge.exe --app={async_host}",
-        "cherrypy": f"/opt/{_project_}/programs/envPy/bin/python3 -m\
-             sweet run-cherrypy",
+        "cherrypy": f"/opt/{_project_}/programs/envPy/bin/python3 -m sweet run-cherrypy",
 
         "scripts":{
             "pyenv": _py3_,
@@ -143,6 +143,9 @@ class _config_accessor_:
     # settings related to modules import:
     cherrypy = False
 
+    # default settings:
+    conffile = os.path.join(_config_["webapp"]["config_dir"],"sweet.json")
+
     def __getitem__(self, keys:str):
         ''' _["key1.key2"] -> _config_["key1"]["key2"] '''
         item = f"_config_{self.ksplit(keys)}"
@@ -153,6 +156,12 @@ class _config_accessor_:
     def ksplit(keys):
         # ksplit("key1.key2") -> str: "['key1']['key2']"
         return "".join([f"['{key}']" for key in keys.split(".")])
+    
+    @classmethod
+    def edit(cls):
+        # edit _config_ as json configuration file
+        with open(cls.conffile, "w") as fo:
+            fo.write(json.dumps(_config_, indent=4))
 
 _ = conf = _config_accessor_()
 
@@ -249,14 +258,22 @@ def cli():
 use the '--help' or '-h' option for getting some help"))
 
     parser.add_argument("-v","--verbosity",action="store_true",
-        help="get some additional messages about processing" )
+        help="get some additional messages about process" )
 
     parser.add_argument("-i","--init",action="store_true",
-        help="launch the init process for building the sweetheart venv")
+        help="launch the init process for building the sweetheart env")
+
+    parser.add_argument("-cf","--conffile",action="store_true",
+        help="load config from sweet.json config file" )
 
 
-    #FIXME: provisional dev tools
-    parser.add_argument("--update-pcloud",action="store_true")
+    #FIXME: provisional dev tools:
+    
+    parser.add_argument("--edit-config", action="store_true",
+        help="provide a default configuration json file")
+    
+    parser.add_argument("--update-pcloud", action="store_true")
+    
 
     dev = subparsers.add_parser("cmd",
         help="execute a script given by the current config")
@@ -275,33 +292,33 @@ use the '--help' or '-h' option for getting some help"))
 
     # create the parser for the "start" command:
     start = subparsers.add_parser("start",
-        help="start all required services for running webapps")
+        help="start required services for running webapps")
 
     start.add_argument("-x","--mongo-disabled",action="store_true",
         help="start without the mongo database server")
 
     start.add_argument("-a","--webapp",action="store_true",
-        help="start within webbrowser as an app")
+        help="start within the webbrowser as an app")
 
     start.add_argument("-c","--cherrypy",action="store_true",
-        help="start running cherrypy as an extra webserver for statics")
+        help="start cherrypy as an extra webserver for static contents")
     
     start.add_argument("-m","--multi-threading",action="store_true",
-        help="start uvicorn webserver as a service allowing multi-threading")
+        help="start uvicorn webserver allowing multi-threading")
 
     start.set_defaults(func= lambda args: quickstart())
 
 
     # create the parser for the "docmaker" command:
-    docmkr = subparsers.add_parser("docmaker",
-        help="build html static documentation from markdown files")
+    docmkr = subparsers.add_parser("mkdoc",
+        help="build html documentation from markdown files")
    
-    docmkr.set_defaults(func= lambda args: docmaker())
+    docmkr.set_defaults(func= lambda args: mkdoc())
     
 
     # create the parser for the "run-cherrypy" command:
     cherry = subparsers.add_parser("run-cherrypy",
-        help="run the cherrypy webserver for statics")
+        help="run cherrypy webserver for serving static contents")
 
     cherry.set_defaults(func= lambda args: CherryPy.start(webapp))
 
@@ -309,12 +326,17 @@ use the '--help' or '-h' option for getting some help"))
     global argv
     argv = parser.parse_args()
 
-    # update current settings when required:
-    global mongo_disabled, cherrypy_enabled, multi_threading
+    # update _config_ from json conf file when required:
+    #FIXME: implement a flexible and safer config loader
+    if argv.conffile: 
+        with open(_.conffile) as fi:
+            _config_.update(json.load(fi))
 
+    # update current settings when required:
     _.verbosity = getattr(argv, "verbosity", _.verbosity)
     _.webapp = getattr(argv, "webapp", _.webapp)
 
+    global mongo_disabled, cherrypy_enabled, multi_threading
     mongo_disabled = getattr(argv, "mongo_disabled", mongo_disabled)
     cherrypy_enabled = getattr(argv, "cherrypy", cherrypy_enabled)
     multi_threading = getattr(argv, "multi_threading", multi_threading)
@@ -345,7 +367,7 @@ def init():
             #"git",
             "npm",
             "node-typescript",
-            "node-vue",
+            #"node-vue",
             "libjs-vue",
             "libjs-highlight.js",
             "libjs-bootstrap4",  
@@ -446,6 +468,9 @@ if __name__ == "__main__":
 
     if argv.update_pcloud:
         cloud.update_files()
+
+    if argv.edit_config:
+        _.edit()
 
     if argv.init:
         init()
@@ -815,7 +840,7 @@ welcome = lambda request: html("WELCOME")
  ##########  DOCUMENTATION FACILITIES ########################################
 #############################################################################
 
-def docmaker():
+def mkdoc():
     """FIXME: only for test"""
 
     source_dir = f"/opt/{_project_}/webpages/markdown_docs"
@@ -846,7 +871,9 @@ def docmaker():
 
 if __name__ == "__main__":
     
-    if not hasattr(argv,"script") and not argv.update_pcloud:
+    if not hasattr(argv,"script") \
+        and not argv.update_pcloud \
+        and not argv.edit_config :
 
         # inform about current version:
         print("[SWEETHEART] running version:", __version__)
