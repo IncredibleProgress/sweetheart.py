@@ -83,9 +83,7 @@ sweet.quickstart(welcome)
 
 ## Install and run sweetheart
 
-On *Windows 10* you have first to open the *Windows Store* for installing **Ubuntu 20.04 LTS** and the **Windows Terminal**.
-
-Generally speaking sweetheart runs on *Ubuntu 20.04 LTS*. It will work on other Linux OS but it will require in this case some manual tasks for installing the usefull dependencies.
+On *Windows 10* you have first to open the *Windows Store* for installing **Ubuntu 20.04 LTS** and the **Windows Terminal**. Note that due to a current bug for accessing *localhost*, this is recommended to use [**wsl1**](https://docs.microsoft.com/en-us/windows/wsl/install-win10#set-your-distribution-version-to-wsl-1-or-wsl-2) and not wsl2. We can expect than Microsoft will solve this matter soon. Generally speaking sweetheart runs on *Ubuntu 20.04 LTS*. It will work on other Linux OS but it will require in this case some manual tasks for installing the usefull dependencies.
 
 Opening an Ubuntu terminal, the 3 following lines will do for you all what is needed:
 
