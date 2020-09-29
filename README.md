@@ -38,7 +38,7 @@ Sweetheart delivers ready-to-use features for any projects:
 - provided web libs for going fast: [**Knacss**](https://www.knacss.com/), [W3css](https://www.w3schools.com/w3css/)
 - provided web libs for high-level featuring: [Bootstrap4](https://getbootstrap.com/), [Vue.js](https://vuejs.org/)
 - optionnal frontend language: [Typescript](https://www.typescriptlang.org/)
-- optionnal low-level language [Rust](https://www.rust-lang.org/) (coming soon)
+- optionnal low-level language: [Rust](https://www.rust-lang.org/) (coming soon)
 
 **And all other nice things you wish using [apt](https://en.wikipedia.org/wiki/APT_(software)), [pip](https://pip.pypa.io/en/stable/) and [npm](https://docs.npmjs.com/about-npm/):** sweetheart comes with the above mentionned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting new project. In a first approach consider these provide to you **an incredible full-stacked sandbox**.
 
@@ -84,7 +84,9 @@ sweet.quickstart(welcome)
 
 ## Install and run sweetheart
 
-On *Windows 10* you have first to open the *Windows Store* for installing **Ubuntu 20.04 LTS** and the **Windows Terminal**. Note that due to a current bug for accessing *localhost*, this is recommended to use [**Wsl1**](https://docs.microsoft.com/en-us/windows/wsl/install-win10#set-your-distribution-version-to-wsl-1-or-wsl-2) and not Wsl2. We can expect than Microsoft will solve this matter soon. Generally speaking sweetheart runs on *Ubuntu 20.04 LTS*. It will work on other Linux OS but it will require in this case some manual tasks for installing the usefull dependencies.
+On *Windows 10* you have first to open the *Windows Store* for installing **Ubuntu 20.04 LTS** and the **Windows Terminal**. Due to a current bug for accessing *localhost*, this is recommended to use [**Wsl1**](https://docs.microsoft.com/en-us/windows/wsl/install-win10#set-your-distribution-version-to-wsl-1-or-wsl-2) and not Wsl2. We can expect than Microsoft will solve this matter soon.
+
+Generally speaking sweetheart runs on *Ubuntu 20.04 LTS*. It will work on other Linux OS but it will require in this case some manual tasks for installing the usefull dependencies.
 
 Opening an Ubuntu terminal, the 3 following lines will do for you all what is needed:
 

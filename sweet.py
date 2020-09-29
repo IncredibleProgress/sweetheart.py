@@ -56,7 +56,7 @@ _config_ = {
     "working_dir": f"/opt/{_project_}/webpages",
     "docs_dir": f"/opt/{_project_}/documentation",
     
-    "web_framework": "starlette",# starlette|responder|fastapi
+    "web_framework": "starlette",# starlette|fastapi
     "templates_dir": "bottle_templates",
     "templates_settings" : {
 
@@ -152,9 +152,9 @@ _ = conf = _config_accessor_()
 _msg_ = []
 def echo(*args, mode="default"):
     """convenient function for printing messages
-    mode = default|stack|release"""
+    mode = 0|default|stack|release"""
 
-    if mode == "stack":
+    if mode == "stack" or mode == 0:
         global _msg_
         _msg_.append(" ".join(args))
 
@@ -232,12 +232,10 @@ class cloud:
     def update_files():
         #FIXME: dev tool not for use
         echo("updating init files provided from pcloud...")
-
         for filename, path in _.copyfiles.items():
 
             source = os.path.join(path, filename)
             dest = _config_["cloud_local"]
-
             verbose(source, " -> ", dest)
 
             if not os.path.isdir(_config_["cloud_local"]):
@@ -259,7 +257,7 @@ def cli():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
-    parser.set_defaults(func= lambda args: print("sweet.py: \
+    parser.set_defaults(func= lambda args: print("* sweet.py: \
 use the '--help' or '-h' option for getting some help"))
 
     parser.add_argument("-v","--verbosity",action="store_true",
@@ -317,13 +315,13 @@ use the '--help' or '-h' option for getting some help"))
 
 
     # create the parser for the "mkdocs" command:
-    bdoc = subparsers.add_parser("mkdocs",
+    mdoc = subparsers.add_parser("mkdocs",
         help="build html documentation from markdown files")
     
-    bdoc.add_argument("-o","--open",action="store_true",
+    mdoc.add_argument("-o","--open",action="store_true",
         help="open documentation in webbrowser after building it")
    
-    bdoc.set_defaults(func= lambda args: mkdocs())
+    mdoc.set_defaults(func= lambda args: mkdocs())
 
 
     # create the parser for the "run-cherrypy" command:
@@ -337,7 +335,6 @@ use the '--help' or '-h' option for getting some help"))
     argv = parser.parse_args()
 
     # update _config_ from json conf file when required:
-    #FIXME: implement a flexible and safer config loader
     if argv.conffile and _.conffile: 
         with open(_.conffile) as fi:
             _config_.update(json.load(fi))
@@ -407,7 +404,7 @@ def init():
 
             "sweetheart",
             "pymongo",
-            #"cherrypy",
+            "cherrypy",
             "uvicorn",
             "aiofiles",#NOTE: required with starlette
             "bottle",
@@ -462,8 +459,8 @@ def init():
             "from os import chdir",
             "from sys import argv",
             "from uvicorn import run",
-            "chdir('%s')"% _config_["working_dir"],
-            f"run(argv[1],host={_.uargs['host']},port={_.uargs['port']})",
+            f"chdir({_config_['working_dir']})",
+            f"run(argv[1],host='{_.uargs['host']}',port={_.uargs['port']})",
         )) )
 
     subproc.bash(f"sudo ln --symbolic \
@@ -671,10 +668,8 @@ from starlette.responses import HTMLResponse, FileResponse
 from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
-try: import sklearn
-except: echo(
-    "machine learning (AI) not implemented within current config",
-    mode="stack" )
+#import sklearn
+echo("AI not implemented within current config", mode="stack")
 
 ###############################################################################
 ###############################################################################
@@ -779,7 +774,7 @@ def quickstart(routes=None, endpoint=None):
 
     # at last start the uvicorn webserver:
     if multi_threading:
-        #FIXME: not implemented, only for test
+        #FIXME: only for test
         subproc.service("uvicorn sweet:webapp.star")
     else:
         echo("quickstart: uvicorn multi-threading is not available here")
@@ -802,7 +797,7 @@ class WebApp(UserList):
         return FileResponse("usual_resources/favicon.ico")
 
     # webapp settings:
-    # class methodes for main settings: mount() star()
+    # methodes for main settings: mount() star()
 
     def mount(self, route_options=True):
         """set optionnal routing and mount static dirs"""
@@ -827,7 +822,7 @@ class WebApp(UserList):
         return Starlette(debug=True, routes=self)
 
     # allow serving statics with cherrypy:
-    # optional facility for increase of performance
+    # optional facility for better performances
 
     @cherrypy.expose
     def default(self):
@@ -856,7 +851,8 @@ welcome = lambda request: html("WELCOME")
 #############################################################################
 
 def mkdocs(working_dir=None):
-    """build static documentation from markdown files"""
+    """build static documentation from markdown files
+    TODO: mkdocs to replace by an integrated sweetheart document generator"""
 
     # set the current working directory:
     if not working_dir: working_dir=_config_["docs_dir"]
@@ -887,9 +883,9 @@ if __name__ == "__main__":
         and not argv.edit_config :
 
         # inform about current version:
-        print("[ sweet.py ] running version:", __version__)
-        print("[ sweet.py ] written by ", __author__)
-        print("[ sweet.py ] shared under CeCILL-C FREE SOFTWARE LICENSE AGREEMENT")
+        print("* sweet.py running version:", __version__)
+        print("* written by ", __author__)
+        print("* shared under CeCILL-C FREE SOFTWARE LICENSE AGREEMENT")
 
         # provide the available public objects list:
         if _.verbosity:
