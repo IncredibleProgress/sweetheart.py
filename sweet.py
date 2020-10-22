@@ -1,40 +1,30 @@
-'''
+"""
 provide simple use of highest quality components
 for building full-stacked webapps including AI
-
-    import sweet
-
-    def welcome():
-        """render a welcome message"""
-        return sweet.html()
-
-    sweet.quickstart(welcome)
-'''
-
-__version__ = "0.1.0-beta2"
+"""
+__version__ = "0.1.0-beta3"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
 
-import os, subprocess, json
-
-#NOTE: import
-# - main modules import are within the WEBAPP FACILITIES section
-# - cherrypy import is within the CHERRYPY FACILITIES section
-# - pymongo import is within the subroc.mongod method
-# - some modules import from standard libs are within relevant objects
-
-
-# hardcoded default settings for services:
-# allow setting of 2 webservers respectively for data and statics
-
-async_host = "http://127.0.0.1:8000"# uvicorn webserver
-static_host = "http://127.0.0.1:8080"# cherrypy webserver
-
+# hardcoded default module settings:
+AI_enabled = False
 mongo_disabled = False
 cherrypy_enabled = False
 multi_threading = False
 
+# allow setting of 2 webservers respectively for data and statics
+async_host = "http://127.0.0.1:8000"# uvicorn webserver
+static_host = "http://127.0.0.1:8080"# cherrypy webserver
+
+
+# early import:
+import os, subprocess, json
+
+# - main modules import are within the WEBAPP FACILITIES section
+# - cherrypy import is within the CHERRYPY FACILITIES section
+# - pymongo import is within the subroc.mongod method
+# - some modules import from standard libs are within relevant objects
 
 # allow dedicated configs for dev purpose:
 _dir_ = os.path.split(os.environ["PWD"])
@@ -51,11 +41,14 @@ _py3_ = f"/opt/{_project_}/programs/envPy/bin/python3"
 # should be updated using _config_.update({ "key": value })
 _config_ = {
 
+    ## set json configuration file path (hardcoded here):
+    "__conffile__": f"/opt/{_project_}/configuration/sweet.json",
+
     ## webapps settings:
-    "config_path": (f"/opt/{_project_}/configuration", "sweet.json"),
     "working_dir": f"/opt/{_project_}/webpages",
     "docs_dir": f"/opt/{_project_}/documentation",
     
+    "ai_modules": "sklearn",# python3 modules
     "web_framework": "starlette",# starlette|fastapi
     "templates_dir": "bottle_templates",
     "templates_settings" : {
@@ -64,12 +57,10 @@ _config_ = {
         "_static_": "",# ""=disabled
         "_async_": async_host,
     },
-    
     "cherrypy": {
         # set default url segments configs:
         "/": f"/opt/{_project_}/configuration/cherrypy.conf",
     },
-    
     ## database settings:
     "db_host": "localhost",
     "db_port": 27017,
@@ -85,21 +76,72 @@ _config_ = {
     "sh_webapp": f"cmd.exe /c start msedge.exe --app={async_host}",
     "sh_cherrypy":f"{_py3_} -m sweet run-cherrypy",
     "sh_opendocs": f"cmd.exe /c start msedge.exe --app=\
-\\\\wsl$\\Ubuntu\\opt\\{_project_}\\documentation\\site\\index.html",
+\\\\wsl$\\Ubuntu\\opt\\{_project_}\\documentation\\book\\index.html",
 
     "scripts": {
+        "hello": "echo welcome to sweetheart!"
         #"bdist": f"{_py3_} setup.py sdist bdist_wheel",
         #"upload": f"{_py3_} -m twine upload dist/*",
-        "pkgtools": f"{_py3_} -m pip install setuptools twine wheel",
+        #"pkgtools": f"{_py3_} -m pip install setuptools twine wheel",
     },
     
+    ## --init settings:
+    "apt-install": [
+        "python3-venv",
+        "rustc",
+        "mongodb",
+        #"xterm",
+        #"git",
+        "npm",
+        "node-typescript",
+        #"node-vue",
+        "libjs-vue",
+        "libjs-bootstrap4",
+        "libjs-highlight.js",
+    ],
+    "cargo-install": [
+        "mdbook",
+        "mdbook-toc",
+    ],
+    "pip-install": [
+        "sweetheart",
+        "pymongo",
+        "uvicorn",
+        "aiofiles",#NOTE: required with starlette
+        "bottle",
+        "mistune",
+        #"cherrypy",
+        #"openpyxl",
+    ],
+    "npm-install": [
+        "brython",
+    ],
+    "wget-install-resources": [
+        "https://raw.githubusercontent.com/alsacreations/KNACSS/master/css/knacss.css",
+        "https://www.w3schools.com/w3css/4/w3.css"
+    ],
+
+    "__basedirs__": """[
+        # given here for ini.__init__()
+        f"/opt/{_project_}",
+        f"/opt/{_project_}/configuration",
+        f"/opt/{_project_}/database",
+        f"{_config_['docs_dir']}",
+        f"/opt/{_project_}/programs",
+        f"/opt/{_project_}/programs/scripts",
+        f"/opt/{_project_}/webpages",
+        f"/opt/{_project_}/webpages/bottle_templates",
+        f"/opt/{_project_}/webpages/markdown_docs",
+        f"/opt/{_project_}/webpages/usual_resources"
+    ]""",
+
     ## pcloud settings (for dev purpose):
     "pmount": "sudo mount -t drvfs p: /mnt/p",
     "cloud_local": "/mnt/p/Public Folder/sweetheart",
     "cloud_public": "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetheart/",
 
-    "copyfiles": {
-        # given here for the init() function
+    "__copyfiles__": """{
+        # given here for ini.__init__()
         # provided config files:
         "cherrypy.conf": f"/opt/{_project_}/configuration",
         "config.xlaunch": f"/opt/{_project_}/configuration",
@@ -112,41 +154,69 @@ _config_ = {
         "sweet.HTML": f"/opt/{_project_}/webpages",
         "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
         "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
-    },
+    }""",
 }
 
-class _config_accessor_:
+class ConfigAccess:
     """provide a convenient _config_ accessor tool"""
+    locker = 0
 
-    conffile = os.path.join(*_config_["config_path"])
-    conffile = conffile if os.path.isfile(conffile) else None
-    copyfiles = _config_["copyfiles"]; del _config_["copyfiles"]
+    # general settings given within CLI:
+    verbose = False
+    webapp = False
+    cherrypy = False
 
     # uvicorn arguments dict:
     uargs = {
         "host": async_host.split(":")[1].strip("/"),
         "port": int(async_host.split(":")[2]),
         "log_level": "info" }
+    
+    def __init__(self, conffile:str):
+        """allow selection of json configuration file"""
+        assert ConfigAccess.locker == 0
+        ConfigAccess.locker = 1
 
-    # general settings given within CLI:
-    verbosity = False
-    webapp = False
-    cherrypy = False
+        # top-level configuration settings:
+        ConfigAccess.conffile=conffile if os.path.isfile(conffile) else None
+        ConfigAccess.copyfiles_str = _config_["__copyfiles__"]
+        ConfigAccess.basedirs_str = _config_["__basedirs__"]
+        # deactivated configuration settings:
+        del _config_["__conffile__"]
+        del _config_["__copyfiles__"]
+        del _config_["__basedirs__"]
 
+    @property
+    def copyfiles(self) -> dict:
+        return eval(ConfigAccess.copyfiles_str)
+    @property
+    def basedirs(self) -> list:
+        return eval(ConfigAccess.basedirs_str)
+    
     def __getitem__(self, keys:str):
         ''' _["key1.key2"] -> _config_["key1"]["key2"] '''
-        verbose("get config item:", keys)
+        verbose("get _config_ item via _config_ accessor:", keys)
         ksplit = lambda keys:\
             "".join([f"['{key}']" for key in keys.split(".")])
         return eval( f"_config_{ksplit(keys)}" )
     
     @classmethod
     def edit(cls):
-        # edit _config_ as json configuration file
-        with open(cls.conffile, "w") as fo:
+        """edit _config_ as json configuration file"""
+        with open(cls.conffile,"w") as fo:
             fo.write(json.dumps(_config_, indent=2))
+    
+    @classmethod
+    def update(cls):
+        """update _config_ from setted json conffile"""
+        #FIXME: allow custom json config file
+        with open(cls.conffile) as fi:
+            _config_.update(json.load(fi))
 
-_ = conf = _config_accessor_()
+
+# set the json configuration filename here:
+#NOTE: loaded only with '-cf' option given within CLI
+_ = CONF = ConfigAccess(_config_["__conffile__"])
 
 
 _msg_ = []
@@ -168,7 +238,7 @@ def echo(*args, mode="default"):
 
 def verbose(*args):
     """convenient function for verbose messages"""
-    if _.verbosity: print(" ", *args)
+    if _.verbose: print("|",*args)
 
 
   #############################################################################
@@ -185,31 +255,36 @@ class subproc:
     run = subprocess.run
 
     @staticmethod
-    def xterm(cmd:str):
-        """start an external service within xterm"""
-        os.system("%s xterm -C -geometry 190x19 -e %s &"
-            % (_config_["display"], cmd))
+    def service(cmd:str):
+        """select the way for starting external service:
+        used for starting mongod, cherrypy, uvicorn within external terminal"""
+        
+        if _config_["terminal"] == "winterm":
+            # start an external service within Windows Terminal
+            os.system(f'cmd.exe /c start wt.exe ubuntu.exe run {cmd} &')
 
-    @staticmethod
-    def winterm(cmd:str):
-        """start an external service within Windows Terminal"""
-        os.system(f'cmd.exe /c start wt.exe ubuntu.exe run {cmd} &')
+        elif _config_["terminal"] == "xterm":
+            # start an external service within xterm"""
+            os.system("%s xterm -C -geometry 190x19 -e %s &"
+                % (_config_["display"], cmd))
 
-    # select the way for starting external service:
-    # used for starting mongod, cherrypy, uvicorn within external terminal
-    service = eval(_config_["terminal"])
+        assert _config_["terminal"] in "xterm|winterm"
+
+    @classmethod
+    def exec(cls, args):
+        cmd = _config_["scripts"][f"{args.script}"]
+        echo("exec bash:$", cmd)
+        cls.bash(cmd)
+
 
     @classmethod
     def mongod(cls):
         """abstract mongoDB settings"""
         global mongoclient, database
-
         from pymongo import MongoClient
         
         echo("try for getting mongodb client...")
-        cls.service(
-            'mongod --dbpath="%s"'\
-            % _config_["db_path"] )
+        cls.service('mongod --dbpath="%s"'%_config_["db_path"])
 
         mongoclient = MongoClient(
             host=_config_["db_host"],
@@ -227,10 +302,11 @@ class subproc:
 
 
 class cloud:
+    """files management in the cloud"""
     
     @staticmethod
     def update_files():
-        #FIXME: dev tool not for use
+        #FIXME: dev tool not for users
         echo("updating init files provided from pcloud...")
         for filename, path in _.copyfiles.items():
 
@@ -244,248 +320,289 @@ class cloud:
             subproc.run(["cp", source, dest])
         echo("all updates done to the pcloud drive")
 
+    @staticmethod
+    def download(files:dict):
+        """downloads files at the right place from a dict
+        files= { "filename": "/destination/path/to/file" }
+        #FIXME: change the current working directory when called"""
+
+        from urllib.parse import urljoin
+        src = lambda file: urljoin(_config_["cloud_public"],file)
+
+        for file, path in files.items():
+            verbose("download file:", src(file))
+            os.chdir(path)
+            subproc.run(["wget","-q","--no-check-certificate",src(file)])
+
+
+class ini:
+    """initialize, build, and configure sweetheart
+    FIXME: local rust toolchain not implemented"""
+
+    token = 0
+    sh = subprocess.run
+
+    def __init__(self, project_name=None):
+
+        global _project_, _py3_
+        assert ini.token == 0
+        assert _project_ == "sweetheart"
+
+        # set custom project name if given:
+        #FIXME: not fully implemented
+        if project_name:
+            _project_ = project_name
+            _py3_ = f"/opt/{_project_}/programs/envPy/bin/python3"
+
+        echo(f"start init process for new project: {_project_}")
+        ini.label("install required packages")
+        ini.apt(_config_["apt-install"])
+        ini.cargo(_config_["cargo-install"])
+        
+        ini.label("create directories")
+        ini.mkdirs(_.basedirs)
+
+        # directories settings:
+        ini.sh(["sudo","chmod","777","-R",f"/opt/{_project_}"])
+        ini.ln(["/usr/share/javascript",
+            f"/opt/{_project_}/webpages/javascript_libs"])
+
+        # build documentation directory:
+        #FIXME: '--force' option seems not working
+        ini.sh(["mdbook","init","--force",_config_["docs_dir"]])
+
+        ini.label("build python3 virtual env")
+        ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/envPy"])
+        ini.pip(_config_["pip-install"]+_config_["web_framework"].split())
+        if AI_enabled: ini.pip(_config_["ai_modules"].split())
+
+        # change current working directory:
+        os.chdir(f"/opt/{_project_}/webpages")
+
+        ini.label("install node modules")
+        ini.sh(["npm","init","--yes"])
+        ini.npm(_config_["npm-install"])
+
+        # change current working directory:
+        os.chdir(f"/opt/{_project_}/webpages/usual_resources")
+
+        ini.label("download webapp resources")
+        ini.wget(_config_["wget-install-resources"])
+        cloud.download(_.copyfiles)
+        
+        # change current working directory:
+        os.chdir(f"/opt/{_project_}/programs/scripts")
+
+        ini.label("build local bash commands")
+        ini.locbin("sweet","uvicorn")
+
+        print("\nINIT all done!\n")
+
+
+    _sweet_ = f"""
+#!/bin/sh
+{_py3_} -m sweet $*
+"""
+
+    _uvicorn_ = f"""
+#!{_py3_}
+from os import chdir
+from sys import argv
+from uvicorn import run
+chdir("{_config_['working_dir']}")
+run(argv[1],host='{_.uargs["host"]}',port={_.uargs["port"]})
+"""
+
+    @classmethod
+    def label(cls,text):
+        cls.token += 1
+        print(f"\nINIT step{ini.token}: {text}...\n")
+
+    @classmethod
+    def apt(cls,data:list):
+        # install 'apt' packages 
+        cls.sh(["sudo","apt","install"]+data)
+
+    @classmethod
+    def cargo(cls,data:list):
+        # install 'cargo' packages 
+        cls.sh(["cargo","install"]+data)
+    
+    @classmethod
+    def pip(cls,data:list):
+        # install 'pip' packages 
+        cls.sh([_py3_,"-m","pip","install"]+data)
+    
+    @classmethod
+    def npm(cls,data:list):
+        # install 'npm' packages 
+        cls.sh(["npm","install"]+data)
+        
+    @classmethod
+    def mkdirs(cls,data:list):
+        for pth in data: cls.sh(["sudo","mkdir",pth])
+    
+    @classmethod
+    def wget(cls,data:list):
+        # download files using 'wget'
+        for url in data:
+            
+            cls.sh(["wget","-q","--no-check-certificate",url])
+    
+    @classmethod
+    def ln(cls,data:list):
+        cls.sh(["sudo","ln","--symbolic"]+data)
+
+    @classmethod
+    def locbin(cls,*args:str):
+
+        for scriptname in args:
+            assert hasattr(ini,f"_{scriptname}_")
+
+            # create 'scriptname' in the current working dir:
+            with open(scriptname,"w") as fo:
+                verbose(f"write new script: {scriptname}")
+                fo.write(eval(f"ini._{scriptname}_").strip())
+
+            cls.ln([
+                f"/opt/{_project_}/programs/scripts/{scriptname}",
+                "/usr/local/bin/" ])
+
+            cls.sh(["sudo","chmod","777",f"/usr/local/bin/{scriptname}"])
+
 
   #############################################################################
  ########## COMMAND LINE INTERFACE ###########################################
 #############################################################################
 
-def cli():
-    """build the sweetheart command line interface (CLI)"""
+class CommandLine:
+    """build Command Line Interface with ease"""
+    locker = 0
 
-    import argparse
+    def __init__(self):
+        cls = CommandLine
 
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers()
+        assert cls.locker == 0
+        cls.locker = 1
 
-    parser.set_defaults(func= lambda args: print("* sweet.py: \
-use the '--help' or '-h' option for getting some help"))
+        import argparse
+        cls.parser= argparse.ArgumentParser()
+        cls.subparser= cls.parser.add_subparsers()
+        cls.dict= { "_": cls.parser }; cls.cur= "_"
 
-    parser.add_argument("-v","--verbosity",action="store_true",
-        help="get some additional messages about process" )
+        cls.set(lambda args:\
+            print("use the '--help' or '-h' option for getting some help"))
 
-    parser.add_argument("-i","--init",action="store_true",
-        help="launch the init process for building the sweetheart env")
-
-    parser.add_argument("-cf","--conffile",action="store_true",
-        help="load config from sweet.json config file" )
+        cls.add("-v","--verbose",action="count",
+            help="get additional messages about on-going process")
     
-    parser.add_argument("--venv", action="store_true",
-        help="python3 within the virtual env built for sweetheart")
+    @classmethod
+    def add(cls,*args,**kwargs):
+        cls.dict[cls.cur].add_argument(*args,**kwargs)
 
-    parser.add_argument("--edit-config", action="store_true",
-        help="provide a default configuration json file")
-
-    #FIXME: provisional dev tools:
-    parser.add_argument("--update-pcloud", action="store_true")
-
-
-    # create the parser for the "cmd" command:
-    src = subparsers.add_parser("cmd",
-        help="execute a script given by the current config")
-
-    src.add_argument("script",
-        help=f'name of a script given in _config_:\
-            {[i for i in _config_["scripts"].keys()]}')
-
-    def _exec(args):
-        cmd = _config_["scripts"][f"{args.script}"]
-        echo("bash:$", cmd)
-        subproc.bash(cmd)
-
-    src.set_defaults(func=_exec)
-
-
-    # create the parser for the "start" command:
-    start = subparsers.add_parser("start",
-        help="start required services for running webapps")
-
-    start.add_argument("-x","--mongo-disabled",action="store_true",
-        help="start without the mongo database server")
-
-    start.add_argument("-a","--webapp",action="store_true",
-        help="start within the webbrowser as an app")
-
-    start.add_argument("-c","--cherrypy",action="store_true",
-        help="start cherrypy as an extra webserver for static contents")
+    @classmethod
+    def sub(cls,*args,**kwargs):
+        cls.cur = args[0]
+        cls.dict[args[0]]=cls.subparser.add_parser(*args,**kwargs)
     
-    start.add_argument("-m","--multi-threading",action="store_true",
-        help="start uvicorn webserver allowing multi-threading")
+    @classmethod
+    def set(cls, func):
+        cls.dict[cls.cur].set_defaults(func=func)
 
-    start.set_defaults(func= lambda args: quickstart())
-
-
-    # create the parser for the "mkdocs" command:
-    mdoc = subparsers.add_parser("mkdocs",
-        help="build html documentation from markdown files")
-    
-    mdoc.add_argument("-o","--open",action="store_true",
-        help="open documentation in webbrowser after building it")
-   
-    mdoc.set_defaults(func= lambda args: mkdocs())
-
-
-    # create the parser for the "run-cherrypy" command:
-    cherry = subparsers.add_parser("run-cherrypy",
-        help="run cherrypy webserver for serving static contents")
-
-    cherry.set_defaults(func= lambda args: CherryPy.start(webapp))
-
-
-    global argv
-    argv = parser.parse_args()
-
-    # update _config_ from json conf file when required:
-    if argv.conffile and _.conffile: 
-        with open(_.conffile) as fi:
-            _config_.update(json.load(fi))
-
-    # update current settings when required:
-    _.verbosity = getattr(argv, "verbosity", _.verbosity)
-    _.webapp = getattr(argv, "webapp", _.webapp)
-
-    global mongo_disabled, cherrypy_enabled, multi_threading
-    mongo_disabled = getattr(argv, "mongo_disabled", mongo_disabled)
-    cherrypy_enabled = getattr(argv, "cherrypy", cherrypy_enabled)
-    multi_threading = getattr(argv, "multi_threading", multi_threading)
-    
-    return argv
-
-
-def init():
-    """ init a new sweetheart project """
-
-    from urllib.parse import urljoin
-
-    # ensure relevant _config_ init:
-    #FIXME: allow custom project initialization
-    assert _project_ == "sweetheart"
-
-    # start install process:
-    print("\n[SWEETHEART] init process is starting now")
-    print("root privileges are required to continue")
-    print("an internet connexion is required for downloads")
-    print("\nINIT step1: install required packages...\n")
-    subproc.run([
-        "sudo","apt","install",
-
-            "python3-venv",
-            "mongodb",
-            "xterm",
-            #"git",
-            "npm",
-            "node-typescript",
-            #"node-vue",
-            "libjs-vue",
-            "libjs-highlight.js",
-            "libjs-bootstrap4",  
-        ])
-    print("\nINIT step2: creating directories...")
-    subproc.bash("sudo mkdir /opt/sweetheart")
-    subproc.bash("sudo mkdir /opt/sweetheart/configuration")
-    subproc.bash("sudo mkdir /opt/sweetheart/database")
-    subproc.bash("sudo mkdir /opt/sweetheart/documentation")
-    subproc.bash("sudo mkdir /opt/sweetheart/programs")
-    subproc.bash("sudo mkdir /opt/sweetheart/programs/scripts")
-    subproc.bash("sudo mkdir /opt/sweetheart/webpages")
-    subproc.bash("sudo mkdir /opt/sweetheart/webpages/bottle_templates")
-    subproc.bash("sudo mkdir /opt/sweetheart/webpages/markdown_docs")
-    subproc.bash("sudo mkdir /opt/sweetheart/webpages/usual_resources")
-    subproc.bash("sudo chmod 777 -R /opt/sweetheart")
-
-    subproc.bash(
-        "ln --symbolic /usr/share/javascript \
-        /opt/sweetheart/webpages/javascript_libs" )
-
-    print("\nINIT step3: building python env...\n")
-    subproc.bash("python3 -m venv /opt/sweetheart/programs/envPy")
-    subproc.run([
-        "/opt/sweetheart/programs/envPy/bin/python3","-m",
-        "pip","install",
-
-            "sweetheart",
-            "pymongo",
-            "cherrypy",
-            "uvicorn",
-            "aiofiles",#NOTE: required with starlette
-            "bottle",
-            "mistune",
-            "mkdocs-material",
-            #"openpyxl",
-            *_config_["web_framework"].split()
-        ])
-    print("\nINIT step4: downloading resources...\n")
-
-    os.chdir("/opt/sweetheart/webpages/usual_resources")
-    for url in [
-        "https://raw.githubusercontent.com/alsacreations/KNACSS/master/css/knacss.css",
-        "https://www.w3schools.com/w3css/4/w3.css" ]:
-        print("download file:", url)
-        subproc.run(["wget","-q","--no-check-certificate",url])
-
-    pcloud = lambda file: urljoin(_config_["cloud_public"], file)
-
-    for file, path in _.copyfiles.items():
-        print("download file:", pcloud(file))
-        os.chdir(path.replace(_project_, "sweetheart"))#!
-        subproc.run(["wget","-q","--no-check-certificate", pcloud(file)])
-
-    print("\nINIT step5: downloading node modules...\n")
-    os.chdir("/opt/sweetheart/webpages")
-    subproc.bash("npm init --yes")
-    subproc.run([
-        "npm","install",
-
-            #NOTE: brython could be installed too as python package with pip
-            "brython"
-        ])
-    print("\nINIT step6: provide local bash commands...\n")
-    os.chdir("/opt/sweetheart/programs/scripts")
-
-    with open("sweet","w") as fo:
-        fo.write("\n".join((
-            "#!/bin/sh",
-            "/opt/sweetheart/programs/envPy/bin/python3 -m sweet $*",
-        )) )
-
-    subproc.bash("sudo ln --symbolic \
-        /opt/sweetheart/programs/scripts/sweet /usr/local/bin/")
-    subproc.bash("sudo chmod 777 /usr/local/bin/sweet")
-
-    # start uvicorn webserver allowing multi-threading
-    # $ uvicorn sweet:app
-    with open("uvicorn","w") as fo:
-        fo.write("\n".join((
-            f"#!/opt/{_project_}/programs/envPy/bin/python3",
-            "from os import chdir",
-            "from sys import argv",
-            "from uvicorn import run",
-            f"chdir({_config_['working_dir']})",
-            f"run(argv[1],host='{_.uargs['host']}',port={_.uargs['port']})",
-        )) )
-
-    subproc.bash(f"sudo ln --symbolic \
-        /opt/{_project_}/programs/scripts/uvicorn /usr/local/bin/")
-    subproc.bash("sudo chmod 777 /usr/local/bin/uvicorn")
+    @classmethod
+    def parse(cls):
+        return cls.parser.parse_args()
 
 
 if __name__ == "__main__":
 
     # build the Command Line Interface
-    # will launch the "init" process if required before modules import
-    argv = cli()
+    # will launch here early processes before modules import
+    cli = CommandLine()
 
-    if argv.update_pcloud:
-        cloud.update_files()
+    cli.add("-cf","--conffile",action="store_true",
+        help="load config from the 'sweet.json' configuration file")
 
-    if argv.edit_config:
-        _.edit()
+    cli.add("-ai","--machine-learning",action="store_true",
+        help="enable machine learning capabilities(AI)")
+        
+    cli.add("-py","--python-venv",action="store_true",
+        help="execute python3 in virtual env built for sweetheart")
 
-    if argv.venv:
+    cli.add("--init",action="store_true",
+        help="launch init process for building new sweetheart project")
+
+    cli.add("--edit-config",action="store_true",
+        help="provide a default configuration json file")
+
+    #FIXME: provisional dev tool:
+    cli.add("--update-pcloud",action="store_true")
+
+
+    # create the parser for the "sh" command:
+    cli.sub("sh",help="execute script given by the current config")
+    cli.set(subproc.exec)
+
+    cli.add("script",help=f'name of a script given in _config_:\
+        {[i for i in _config_["scripts"].keys()]}')
+
+
+    # set the subparser for the 'book' command:
+    cli.sub("book",help="provide nice documentation from markdown files")
+    cli.set(lambda args: mdbook())
+
+    cli.add("-o","--open",action="store_true",
+        help="open documentation within webbrowser")
+
+    cli.add("-b","--build",action="store_true",
+        help="build html documentation from markdown files")
+
+
+    # create the parser for the "cli" command:
+    cli.sub("cli",help="cli required services for running webapps")
+    cli.set(lambda args: quickstart())
+
+    cli.add("-x","--mongo-disabled",action="store_true",
+        help="cli without the mongo database server")
+
+    cli.add("-a","--webapp",action="store_true",
+        help="cli within the webbrowser as an app")
+
+    cli.add("-c","--cherrypy",action="store_true",
+        help="cli cherrypy as an extra webserver for static contents")
+
+    cli.add("-m","--multi-threading",action="store_true",
+        help="cli uvicorn webserver allowing multi-threading")
+
+
+    # create the parser for the "run-cherrypy" command:
+    cli.sub("run-cherrypy",
+        help="run cherrypy webserver for serving static contents")
+    cli.set(lambda args: CherryPy.cli(webapp))
+
+
+    argv = cli.parse()
+
+    # update _config_ from json conf file when required:
+    if argv.conffile: ConfigAccess.update()
+        
+    # update current settings when required:
+    ConfigAccess.verbose = getattr(argv, "verbose", _.verbose)
+    ConfigAccess.webapp = getattr(argv, "webapp", _.webapp)
+
+    mongo_disabled = getattr(argv, "mongo_disabled", mongo_disabled)
+    cherrypy_enabled = getattr(argv, "cherrypy", cherrypy_enabled)
+    multi_threading = getattr(argv, "multi_threading", multi_threading)
+    AI_enabled = getattr(argv, "machine_learning", AI_enabled)
+    
+    # start early processes when required:
+    if argv.update_pcloud: cloud.update_files()
+    if argv.edit_config: ConfigAccess.edit()
+    if argv.init: ini()
+
+    # start standalone action when required:
+    if argv.python_venv:
         subproc.bash(_config_["sh_venv"])
-        quit()
-
-    if argv.init:
-        init()
         quit()
 
 
@@ -495,7 +612,7 @@ if __name__ == "__main__":
 
 try:
     import cherrypy
-    _.cherrypy = True
+    ConfigAccess.cherrypy = True
 
     class CherryPy:
         """provide a namespace for cherrypy facilities
@@ -668,8 +785,8 @@ from starlette.responses import HTMLResponse, FileResponse
 from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
-#import sklearn
-echo("AI not implemented within current config", mode="stack")
+if not AI_enabled:
+    echo("AI not implemented within current config", mode="stack")
 
 ###############################################################################
 ###############################################################################
@@ -720,7 +837,7 @@ def html(source:str= "WELCOME", **kwargs):
     raise ValueError("invalid source argument calling html()")
 
 
-# convenient function for starting a webapp
+# convenient function for starting webapp
 def quickstart(routes=None, endpoint=None):
     """start webapp on ASGI web server
     include a default routing settings for the webpages directory"""
@@ -850,22 +967,20 @@ welcome = lambda request: html("WELCOME")
  ##########  DOCUMENTATION FACILITIES ########################################
 #############################################################################
 
-def mkdocs(working_dir=None):
-    """build static documentation from markdown files
-    TODO: mkdocs to replace by an integrated sweetheart document generator"""
+def mdbook(working_dir=None):
+    """build static documentation from markdown files"""
 
     # set the current working directory:
     if not working_dir: working_dir=_config_["docs_dir"]
     os.chdir(working_dir)
     echo("set working directory:", os.getcwd())
 
-    # check if mkdocs.yml is existing and create it if not:
-    if not os.path.isfile(
-        os.path.join(_config_["docs_dir"],"mkdocs.yml")):
-        subproc.run([_py3_,"-m","mkdocs","new","."])
+    # check if a doc is existing and create it if not:
+    if not os.path.isfile(os.path.join(working_dir,"book.toml")):
+        subproc.run(["mdbook","init"])
 
     # build static docs website:
-    subproc.run([_py3_,"-m","mkdocs","build"])
+    subproc.run(["mdbook","build"])
 
     # open static docs website:
     if hasattr(argv,"open") and argv.open:
@@ -883,31 +998,30 @@ if __name__ == "__main__":
         and not argv.edit_config :
 
         # inform about current version:
-        print("* sweet.py running version:", __version__)
-        print("* written by ", __author__)
-        print("* shared under CeCILL-C FREE SOFTWARE LICENSE AGREEMENT")
+        verbose("sweet.py running version:", __version__)
+        verbose("written by ", __author__)
+        verbose("shared under CeCILL-C FREE SOFTWARE LICENSE AGREEMENT")
 
         # provide the available public objects list:
-        if _.verbosity:
+        if _.verbose == 2:
 
             objects = dict( (k,v) for k,v in globals().items() \
                 if k[0] != "_" and not repr(v).startswith("<module") )
 
-            print("--verbosity  available objects provided by sweet.py:")
+            print("\navailable objects provided by sweet.py:\n")
             import pprint
-            print(); pprint.pprint(objects); print()
+            pprint.pprint(objects); print()
 
         # release stacked messages:
         echo(mode="release")
+        echo("NEW: make nice docs at the speedlight with rust/mdbook")
 
-        # adjust config and settings:
-        if cherrypy_enabled and not _.cherrypy:
-            cherrypy_enabled = False
+        # force config and settings:
+        if not _.cherrypy: cherrypy_enabled = False
 
         # inform about config status:
-        if _.verbosity and _project_ != "sweetheart":
-            echo(f"'_config_' built for the '{_project_}' project directory")
-            verbose("configuration initialized from PWD:", _dir_)
+        if _.verbose and _project_ != "sweetheart":
+            echo(f"config built for the {_dir_} project directory")
 
     # execute dedicated function related to the cli:
     argv.func(argv)
