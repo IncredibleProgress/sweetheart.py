@@ -13,9 +13,10 @@ mongo_disabled = False
 cherrypy_enabled = False
 multi_threading = False
 
-# allow setting of 2 webservers respectively for data and statics
+# allow setting of 3 webservers respectively for data, statics, mdbook
 async_host = "http://127.0.0.1:8000"# uvicorn webserver
 static_host = "http://127.0.0.1:8080"# cherrypy webserver
+book_host = "http://127.0.0.1:3000"# serve mdbook (rust lib)
 
 
 # early import:
@@ -48,19 +49,25 @@ _config_ = {
     "working_dir": f"/opt/{_project_}/webpages",
     "docs_dir": f"/opt/{_project_}/documentation",
     
-    "ai_modules": "sklearn",# python3 modules
-    "web_framework": "starlette",# starlette|fastapi
+    "webbrowser": "msedge.exe",
+    "ai_modules": "sklearn",# selected py3 modules
+    "web_framework": "starlette",# select py3 module: starlette|fastapi
     "templates_dir": "bottle_templates",
     "templates_settings" : {
 
         "_default_libs_": "knacss py",
         "_static_": "",# ""=disabled
         "_async_": async_host,
+        "_book_": book_host,# {async_host}/document/welcome
     },
+    "url_webapp": async_host,
+    "url_book": f"\\\\wsl$\\Ubuntu\\opt\\{_project_}\\documentation\\book\\index.html",
+
+    ## set cherrypy default url segments configs:
     "cherrypy": {
-        # set default url segments configs:
         "/": f"/opt/{_project_}/configuration/cherrypy.conf",
     },
+
     ## database settings:
     "db_host": "localhost",
     "db_port": 27017,
@@ -72,11 +79,7 @@ _config_ = {
     "display": "DISPLAY=:0",
     "terminal": "winterm",# xterm|winterm
 
-    "sh_venv": _py3_,
-    "sh_webapp": f"cmd.exe /c start msedge.exe --app={async_host}",
-    "sh_cherrypy":f"{_py3_} -m sweet run-cherrypy",
-    "sh_opendocs": f"cmd.exe /c start msedge.exe --app=\
-\\\\wsl$\\Ubuntu\\opt\\{_project_}\\documentation\\book\\index.html",
+    "sh_cherrypy": f"{_py3_} -m sweet run-cherrypy",
 
     "scripts": {
         "hello": "echo welcome to sweetheart!"
@@ -167,10 +170,18 @@ class ConfigAccess:
     cherrypy = False
 
     # uvicorn arguments dict:
+    #NOTE: used for starting uvicorn webserver
     uargs = {
         "host": async_host.split(":")[1].strip("/"),
         "port": int(async_host.split(":")[2]),
         "log_level": "info" }
+
+    # webbrowser shell commands:
+    webbrowsers = {
+        "msedge.exe": f"cmd.exe /c start msedge.exe --app=",
+        "brave.exe": f"cmd.exe /c start brave.exe --app=",
+        "firefox.exe": f"cmd.exe /c start firefox.exe --app=",
+    }
     
     def __init__(self, conffile:str):
         """allow selection of json configuration file"""
@@ -251,7 +262,7 @@ class subproc:
     >>> subproc.run(["list","of","bash","intruc"])
     >>> subproc.service("command line")
     """
-    bash = lambda s: subprocess.run(s.split())
+    bash = lambda *args,**kwargs:subprocess.run(*args,shell=True,**kwargs)
     run = subprocess.run
 
     @staticmethod
@@ -271,11 +282,21 @@ class subproc:
         assert _config_["terminal"] in "xterm|winterm"
 
     @classmethod
-    def exec(cls, args):
+    def exec(cls,args):
         cmd = _config_["scripts"][f"{args.script}"]
         echo("exec bash:$", cmd)
+
+        # stop here any 'sudo' cmd given within 'script':
+        #FIXME: make it safer
+        assert "sudo" in cmd
+
         cls.bash(cmd)
 
+    @classmethod
+    def webbrowser(cls,url):
+        cmd = _.webbrowsers[ _config_["webbrowser"] ]
+        if not url[0] in ["'",'"']: url= f"'{url}'"
+        cls.bash( cmd + url )
 
     @classmethod
     def mongod(cls):
@@ -368,8 +389,9 @@ class ini:
             f"/opt/{_project_}/webpages/javascript_libs"])
 
         # build documentation directory:
-        #FIXME: '--force' option seems not working
-        ini.sh(["mdbook","init","--force",_config_["docs_dir"]])
+        ini.label("create an empty mdbook (rust)")
+        ini.sh(["mdbook","init","--force",_config_["docs_dir"]],
+            capture_output=True, text=True, input="n")
 
         ini.label("build python3 virtual env")
         ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/envPy"])
@@ -380,7 +402,7 @@ class ini:
         os.chdir(f"/opt/{_project_}/webpages")
 
         ini.label("install node modules")
-        ini.sh(["npm","init","--yes"])
+        ini.sh("npm -q init --yes",shell=True)
         ini.npm(_config_["npm-install"])
 
         # change current working directory:
@@ -440,13 +462,15 @@ run(argv[1],host='{_.uargs["host"]}',port={_.uargs["port"]})
         
     @classmethod
     def mkdirs(cls,data:list):
-        for pth in data: cls.sh(["sudo","mkdir",pth])
+        for pth in data: 
+            verbose(f"mkdir {pth}")
+            cls.sh(["sudo","mkdir",pth])
     
     @classmethod
     def wget(cls,data:list):
         # download files using 'wget'
         for url in data:
-            
+            verbose(f"download file: {url}")
             cls.sh(["wget","-q","--no-check-certificate",url])
     
     @classmethod
@@ -481,9 +505,7 @@ class CommandLine:
 
     def __init__(self):
         cls = CommandLine
-
-        assert cls.locker == 0
-        cls.locker = 1
+        assert cls.locker == 0; cls.locker = 1
 
         import argparse
         cls.parser= argparse.ArgumentParser()
@@ -539,7 +561,7 @@ if __name__ == "__main__":
     cli.add("--update-pcloud",action="store_true")
 
 
-    # create the parser for the "sh" command:
+    # create the subparser for the "sh" command:
     cli.sub("sh",help="execute script given by the current config")
     cli.set(subproc.exec)
 
@@ -547,7 +569,7 @@ if __name__ == "__main__":
         {[i for i in _config_["scripts"].keys()]}')
 
 
-    # set the subparser for the 'book' command:
+    # creat the subparser for the 'book' command:
     cli.sub("book",help="provide nice documentation from markdown files")
     cli.set(lambda args: mdbook())
 
@@ -558,8 +580,8 @@ if __name__ == "__main__":
         help="build html documentation from markdown files")
 
 
-    # create the parser for the "cli" command:
-    cli.sub("cli",help="cli required services for running webapps")
+    # create the subparser for the "start" command:
+    cli.sub("start",help="cli required services for running webapps")
     cli.set(lambda args: quickstart())
 
     cli.add("-x","--mongo-disabled",action="store_true",
@@ -575,10 +597,10 @@ if __name__ == "__main__":
         help="cli uvicorn webserver allowing multi-threading")
 
 
-    # create the parser for the "run-cherrypy" command:
+    # create the subparser for the "run-cherrypy" command:
     cli.sub("run-cherrypy",
         help="run cherrypy webserver for serving static contents")
-    cli.set(lambda args: CherryPy.cli(webapp))
+    cli.set(lambda args: CherryPy.start(webapp))
 
 
     argv = cli.parse()
@@ -602,7 +624,7 @@ if __name__ == "__main__":
 
     # start standalone action when required:
     if argv.python_venv:
-        subproc.bash(_config_["sh_venv"])
+        subproc.bash(_py3_)
         quit()
 
 
@@ -785,14 +807,14 @@ from starlette.responses import HTMLResponse, FileResponse
 from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
-if not AI_enabled:
-    echo("AI not implemented within current config", mode="stack")
+if AI_enabled: exec(f"import {_config_['ai_modules']}")
+else: echo("AI not implemented within current config", mode="stack")
 
 ###############################################################################
 ###############################################################################
 
 # convenient function for rendering html content:
-def html(source:str= "WELCOME", **kwargs):
+def html(source:str="WELCOME",**kwargs):
 
     if source == "WELCOME":
         # provide a welcome message:
@@ -804,13 +826,13 @@ def html(source:str= "WELCOME", **kwargs):
             <h3>sweetheart</h3>
             <p>a supercharged heart for the non-expert hands</p>
             <p>be aware that you could fall in love with it</p>
-            <p><a href="{async_host}/document/welcome" 
-                class="btn" role="button">go farer ahead now !</a></p>
+            <p><a href="{book_host}"
+                class="btn" role="button">Get Started Now!</a></p>
             <p><br><br><br><em>this message appears because there
                 was nothing else to render here</em></p>
             </div>""")
 
-    template_path = os.path.join(_config_["templates_dir"], source)
+    template_path = os.path.join(_config_["templates_dir"],source)
     if os.path.isfile(template_path):
 
         # render html content from given bottle template:
@@ -822,6 +844,7 @@ def html(source:str= "WELCOME", **kwargs):
     elif source.endswith(".md") and os.path.isfile(source):
 
         # render html content from given markdown file:
+        #FIXME: deprecated
         with open(source) as file:
             return HTMLResponse(template(
                 os.path.join(_config_["templates_dir"],"document.txt"),
@@ -887,8 +910,10 @@ def quickstart(routes=None, endpoint=None):
         assert isinstance(route,Route) or isinstance(route,Mount)
     
     # auto start the webapp within webbrowser:
-    if _.webapp: os.system(_config_["sh_webapp"])
-
+    if _.webapp: 
+        mdbook.serve(_config_['docs_dir'])
+        subproc.webbrowser(_config_["url_webapp"])
+    
     # at last start the uvicorn webserver:
     if multi_threading:
         #FIXME: only for test
@@ -907,6 +932,7 @@ class WebApp(UserList):
         return html("login.txt")
 
     def document(self, request):
+        #FIXME: deprecated
         filename = request.path_params["filename"]
         return html(f"markdown_docs/{filename}.md")
     
@@ -967,24 +993,50 @@ welcome = lambda request: html("WELCOME")
  ##########  DOCUMENTATION FACILITIES ########################################
 #############################################################################
 
-def mdbook(working_dir=None):
-    """build static documentation from markdown files"""
+class mdbook:
+    """provide static documentation from markdown files"""
 
-    # set the current working directory:
-    if not working_dir: working_dir=_config_["docs_dir"]
-    os.chdir(working_dir)
-    echo("set working directory:", os.getcwd())
+    def __init__(self,working_dir=None):
+        """command line interface: sweet book -> mdbook()"""
 
-    # check if a doc is existing and create it if not:
-    if not os.path.isfile(os.path.join(working_dir,"book.toml")):
-        subproc.run(["mdbook","init"])
+        # set the current working directory:
+        if not working_dir: working_dir=_config_["docs_dir"]
+        os.chdir(working_dir)
+        echo("set working directory:", os.getcwd())
 
-    # build static docs website:
-    subproc.run(["mdbook","build"])
+        # build static docs website:
+        if hasattr(argv,"build") and argv.build:
+            mdbook.init(working_dir)
+            mdbook.build()
 
-    # open static docs website:
-    if hasattr(argv,"open") and argv.open:
-        subproc.bash(_config_["sh_opendocs"])
+        # open static docs website:
+        if hasattr(argv,"open") and argv.open:
+            mdbook.open()
+
+    @staticmethod
+    def init(working_dir):
+
+        # check if a doc is existing and create it if not:
+        if not os.path.isfile(os.path.join(working_dir,"book.toml")):
+            #FIXME: input="n" means git features not activated
+            subproc.run(["mdbook","init","--force",working_dir],
+                capture_output=True, text=True, input="n")
+
+    @staticmethod
+    def build():
+        subproc.run(["mdbook","build"])
+
+    @staticmethod
+    def open():
+        subproc.webbrowser(_config_["url_book"])
+
+    @staticmethod
+    def serve(directory=None):
+        if not directory: directory= _config_['docs_dir']
+        #FIXME: rust toolchain not implemented
+        subproc.service(
+            f"~/.cargo/bin/mdbook serve {directory}" )
+        pass
     
 
   #############################################################################
@@ -993,28 +1045,31 @@ def mdbook(working_dir=None):
 
 if __name__ == "__main__":
     
-    if not hasattr(argv,"script") \
-        and not argv.update_pcloud \
-        and not argv.edit_config :
+    if not hasattr(argv,"script"):
 
         # inform about current version:
         verbose("sweet.py running version:", __version__)
         verbose("written by ", __author__)
         verbose("shared under CeCILL-C FREE SOFTWARE LICENSE AGREEMENT")
 
-        # provide the available public objects list:
         if _.verbose == 2:
 
+            # provide the available public objects list:
             objects = dict( (k,v) for k,v in globals().items() \
                 if k[0] != "_" and not repr(v).startswith("<module") )
 
-            print("\navailable objects provided by sweet.py:\n")
+            print("\n**available objects provided by sweet.py:\n")
             import pprint
             pprint.pprint(objects); print()
 
+            # give the current wsl statement:
+            print("**current WSL statement:\n")
+            subproc.bash("cmd.exe /c 'wsl -l -v'")
+            print("")
+
         # release stacked messages:
         echo(mode="release")
-        echo("NEW: make nice docs at the speedlight with rust/mdbook")
+        echo("NEW! make incredible docs with rust and mdbook")
 
         # force config and settings:
         if not _.cherrypy: cherrypy_enabled = False
