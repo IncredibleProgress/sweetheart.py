@@ -19,7 +19,7 @@ static_host = "http://127.0.0.1:8080"# cherrypy webserver
 book_host = "http://127.0.0.1:3000"# serve mdbook (rust lib)
 
 
-# early imports:
+# early import:
 import os, subprocess, json
 from collections import UserList, UserDict
 
@@ -50,7 +50,7 @@ _config_ = {
     "working_dir": f"/opt/{_project_}/webpages",
     "webbrowser": "msedge.exe",
 
-    "ai_modules": "sklearn",# selected py3 modules
+    "ai_modules": "sklearn",# select py3 imports
     "web_framework": "starlette",# starlette|fastapi
 
     "templates_dir": "bottle_templates",
@@ -59,7 +59,7 @@ _config_ = {
         "_default_libs_": "knacss py",
         "_static_": "",# ""=disabled
         "_async_": async_host,
-        "_book_": book_host,
+        "_book_": "",# ""=disabled,
     },
 
     ## set cherrypy default url segments configs:
@@ -79,10 +79,9 @@ _config_ = {
     "terminal": "winterm",# xterm|winterm
 
     "scripts": {
-        "welcome": "sudo echo welcome to sweetheart !",
     },
 
-    ## --init settings:
+    ## settings for the --init process:
     "apt-install": [
         "python3-venv",
         "rustc",
@@ -99,6 +98,7 @@ _config_ = {
     "cargo-install": [
         "mdbook",
         "mdbook-toc",
+        #"mdbook-mermaid",
     ],
     "pip-install": [
         "sweetheart",
@@ -119,22 +119,16 @@ class ConfigAccess(UserDict):
     """provide a convenient _config_ accessor tool"""
 
     # general settings:
-    webapp = False # ENABLE= set url
-    mdbook = False
-    cherrypy = False
     verbose = False
+    cherrypy = False
+    webapp = False # ENABLE= set url
+    mdbook = _config_["templates_settings"].get("_book_")
 
     # uvicorn arguments dict:
     uargs = {
         "host": async_host.split(":")[1].strip("/"),
         "port": int(async_host.split(":")[2]),
         "log_level": "info" }
-
-    # webbrowser shell commands:
-    webbrowsers = {
-        "msedge.exe": f"cmd.exe /c start msedge.exe --app=",
-        "brave.exe": f"cmd.exe /c start brave.exe --app=",
-        "firefox.exe": f"cmd.exe /c start firefox.exe --app=" }
     
     locker = 0
     def __init__(self, conffile:str=None):
@@ -149,64 +143,76 @@ class ConfigAccess(UserDict):
         # deep config settings:
         self.data = {
             
-            "install": {
-                "setuptools": f"{_py3_} -m pip install setuptools twine wheel",
-                "pyxl": f"{_py3_} -m pip install openpyxl panda",
-            },
+        "install": {
+            # pip install:
+            "setuptools": f"{_py3_} -m pip install setuptools twine wheel",
+            "pyxl": f"{_py3_} -m pip install openpyxl panda" },
 
-            "run": {
-                #"bdist": f"{_py3_} setup.py sdist bdist_wheel",
-                #"upload": f"{_py3_} -m twine upload dist/*"
-            },
+        "run": {
+            # webbrowsers shell commands:
+            "webbrowser": {
+                "msedge.exe": f"cmd.exe /c start msedge.exe --app=",
+                "brave.exe": f"cmd.exe /c start brave.exe --app=",
+                "firefox.exe": f"cmd.exe /c start firefox.exe --app=" },
+                
+            #"bdist": f"{_py3_} setup.py sdist bdist_wheel",
+            #"upload": f"{_py3_} -m twine upload dist/*"
+        },
 
-            "__basedirs__": """[
-                # given here for ini.__init__()
-                f"/opt/{_project_}",
-                f"/opt/{_project_}/configuration",
-                f"/opt/{_project_}/database",
-                f"/opt/{_project_}/documentation",
-                f"/opt/{_project_}/programs",
-                f"/opt/{_project_}/programs/scripts",
-                f"/opt/{_project_}/webpages",
-                f"/opt/{_project_}/webpages/bottle_templates",
-                f"/opt/{_project_}/webpages/markdown_files",
-                f"/opt/{_project_}/webpages/markdown_book",
-                f"/opt/{_project_}/webpages/usual_resources"
-            ]""",
-            
-            "__copyfiles__": """{
-                # given here for ini.__init__()
-                # provided config files:
-                "cherrypy.conf": f"/opt/{_project_}/configuration",
-                # provided templates:
-                "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
-                # provided documents:
-                "welcome.md": f"/opt/{_project_}/documentation/src",
-                # provided resources:
-                "sweet.HTML": f"/opt/{_project_}/webpages",
-                "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
-                "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
-            }""",
-        }
+        "__basedirs__": """[
+            # given here for ini.__init__()
+            f"/opt/{_project_}",
+            f"/opt/{_project_}/configuration",
+            f"/opt/{_project_}/database",
+            f"/opt/{_project_}/documentation",
+            f"/opt/{_project_}/documentation/src",
+            f"/opt/{_project_}/programs",
+            f"/opt/{_project_}/programs/scripts",
+            f"/opt/{_project_}/webpages",
+            f"/opt/{_project_}/webpages/bottle_templates",
+            f"/opt/{_project_}/webpages/markdown_files",
+            f"/opt/{_project_}/webpages/markdown_book",
+            f"/opt/{_project_}/webpages/usual_resources"
+        ]""",
+        
+        "__copyfiles__": """{
+            # given here for ini.__init__()
+            # provided config files:
+            "cherrypy.conf": f"/opt/{_project_}/configuration",
+            # provided templates:
+            "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
+            # provided documents:
+            "welcome.md": f"/opt/{_project_}/documentation/src",
+            # provided resources:
+            "sweet.HTML": f"/opt/{_project_}/webpages",
+            "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
+            "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
+        }""",
+    }
 
+    @property
+    def webbrowser(self) -> str:
+        select = _config_["webbrowser"]
+        return self.data["run"]["webbrowser"][select]
     @property
     def copyfiles(self) -> dict:
-        return eval(self["__copyfiles__"])
+        return eval(self.data["__copyfiles__"])
     @property
     def basedirs(self) -> list:
-        return eval(self["__basedirs__"])
+        return eval(self.data["__basedirs__"])
     
-    def __getitem__(self,keys:str):
-        # look for key in self.data and return it if existing:
-        item = self.data.get(keys)
-        if item: return item
+    # "key1.key2" -> ["key1"]["key2"]
+    ksplit = lambda keys:\
+        "".join([f"['{key}']" for key in keys.split(".")])
 
-        # in other cases look within _config_:
-        # _["key1.key2"] -> _config_["key1"]["key2"]
-        verbose("get _config_ item via ConfigAcess:", keys)
-        ksplit = lambda keys:\
-            "".join([f"['{key}']" for key in keys.split(".")])
-        return eval( f"_config_{ksplit(keys)}" )
+    def __getitem__(self,keys:str):
+        try:
+            # look for keys in self.data:
+            return eval(f"self.data{ConfigAccess.ksplit(keys)}")
+        finally:
+            # if not, look for keys within _config_:
+            verbose("get _config_ item via ConfigAcess:", keys)
+            return eval(f"_config_{ConfigAccess.ksplit(keys)}")
 
     def __setitem__(self,key,val):
         raise NotImplementedError
@@ -221,7 +227,6 @@ class ConfigAccess(UserDict):
     def update(cls):
         """update _config_ from setted json conffile"""
         assert cls.conffile
-        #FIXME: allow custom json config file
         with open(cls.conffile) as fi:
             _config_.update(json.load(fi))
 
@@ -263,7 +268,7 @@ class subproc:
     >>> subproc.run(["list","of","bash","intruc"])
     >>> subproc.service("command line")
     """
-    bash = lambda *args,**kwargs:subprocess.run(*args,shell=True,**kwargs)
+    bash = lambda *args,**kwargs: subprocess.run(*args,shell=True,**kwargs)
     run = subprocess.run
 
     @staticmethod
@@ -284,8 +289,9 @@ class subproc:
 
     @classmethod
     def exec(cls,args):
-        cmd:str = _config_["scripts"][f"{args.script}"]
-        echo("exec bash:$", cmd)
+        cmd:str = _config_["scripts"].get(
+            f"{args.script}","echo invalid script name given")
+        echo("bash:$", cmd)
 
         # stop here any 'sudo' cmd given within 'script':
         #FIXME: make it safer
@@ -295,9 +301,8 @@ class subproc:
 
     @classmethod
     def webbrowser(cls,url):
-        cmd = _.webbrowsers[ _config_["webbrowser"] ]
         if not url[0] in ["'",'"']: url= f"'{url}'"
-        cls.bash( cmd + url )
+        cls.bash( _.webbrowser + url )
 
     @classmethod
     def mongod(cls):
@@ -349,16 +354,18 @@ class cloud:
     @staticmethod
     def download(files:dict):
         """downloads files at the right place from a dict
-        files= { "filename": "/destination/path/to/file" }
-        #FIXME: change the current working directory when called"""
+        files= { "filename": "/destination/path/to/file" }"""
 
         from urllib.parse import urljoin
         src = lambda file: urljoin(cloud.public,file)
+        curdir = os.getcwd()
 
         for file, path in files.items():
             verbose("download file:", src(file))
             os.chdir(path)
             subproc.run(["wget","-q","--no-check-certificate",src(file)])
+        
+        os.chdir(curdir)
 
 
 class mdbook:
@@ -477,7 +484,7 @@ class ini:
             fo.write(mdbook.SUMMARY)
 
         ini.label("install node modules")
-        ini.sh("npm -q init --yes",shell=True)
+        ini.sh("npm init --yes",shell=True)
         ini.npm(_config_["npm-install"])
 
         # change current working directory:
