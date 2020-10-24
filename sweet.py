@@ -19,8 +19,9 @@ static_host = "http://127.0.0.1:8080"# cherrypy webserver
 book_host = "http://127.0.0.1:3000"# serve mdbook (rust lib)
 
 
-# early import:
+# early imports:
 import os, subprocess, json
+from collections import UserList, UserDict
 
 # - main modules import are within the WEBAPP FACILITIES section
 # - cherrypy import is within the CHERRYPY FACILITIES section
@@ -42,26 +43,24 @@ _py3_ = f"/opt/{_project_}/programs/envPy/bin/python3"
 # should be updated using _config_.update({ "key": value })
 _config_ = {
 
-    ## set json configuration file path (hardcoded here):
+    ## default json configuration file (harcoded here):
     "__conffile__": f"/opt/{_project_}/configuration/sweet.json",
 
     ## webapps settings:
     "working_dir": f"/opt/{_project_}/webpages",
-    "docs_dir": f"/opt/{_project_}/documentation",
-    
     "webbrowser": "msedge.exe",
+
     "ai_modules": "sklearn",# selected py3 modules
-    "web_framework": "starlette",# select py3 module: starlette|fastapi
+    "web_framework": "starlette",# starlette|fastapi
+
     "templates_dir": "bottle_templates",
     "templates_settings" : {
 
         "_default_libs_": "knacss py",
         "_static_": "",# ""=disabled
         "_async_": async_host,
-        "_book_": book_host,# {async_host}/document/welcome
+        "_book_": book_host,
     },
-    "url_webapp": async_host,
-    "url_book": f"\\\\wsl$\\Ubuntu\\opt\\{_project_}\\documentation\\book\\index.html",
 
     ## set cherrypy default url segments configs:
     "cherrypy": {
@@ -79,15 +78,10 @@ _config_ = {
     "display": "DISPLAY=:0",
     "terminal": "winterm",# xterm|winterm
 
-    "sh_cherrypy": f"{_py3_} -m sweet run-cherrypy",
-
     "scripts": {
-        "hello": "echo welcome to sweetheart!"
-        #"bdist": f"{_py3_} setup.py sdist bdist_wheel",
-        #"upload": f"{_py3_} -m twine upload dist/*",
-        #"pkgtools": f"{_py3_} -m pip install setuptools twine wheel",
+        "welcome": "sudo echo welcome to sweetheart !",
     },
-    
+
     ## --init settings:
     "apt-install": [
         "python3-venv",
@@ -112,9 +106,6 @@ _config_ = {
         "uvicorn",
         "aiofiles",#NOTE: required with starlette
         "bottle",
-        "mistune",
-        #"cherrypy",
-        #"openpyxl",
     ],
     "npm-install": [
         "brython",
@@ -123,54 +114,17 @@ _config_ = {
         "https://raw.githubusercontent.com/alsacreations/KNACSS/master/css/knacss.css",
         "https://www.w3schools.com/w3css/4/w3.css"
     ],
-
-    "__basedirs__": """[
-        # given here for ini.__init__()
-        f"/opt/{_project_}",
-        f"/opt/{_project_}/configuration",
-        f"/opt/{_project_}/database",
-        f"{_config_['docs_dir']}",
-        f"/opt/{_project_}/programs",
-        f"/opt/{_project_}/programs/scripts",
-        f"/opt/{_project_}/webpages",
-        f"/opt/{_project_}/webpages/bottle_templates",
-        f"/opt/{_project_}/webpages/markdown_docs",
-        f"/opt/{_project_}/webpages/usual_resources"
-    ]""",
-
-    ## pcloud settings (for dev purpose):
-    "pmount": "sudo mount -t drvfs p: /mnt/p",
-    "cloud_local": "/mnt/p/Public Folder/sweetheart",
-    "cloud_public": "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetheart/",
-
-    "__copyfiles__": """{
-        # given here for ini.__init__()
-        # provided config files:
-        "cherrypy.conf": f"/opt/{_project_}/configuration",
-        "config.xlaunch": f"/opt/{_project_}/configuration",
-        # provided templates:
-        "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
-        "document.txt": f"/opt/{_project_}/webpages/bottle_templates",
-        # provided documents:
-        "welcome.md": f"/opt/{_project_}/webpages/markdown_docs",
-        # provided resources:
-        "sweet.HTML": f"/opt/{_project_}/webpages",
-        "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
-        "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
-    }""",
 }
-
-class ConfigAccess:
+class ConfigAccess(UserDict):
     """provide a convenient _config_ accessor tool"""
-    locker = 0
 
-    # general settings given within CLI:
-    verbose = False
-    webapp = False
+    # general settings:
+    webapp = False # ENABLE= set url
+    mdbook = False
     cherrypy = False
+    verbose = False
 
     # uvicorn arguments dict:
-    #NOTE: used for starting uvicorn webserver
     uargs = {
         "host": async_host.split(":")[1].strip("/"),
         "port": int(async_host.split(":")[2]),
@@ -180,36 +134,82 @@ class ConfigAccess:
     webbrowsers = {
         "msedge.exe": f"cmd.exe /c start msedge.exe --app=",
         "brave.exe": f"cmd.exe /c start brave.exe --app=",
-        "firefox.exe": f"cmd.exe /c start firefox.exe --app=",
-    }
+        "firefox.exe": f"cmd.exe /c start firefox.exe --app=" }
     
-    def __init__(self, conffile:str):
-        """allow selection of json configuration file"""
-        assert ConfigAccess.locker == 0
-        ConfigAccess.locker = 1
+    locker = 0
+    def __init__(self, conffile:str=None):
+        """final configuration completion
+        allowing json configuration file selection"""
+        cls = ConfigAccess
+        assert cls.locker == 0; cls.locker = 1
 
-        # top-level configuration settings:
-        ConfigAccess.conffile=conffile if os.path.isfile(conffile) else None
-        ConfigAccess.copyfiles_str = _config_["__copyfiles__"]
-        ConfigAccess.basedirs_str = _config_["__basedirs__"]
-        # deactivated configuration settings:
-        del _config_["__conffile__"]
-        del _config_["__copyfiles__"]
-        del _config_["__basedirs__"]
+        # top-level config settings:
+        cls.conffile= conffile if os.path.isfile(conffile) else None
+
+        # deep config settings:
+        self.data = {
+            
+            "install": {
+                "setuptools": f"{_py3_} -m pip install setuptools twine wheel",
+                "pyxl": f"{_py3_} -m pip install openpyxl panda",
+            },
+
+            "run": {
+                #"bdist": f"{_py3_} setup.py sdist bdist_wheel",
+                #"upload": f"{_py3_} -m twine upload dist/*"
+            },
+
+            "__basedirs__": """[
+                # given here for ini.__init__()
+                f"/opt/{_project_}",
+                f"/opt/{_project_}/configuration",
+                f"/opt/{_project_}/database",
+                f"/opt/{_project_}/documentation",
+                f"/opt/{_project_}/programs",
+                f"/opt/{_project_}/programs/scripts",
+                f"/opt/{_project_}/webpages",
+                f"/opt/{_project_}/webpages/bottle_templates",
+                f"/opt/{_project_}/webpages/markdown_files",
+                f"/opt/{_project_}/webpages/markdown_book",
+                f"/opt/{_project_}/webpages/usual_resources"
+            ]""",
+            
+            "__copyfiles__": """{
+                # given here for ini.__init__()
+                # provided config files:
+                "cherrypy.conf": f"/opt/{_project_}/configuration",
+                # provided templates:
+                "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
+                # provided documents:
+                "welcome.md": f"/opt/{_project_}/documentation/src",
+                # provided resources:
+                "sweet.HTML": f"/opt/{_project_}/webpages",
+                "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
+                "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
+            }""",
+        }
 
     @property
     def copyfiles(self) -> dict:
-        return eval(ConfigAccess.copyfiles_str)
+        return eval(self["__copyfiles__"])
     @property
     def basedirs(self) -> list:
-        return eval(ConfigAccess.basedirs_str)
+        return eval(self["__basedirs__"])
     
-    def __getitem__(self, keys:str):
-        ''' _["key1.key2"] -> _config_["key1"]["key2"] '''
-        verbose("get _config_ item via _config_ accessor:", keys)
+    def __getitem__(self,keys:str):
+        # look for key in self.data and return it if existing:
+        item = self.data.get(keys)
+        if item: return item
+
+        # in other cases look within _config_:
+        # _["key1.key2"] -> _config_["key1"]["key2"]
+        verbose("get _config_ item via ConfigAcess:", keys)
         ksplit = lambda keys:\
             "".join([f"['{key}']" for key in keys.split(".")])
         return eval( f"_config_{ksplit(keys)}" )
+
+    def __setitem__(self,key,val):
+        raise NotImplementedError
     
     @classmethod
     def edit(cls):
@@ -220,6 +220,7 @@ class ConfigAccess:
     @classmethod
     def update(cls):
         """update _config_ from setted json conffile"""
+        assert cls.conffile
         #FIXME: allow custom json config file
         with open(cls.conffile) as fi:
             _config_.update(json.load(fi))
@@ -283,12 +284,12 @@ class subproc:
 
     @classmethod
     def exec(cls,args):
-        cmd = _config_["scripts"][f"{args.script}"]
+        cmd:str = _config_["scripts"][f"{args.script}"]
         echo("exec bash:$", cmd)
 
         # stop here any 'sudo' cmd given within 'script':
         #FIXME: make it safer
-        assert "sudo" in cmd
+        assert cmd.find("sudo") == -1
 
         cls.bash(cmd)
 
@@ -324,7 +325,11 @@ class subproc:
 
 class cloud:
     """files management in the cloud"""
-    
+
+    pmount = "sudo mount -t drvfs p: /mnt/p"
+    local = "/mnt/p/Public Folder/sweetheart"
+    public = "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetheart/"
+
     @staticmethod
     def update_files():
         #FIXME: dev tool not for users
@@ -332,11 +337,11 @@ class cloud:
         for filename, path in _.copyfiles.items():
 
             source = os.path.join(path, filename)
-            dest = _config_["cloud_local"]
+            dest = cloud.local
             verbose(source, " -> ", dest)
 
-            if not os.path.isdir(_config_["cloud_local"]):
-                subproc.bash(_config_["pmount"])
+            if not os.path.isdir(cloud.local):
+                subproc.bash(cloud.pmount)
 
             subproc.run(["cp", source, dest])
         echo("all updates done to the pcloud drive")
@@ -348,12 +353,77 @@ class cloud:
         #FIXME: change the current working directory when called"""
 
         from urllib.parse import urljoin
-        src = lambda file: urljoin(_config_["cloud_public"],file)
+        src = lambda file: urljoin(cloud.public,file)
 
         for file, path in files.items():
             verbose("download file:", src(file))
             os.chdir(path)
             subproc.run(["wget","-q","--no-check-certificate",src(file)])
+
+
+class mdbook:
+    """build documentation from markdown files"""
+
+    def __init__(self,working_dir=None):
+        """command line interface: sweet book -> mdbook()"""
+
+        # set the current working directory:
+        if not working_dir: working_dir=_config_["working_dir"]
+        os.chdir(working_dir)
+        echo("set working directory:", os.getcwd())
+
+        # build static docs website:
+        if hasattr(argv,"build") and argv.build:
+            mdbook.init(working_dir)
+            mdbook.build()
+
+        # open static docs website:
+        if hasattr(argv,"open") and argv.open:
+            mdbook.open()
+
+    @staticmethod
+    def init(working_dir):
+
+        # check if a doc is existing and create it if not:
+        if not os.path.isfile(os.path.join(working_dir,"book.toml")):
+            #FIXME: input="n" means git features not activated
+            subproc.run(["mdbook","init","--force",working_dir],
+                capture_output=True, text=True, input="n")
+
+    @staticmethod
+    def build():
+        subproc.run(["mdbook","build"])
+
+    @staticmethod
+    def open():
+        subproc.webbrowser(_config_["static_book"])
+
+    @staticmethod
+    def serve(directory=None):
+        if not directory: directory= _config_["working_dir"]
+        echo("start the mdbook server (rust)")
+        #FIXME: rust toolchain not implemented
+        subproc.service(
+            f"~/.cargo/bin/mdbook serve {directory}" )
+    
+    toml = """
+[book]
+multilingual = false
+src = "markdown_files"
+
+[build]
+build-dir = "markdown_book"
+
+[preprocessor.toc]
+command = "mdbook-toc"
+renderer = ["html"]
+"""
+
+    SUMMARY = """
+# Summary
+
+- [Welcome](./welcome.md)
+"""
 
 
 class ini:
@@ -385,13 +455,12 @@ class ini:
 
         # directories settings:
         ini.sh(["sudo","chmod","777","-R",f"/opt/{_project_}"])
+
         ini.ln(["/usr/share/javascript",
             f"/opt/{_project_}/webpages/javascript_libs"])
 
-        # build documentation directory:
-        ini.label("create an empty mdbook (rust)")
-        ini.sh(["mdbook","init","--force",_config_["docs_dir"]],
-            capture_output=True, text=True, input="n")
+        ini.ln([f"/opt/{_project_}/documentation",
+            f"/opt/{_project_}/webpages/sweet_documentation"])
 
         ini.label("build python3 virtual env")
         ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/envPy"])
@@ -400,6 +469,12 @@ class ini:
 
         # change current working directory:
         os.chdir(f"/opt/{_project_}/webpages")
+
+        # build documentation setting files:
+        with open("book.toml","w") as fo:
+            fo.write(mdbook.toml)
+        with open("markdown_files/SUMMARY.md","w") as fo:
+            fo.write(mdbook.SUMMARY)
 
         ini.label("install node modules")
         ini.sh("npm -q init --yes",shell=True)
@@ -545,8 +620,8 @@ if __name__ == "__main__":
     cli.add("-cf","--conffile",action="store_true",
         help="load config from the 'sweet.json' configuration file")
 
-    cli.add("-ai","--machine-learning",action="store_true",
-        help="enable machine learning capabilities(AI)")
+    cli.add("-ai","--machine-learn",action="store_true",
+        help="enable machine learning capabilities (AI)")
         
     cli.add("-py","--python-venv",action="store_true",
         help="execute python3 in virtual env built for sweetheart")
@@ -585,16 +660,16 @@ if __name__ == "__main__":
     cli.set(lambda args: quickstart())
 
     cli.add("-x","--mongo-disabled",action="store_true",
-        help="cli without the mongo database server")
+        help="start without the mongo database server")
 
     cli.add("-a","--webapp",action="store_true",
-        help="cli within the webbrowser as an app")
+        help="start within the webbrowser as an app")
 
     cli.add("-c","--cherrypy",action="store_true",
-        help="cli cherrypy as an extra webserver for static contents")
+        help="start cherrypy as an extra webserver for static contents")
 
     cli.add("-m","--multi-threading",action="store_true",
-        help="cli uvicorn webserver allowing multi-threading")
+        help="start uvicorn webserver allowing multi-threading")
 
 
     # create the subparser for the "run-cherrypy" command:
@@ -610,7 +685,8 @@ if __name__ == "__main__":
         
     # update current settings when required:
     ConfigAccess.verbose = getattr(argv, "verbose", _.verbose)
-    ConfigAccess.webapp = getattr(argv, "webapp", _.webapp)
+    ConfigAccess.webapp = async_host \
+        if hasattr(argv,"webapp") and argv.webapp else None
 
     mongo_disabled = getattr(argv, "mongo_disabled", mongo_disabled)
     cherrypy_enabled = getattr(argv, "cherrypy", cherrypy_enabled)
@@ -793,13 +869,398 @@ except:
             pass
 
 
+###############################################################################
+ ##########  BOTTLE TEMPLATING ###############################################
+#############################################################################
+# MIT Lisence 
+# https://github.com/bottlepy/bottle/blob/master/bottle.py
+
+# class BottleException(Exception):
+#     """ A base class for exceptions used by bottle. """
+#     pass
+
+# class TemplateError(BottleException):
+#     pass
+
+# class BaseTemplate(object):
+#     """ Base class and minimal API for template adapters """
+#     extensions = ['tpl', 'html', 'thtml', 'stpl']
+#     settings = {}  #used in prepare()
+#     defaults = {}  #used in render()
+
+#     def __init__(self,
+#                  source=None,
+#                  name=None,
+#                  lookup=None,
+#                  encoding='utf8', **settings):
+#         """ Create a new template.
+#         If the source parameter (str or buffer) is missing, the name argument
+#         is used to guess a template filename. Subclasses can assume that
+#         self.source and/or self.filename are set. Both are strings.
+#         The lookup, encoding and settings parameters are stored as instance
+#         variables.
+#         The lookup parameter stores a list containing directory paths.
+#         The encoding parameter should be used to decode byte strings or files.
+#         The settings parameter contains a dict for engine-specific settings.
+#         """
+#         self.name = name
+#         self.source = source.read() if hasattr(source, 'read') else source
+#         self.filename = source.filename if hasattr(source, 'filename') else None
+#         self.lookup = [os.path.abspath(x) for x in lookup] if lookup else []
+#         self.encoding = encoding
+#         self.settings = self.settings.copy()  # Copy from class variable
+#         self.settings.update(settings)  # Apply
+#         if not self.source and self.name:
+#             self.filename = self.search(self.name, self.lookup)
+#             if not self.filename:
+#                 raise TemplateError('Template %s not found.' % repr(name))
+#         if not self.source and not self.filename:
+#             raise TemplateError('No template specified.')
+#         self.prepare(**self.settings)
+
+#     @classmethod
+#     def search(cls, name, lookup=None):
+#         """ Search name in all directories specified in lookup.
+#         First without, then with common extensions. Return first hit. """
+#         if not lookup:
+#             raise depr(0, 12, "Empty template lookup path.", "Configure a template lookup path.")
+
+#         if os.path.isabs(name):
+#             raise depr(0, 12, "Use of absolute path for template name.",
+#                        "Refer to templates with names or paths relative to the lookup path.")
+
+#         for spath in lookup:
+#             spath = os.path.abspath(spath) + os.sep
+#             fname = os.path.abspath(os.path.join(spath, name))
+#             if not fname.startswith(spath): continue
+#             if os.path.isfile(fname): return fname
+#             for ext in cls.extensions:
+#                 if os.path.isfile('%s.%s' % (fname, ext)):
+#                     return '%s.%s' % (fname, ext)
+
+#     @classmethod
+#     def global_config(cls, key, *args):
+#         """ This reads or sets the global settings stored in class.settings. """
+#         if args:
+#             cls.settings = cls.settings.copy()  # Make settings local to class
+#             cls.settings[key] = args[0]
+#         else:
+#             return cls.settings[key]
+
+#     def prepare(self, **options):
+#         """ Run preparations (parsing, caching, ...).
+#         It should be possible to call this again to refresh a template or to
+#         update settings.
+#         """
+#         raise NotImplementedError
+
+#     def render(self, *args, **kwargs):
+#         """ Render the template with the specified local variables and return
+#         a single byte or unicode string. If it is a byte string, the encoding
+#         must match self.encoding. This method must be thread-safe!
+#         Local variables may be provided in dictionaries (args)
+#         or directly, as keywords (kwargs).
+#         """
+#         raise NotImplementedError
+
+# class SimpleTemplate(BaseTemplate):
+#     def prepare(self,
+#                 escape_func=html_escape,
+#                 noescape=False,
+#                 syntax=None, **ka):
+#         self.cache = {}
+#         enc = self.encoding
+#         self._str = lambda x: touni(x, enc)
+#         self._escape = lambda x: escape_func(touni(x, enc))
+#         self.syntax = syntax
+#         if noescape:
+#             self._str, self._escape = self._escape, self._str
+
+#     @cached_property
+#     def co(self):
+#         return compile(self.code, self.filename or '<string>', 'exec')
+
+#     @cached_property
+#     def code(self):
+#         source = self.source
+#         if not source:
+#             with open(self.filename, 'rb') as f:
+#                 source = f.read()
+#         try:
+#             source, encoding = touni(source), 'utf8'
+#         except UnicodeError:
+#             raise depr(0, 11, 'Unsupported template encodings.', 'Use utf-8 for templates.')
+#         parser = StplParser(source, encoding=encoding, syntax=self.syntax)
+#         code = parser.translate()
+#         self.encoding = parser.encoding
+#         return code
+
+#     def _rebase(self, _env, _name=None, **kwargs):
+#         _env['_rebase'] = (_name, kwargs)
+
+#     def _include(self, _env, _name=None, **kwargs):
+#         env = _env.copy()
+#         env.update(kwargs)
+#         if _name not in self.cache:
+#             self.cache[_name] = self.__class__(name=_name, lookup=self.lookup, syntax=self.syntax)
+#         return self.cache[_name].execute(env['_stdout'], env)
+
+#     def execute(self, _stdout, kwargs):
+#         env = self.defaults.copy()
+#         env.update(kwargs)
+#         env.update({
+#             '_stdout': _stdout,
+#             '_printlist': _stdout.extend,
+#             'include': functools.partial(self._include, env),
+#             'rebase': functools.partial(self._rebase, env),
+#             '_rebase': None,
+#             '_str': self._str,
+#             '_escape': self._escape,
+#             'get': env.get,
+#             'setdefault': env.setdefault,
+#             'defined': env.__contains__
+#         })
+#         exec(self.co, env)
+#         if env.get('_rebase'):
+#             subtpl, rargs = env.pop('_rebase')
+#             rargs['base'] = ''.join(_stdout)  #copy stdout
+#             del _stdout[:]  # clear stdout
+#             return self._include(env, subtpl, **rargs)
+#         return env
+
+#     def render(self, *args, **kwargs):
+#         """ Render the template using keyword arguments as local variables. """
+#         env = {}
+#         stdout = []
+#         for dictarg in args:
+#             env.update(dictarg)
+#         env.update(kwargs)
+#         self.execute(stdout, env)
+#         return ''.join(stdout)
+
+
+# class StplSyntaxError(TemplateError):
+#     pass
+
+
+# class StplParser(object):
+#     """ Parser for stpl templates. """
+#     _re_cache = {}  #: Cache for compiled re patterns
+
+#     # This huge pile of voodoo magic splits python code into 8 different tokens.
+#     # We use the verbose (?x) regex mode to make this more manageable
+
+#     _re_tok = _re_inl = r'''(
+#         [urbURB]*
+#         (?:  ''(?!')
+#             |""(?!")
+#             |'{6}
+#             |"{6}
+#             |'(?:[^\\']|\\.)+?'
+#             |"(?:[^\\"]|\\.)+?"
+#             |'{3}(?:[^\\]|\\.|\n)+?'{3}
+#             |"{3}(?:[^\\]|\\.|\n)+?"{3}
+#         )
+#     )'''
+
+#     _re_inl = _re_tok.replace(r'|\n', '')  # We re-use this string pattern later
+
+#     _re_tok += r'''
+#         # 2: Comments (until end of line, but not the newline itself)
+#         |(\#.*)
+#         # 3: Open and close (4) grouping tokens
+#         |([\[\{\(])
+#         |([\]\}\)])
+#         # 5,6: Keywords that start or continue a python block (only start of line)
+#         |^([\ \t]*(?:if|for|while|with|try|def|class)\b)
+#         |^([\ \t]*(?:elif|else|except|finally)\b)
+#         # 7: Our special 'end' keyword (but only if it stands alone)
+#         |((?:^|;)[\ \t]*end[\ \t]*(?=(?:%(block_close)s[\ \t]*)?\r?$|;|\#))
+#         # 8: A customizable end-of-code-block template token (only end of line)
+#         |(%(block_close)s[\ \t]*(?=\r?$))
+#         # 9: And finally, a single newline. The 10th token is 'everything else'
+#         |(\r?\n)
+#     '''
+
+#     # Match the start tokens of code areas in a template
+#     _re_split = r'''(?m)^[ \t]*(\\?)((%(line_start)s)|(%(block_start)s))'''
+#     # Match inline statements (may contain python strings)
+#     _re_inl = r'''%%(inline_start)s((?:%s|[^'"\n])*?)%%(inline_end)s''' % _re_inl
+
+#     # add the flag in front of the regexp to avoid Deprecation warning (see Issue #949)
+#     # verbose and dot-matches-newline mode
+#     _re_tok = '(?mx)' + _re_tok
+#     _re_inl = '(?mx)' + _re_inl
+
+
+#     default_syntax = '<% %> % {{ }}'
+
+#     def __init__(self, source, syntax=None, encoding='utf8'):
+#         self.source, self.encoding = touni(source, encoding), encoding
+#         self.set_syntax(syntax or self.default_syntax)
+#         self.code_buffer, self.text_buffer = [], []
+#         self.lineno, self.offset = 1, 0
+#         self.indent, self.indent_mod = 0, 0
+#         self.paren_depth = 0
+
+#     def get_syntax(self):
+#         """ Tokens as a space separated string (default: <% %> % {{ }}) """
+#         return self._syntax
+
+#     def set_syntax(self, syntax):
+#         self._syntax = syntax
+#         self._tokens = syntax.split()
+#         if syntax not in self._re_cache:
+#             names = 'block_start block_close line_start inline_start inline_end'
+#             etokens = map(re.escape, self._tokens)
+#             pattern_vars = dict(zip(names.split(), etokens))
+#             patterns = (self._re_split, self._re_tok, self._re_inl)
+#             patterns = [re.compile(p % pattern_vars) for p in patterns]
+#             self._re_cache[syntax] = patterns
+#         self.re_split, self.re_tok, self.re_inl = self._re_cache[syntax]
+
+#     syntax = property(get_syntax, set_syntax)
+
+#     def translate(self):
+#         if self.offset: raise RuntimeError('Parser is a one time instance.')
+#         while True:
+#             m = self.re_split.search(self.source, pos=self.offset)
+#             if m:
+#                 text = self.source[self.offset:m.start()]
+#                 self.text_buffer.append(text)
+#                 self.offset = m.end()
+#                 if m.group(1):  # Escape syntax
+#                     line, sep, _ = self.source[self.offset:].partition('\n')
+#                     self.text_buffer.append(self.source[m.start():m.start(1)] +
+#                                             m.group(2) + line + sep)
+#                     self.offset += len(line + sep)
+#                     continue
+#                 self.flush_text()
+#                 self.offset += self.read_code(self.source[self.offset:],
+#                                               multiline=bool(m.group(4)))
+#             else:
+#                 break
+#         self.text_buffer.append(self.source[self.offset:])
+#         self.flush_text()
+#         return ''.join(self.code_buffer)
+
+#     def read_code(self, pysource, multiline):
+#         code_line, comment = '', ''
+#         offset = 0
+#         while True:
+#             m = self.re_tok.search(pysource, pos=offset)
+#             if not m:
+#                 code_line += pysource[offset:]
+#                 offset = len(pysource)
+#                 self.write_code(code_line.strip(), comment)
+#                 break
+#             code_line += pysource[offset:m.start()]
+#             offset = m.end()
+#             _str, _com, _po, _pc, _blk1, _blk2, _end, _cend, _nl = m.groups()
+#             if self.paren_depth > 0 and (_blk1 or _blk2):  # a if b else c
+#                 code_line += _blk1 or _blk2
+#                 continue
+#             if _str:  # Python string
+#                 code_line += _str
+#             elif _com:  # Python comment (up to EOL)
+#                 comment = _com
+#                 if multiline and _com.strip().endswith(self._tokens[1]):
+#                     multiline = False  # Allow end-of-block in comments
+#             elif _po:  # open parenthesis
+#                 self.paren_depth += 1
+#                 code_line += _po
+#             elif _pc:  # close parenthesis
+#                 if self.paren_depth > 0:
+#                     # we could check for matching parentheses here, but it's
+#                     # easier to leave that to python - just check counts
+#                     self.paren_depth -= 1
+#                 code_line += _pc
+#             elif _blk1:  # Start-block keyword (if/for/while/def/try/...)
+#                 code_line = _blk1
+#                 self.indent += 1
+#                 self.indent_mod -= 1
+#             elif _blk2:  # Continue-block keyword (else/elif/except/...)
+#                 code_line = _blk2
+#                 self.indent_mod -= 1
+#             elif _cend:  # The end-code-block template token (usually '%>')
+#                 if multiline: multiline = False
+#                 else: code_line += _cend
+#             elif _end:
+#                 self.indent -= 1
+#                 self.indent_mod += 1
+#             else:  # \n
+#                 self.write_code(code_line.strip(), comment)
+#                 self.lineno += 1
+#                 code_line, comment, self.indent_mod = '', '', 0
+#                 if not multiline:
+#                     break
+
+#         return offset
+
+#     def flush_text(self):
+#         text = ''.join(self.text_buffer)
+#         del self.text_buffer[:]
+#         if not text: return
+#         parts, pos, nl = [], 0, '\\\n' + '  ' * self.indent
+#         for m in self.re_inl.finditer(text):
+#             prefix, pos = text[pos:m.start()], m.end()
+#             if prefix:
+#                 parts.append(nl.join(map(repr, prefix.splitlines(True))))
+#             if prefix.endswith('\n'): parts[-1] += nl
+#             parts.append(self.process_inline(m.group(1).strip()))
+#         if pos < len(text):
+#             prefix = text[pos:]
+#             lines = prefix.splitlines(True)
+#             if lines[-1].endswith('\\\\\n'): lines[-1] = lines[-1][:-3]
+#             elif lines[-1].endswith('\\\\\r\n'): lines[-1] = lines[-1][:-4]
+#             parts.append(nl.join(map(repr, lines)))
+#         code = '_printlist((%s,))' % ', '.join(parts)
+#         self.lineno += code.count('\n') + 1
+#         self.write_code(code)
+
+#     @staticmethod
+#     def process_inline(chunk):
+#         if chunk[0] == '!': return '_str(%s)' % chunk[1:]
+#         return '_escape(%s)' % chunk
+
+#     def write_code(self, line, comment=''):
+#         code = '  ' * (self.indent + self.indent_mod)
+#         code += line.lstrip() + comment + '\n'
+#         self.code_buffer.append(code)
+
+
+# def template(*args, **kwargs):
+#     """
+#     Get a rendered template as a string iterator.
+#     You can use a name, a filename or a template string as first parameter.
+#     Template rendering arguments can be passed as dictionaries
+#     or directly (as keyword arguments).
+#     """
+#     tpl = args[0] if args else None
+#     for dictarg in args[1:]:
+#         kwargs.update(dictarg)
+#     adapter = kwargs.pop('template_adapter', SimpleTemplate)
+#     lookup = kwargs.pop('template_lookup', TEMPLATE_PATH)
+#     tplid = (id(lookup), tpl)
+#     if tplid not in TEMPLATES or DEBUG:
+#         settings = kwargs.pop('template_settings', {})
+#         if isinstance(tpl, adapter):
+#             TEMPLATES[tplid] = tpl
+#             if settings: TEMPLATES[tplid].prepare(**settings)
+#         elif "\n" in tpl or "{" in tpl or "%" in tpl or '$' in tpl:
+#             TEMPLATES[tplid] = adapter(source=tpl, lookup=lookup, **settings)
+#         else:
+#             TEMPLATES[tplid] = adapter(name=tpl, lookup=lookup, **settings)
+#     if not TEMPLATES[tplid]:
+#         abort(500, 'Template (%s) not found' % tpl)
+#     return TEMPLATES[tplid].render(kwargs)
+
+
   #############################################################################
  ##########  WEBAPP FACILITIES ###############################################
 #############################################################################
 
 from bottle import template
-from mistune import markdown
-from collections import UserList, UserDict
 
 import uvicorn
 from starlette.applications import Starlette
@@ -826,7 +1287,7 @@ def html(source:str="WELCOME",**kwargs):
             <h3>sweetheart</h3>
             <p>a supercharged heart for the non-expert hands</p>
             <p>be aware that you could fall in love with it</p>
-            <p><a href="{book_host}"
+            <p><a href="documentation/index.html"
                 class="btn" role="button">Get Started Now!</a></p>
             <p><br><br><br><em>this message appears because there
                 was nothing else to render here</em></p>
@@ -841,19 +1302,18 @@ def html(source:str="WELCOME",**kwargs):
             **_config_["templates_settings"],
             **kwargs ))
 
-    elif source.endswith(".md") and os.path.isfile(source):
+    # elif source.endswith(".md") and os.path.isfile(source):
 
-        # render html content from given markdown file:
-        #FIXME: deprecated
-        with open(source) as file:
-            return HTMLResponse(template(
-                os.path.join(_config_["templates_dir"],"document.txt"),
-                text= markdown(file.read()),
-                **_config_["templates_settings"],
-                **kwargs ))
+    #     # render html content from given markdown file:
+    #     with open(source) as file:
+    #         return HTMLResponse(template(
+    #             os.path.join(_config_["templates_dir"],"document.txt"),
+    #             text= markdown(file.read()),
+    #             **_config_["templates_settings"],
+    #             **kwargs ))
 
     elif "</" in source:
-        #FIXME: not so good for detecting html content!
+        #FIXME: not safe for detecting html content
         # render here the source as a pure html content
         return HTMLResponse(source)
 
@@ -868,7 +1328,11 @@ def quickstart(routes=None, endpoint=None):
 
     # at first set and start mongo database service:
     if not mongo_disabled: subproc.mongod()
-    else: echo("MongoDB client is DISABLED")
+    else: echo("mongoDB client is DISABLED")
+
+    # set mdbook service:
+    if _.mdbook: mdbook.serve(_config_["working_dir"])
+    else: echo("mdbook server is DISABLED")
 
     # set the current working directory:
     os.chdir(_config_["working_dir"])
@@ -900,7 +1364,7 @@ def quickstart(routes=None, endpoint=None):
         # start cherrypy as external service:
         # this will happen with bash command 'sweet -c start'
         echo("try running cherrypy webserver as external service")
-        subproc.service(_config_["sh_cherrypy"])
+        subproc.service(f"{_py3_} -m sweet run-cherrypy")
 
     # set routing and create Starlette object:
     webapp.mount(route_options=True)
@@ -910,9 +1374,7 @@ def quickstart(routes=None, endpoint=None):
         assert isinstance(route,Route) or isinstance(route,Mount)
     
     # auto start the webapp within webbrowser:
-    if _.webapp: 
-        mdbook.serve(_config_['docs_dir'])
-        subproc.webbrowser(_config_["url_webapp"])
+    if _.webapp: subproc.webbrowser(_.webapp)
     
     # at last start the uvicorn webserver:
     if multi_threading:
@@ -930,11 +1392,6 @@ class WebApp(UserList):
         
     def index(self, request):
         return html("login.txt")
-
-    def document(self, request):
-        #FIXME: deprecated
-        filename = request.path_params["filename"]
-        return html(f"markdown_docs/{filename}.md")
     
     def favicon(self, request):
         return FileResponse("usual_resources/favicon.ico")
@@ -949,13 +1406,13 @@ class WebApp(UserList):
         if route_options: 
             self.extend([
                 Route("/favicon.ico", self.favicon),
-                Route("/document/{filename}", self.document),
             ])
         # mount static resources:
         self.extend([
             Mount("/resources", StaticFiles(directory="usual_resources")),
             Mount("/libs", StaticFiles(directory="javascript_libs")),
             Mount("/modules", StaticFiles(directory="node_modules")),
+            Mount("/documentation", StaticFiles(directory="sweet_documentation"))
         ])
     
     @property
@@ -990,56 +1447,6 @@ welcome = lambda request: html("WELCOME")
 
 
   #############################################################################
- ##########  DOCUMENTATION FACILITIES ########################################
-#############################################################################
-
-class mdbook:
-    """provide static documentation from markdown files"""
-
-    def __init__(self,working_dir=None):
-        """command line interface: sweet book -> mdbook()"""
-
-        # set the current working directory:
-        if not working_dir: working_dir=_config_["docs_dir"]
-        os.chdir(working_dir)
-        echo("set working directory:", os.getcwd())
-
-        # build static docs website:
-        if hasattr(argv,"build") and argv.build:
-            mdbook.init(working_dir)
-            mdbook.build()
-
-        # open static docs website:
-        if hasattr(argv,"open") and argv.open:
-            mdbook.open()
-
-    @staticmethod
-    def init(working_dir):
-
-        # check if a doc is existing and create it if not:
-        if not os.path.isfile(os.path.join(working_dir,"book.toml")):
-            #FIXME: input="n" means git features not activated
-            subproc.run(["mdbook","init","--force",working_dir],
-                capture_output=True, text=True, input="n")
-
-    @staticmethod
-    def build():
-        subproc.run(["mdbook","build"])
-
-    @staticmethod
-    def open():
-        subproc.webbrowser(_config_["url_book"])
-
-    @staticmethod
-    def serve(directory=None):
-        if not directory: directory= _config_['docs_dir']
-        #FIXME: rust toolchain not implemented
-        subproc.service(
-            f"~/.cargo/bin/mdbook serve {directory}" )
-        pass
-    
-
-  #############################################################################
  ########## COMMAND LINE & MESSAGES SETUP ####################################
 #############################################################################
 
@@ -1069,7 +1476,6 @@ if __name__ == "__main__":
 
         # release stacked messages:
         echo(mode="release")
-        echo("NEW! make incredible docs with rust and mdbook")
 
         # force config and settings:
         if not _.cherrypy: cherrypy_enabled = False
