@@ -159,12 +159,13 @@ class ConfigAccess(UserDict):
             #"upload": f"{_py3_} -m twine upload dist/*"
         },
 
+        # data for building new project dir:
         "__basedirs__": """[
-            # given here for ini.__init__()
             f"/opt/{_project_}",
             f"/opt/{_project_}/configuration",
             f"/opt/{_project_}/database",
             f"/opt/{_project_}/documentation",
+            f"/opt/{_project_}/documentation/book",
             f"/opt/{_project_}/documentation/src",
             f"/opt/{_project_}/programs",
             f"/opt/{_project_}/programs/scripts",
@@ -176,15 +177,13 @@ class ConfigAccess(UserDict):
         ]""",
         
         "__copyfiles__": """{
-            # given here for ini.__init__()
-            # provided config files:
             "cherrypy.conf": f"/opt/{_project_}/configuration",
-            # provided templates:
-            "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
-            # provided documents:
-            "welcome.md": f"/opt/{_project_}/documentation/src",
-            # provided resources:
+            "config.xlaunch": f"/opt/{_project_}/configuration",
+            "book.toml": f"/opt/{_project_}/documentation",
+            "SUMMARY.md": f"/opt/{_project_}/documentation/src",
+            "README.md": f"/opt/{_project_}/documentation/src",
             "sweet.HTML": f"/opt/{_project_}/webpages",
+            "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
             "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
             "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
         }""",
@@ -290,7 +289,8 @@ class subproc:
     @classmethod
     def exec(cls,args):
         cmd:str = _config_["scripts"].get(
-            f"{args.script}","echo invalid script name given")
+            f"{args.script}",
+            "echo invalid script name given" )
         echo("bash:$", cmd)
 
         # stop here any 'sudo' cmd given within 'script':
@@ -398,8 +398,8 @@ class mdbook:
                 capture_output=True, text=True, input="n")
 
     @staticmethod
-    def build():
-        subproc.run(["mdbook","build"])
+    def build(dir:str=""):
+        subproc.run(["mdbook","build",dir])
 
     @staticmethod
     def open():
@@ -466,7 +466,7 @@ class ini:
         ini.ln(["/usr/share/javascript",
             f"/opt/{_project_}/webpages/javascript_libs"])
 
-        ini.ln([f"/opt/{_project_}/documentation",
+        ini.ln([f"/opt/{_project_}/documentation/book",
             f"/opt/{_project_}/webpages/sweet_documentation"])
 
         ini.label("build python3 virtual env")
@@ -474,7 +474,7 @@ class ini:
         ini.pip(_config_["pip-install"]+_config_["web_framework"].split())
         if AI_enabled: ini.pip(_config_["ai_modules"].split())
 
-        # change current working directory:
+        # *change current working directory:
         os.chdir(f"/opt/{_project_}/webpages")
 
         # build documentation setting files:
@@ -487,14 +487,17 @@ class ini:
         ini.sh("npm init --yes",shell=True)
         ini.npm(_config_["npm-install"])
 
-        # change current working directory:
+        # *change current working directory:
         os.chdir(f"/opt/{_project_}/webpages/usual_resources")
 
         ini.label("download webapp resources")
         ini.wget(_config_["wget-install-resources"])
         cloud.download(_.copyfiles)
+
+        # build sweetheart documentation:
+        mdbook.build(f"/opt/{_project_}/documentation")
         
-        # change current working directory:
+        # *change current working directory:
         os.chdir(f"/opt/{_project_}/programs/scripts")
 
         ini.label("build local bash commands")
@@ -583,8 +586,8 @@ run(argv[1],host='{_.uargs["host"]}',port={_.uargs["port"]})
 
 class CommandLine:
     """build Command Line Interface with ease"""
-    locker = 0
 
+    locker = 0
     def __init__(self):
         cls = CommandLine
         assert cls.locker == 0; cls.locker = 1
@@ -640,7 +643,7 @@ if __name__ == "__main__":
         help="provide a default configuration json file")
 
     #FIXME: provisional dev tool:
-    cli.add("--update-pcloud",action="store_true")
+    cli.add("--update-cloud",action="store_true")
 
 
     # create the subparser for the "sh" command:
@@ -701,7 +704,7 @@ if __name__ == "__main__":
     AI_enabled = getattr(argv, "machine_learning", AI_enabled)
     
     # start early processes when required:
-    if argv.update_pcloud: cloud.update_files()
+    if argv.update_cloud: cloud.update_files()
     if argv.edit_config: ConfigAccess.edit()
     if argv.init: ini()
 
