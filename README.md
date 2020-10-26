@@ -1,4 +1,4 @@
-# Sweetheart
+# Sweetheart 0.1.0-beta4
 
 build at the speedlight full-stacked webapps including AI and best coding practices
 
