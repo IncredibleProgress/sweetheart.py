@@ -2,7 +2,7 @@
 provide simple use of highest quality components
 for building full-stacked webapps including AI
 """
-__version__ = "0.1.0-beta3"
+__version__ = "0.1.0-beta4"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -48,6 +48,7 @@ _config_ = {
 
     ## webapps settings:
     "working_dir": f"/opt/{_project_}/webpages",
+    "book": "\\\\wsl$\\Ubuntu\\opt\\incredible\\webpages\\markdown_book\\index.html",
     "webbrowser": "msedge.exe",
 
     "ai_modules": "sklearn",# select py3 imports
@@ -79,6 +80,8 @@ _config_ = {
     "terminal": "winterm",# xterm|winterm
 
     "scripts": {
+        "setup": f"{_py3_} setup.py sdist bdist_wheel",
+        "twine": f"{_py3_} -m twine upload dist/*",
     },
 
     ## settings for the --init process:
@@ -109,6 +112,7 @@ _config_ = {
     ],
     "npm-install": [
         "brython",
+        "assemblyscript"
     ],
     "wget-install-resources": [
         "https://raw.githubusercontent.com/alsacreations/KNACSS/master/css/knacss.css",
@@ -144,9 +148,8 @@ class ConfigAccess(UserDict):
         self.data = {
             
         "install": {
-            # pip install:
-            "setuptools": f"{_py3_} -m pip install setuptools twine wheel",
-            "pyxl": f"{_py3_} -m pip install openpyxl panda" },
+            "setuptools": "$pip setuptools twine wheel",
+            "excel": "$pip openpyxl" },
 
         "run": {
             # webbrowsers shell commands:
@@ -154,9 +157,6 @@ class ConfigAccess(UserDict):
                 "msedge.exe": f"cmd.exe /c start msedge.exe --app=",
                 "brave.exe": f"cmd.exe /c start brave.exe --app=",
                 "firefox.exe": f"cmd.exe /c start firefox.exe --app=" },
-                
-            #"bdist": f"{_py3_} setup.py sdist bdist_wheel",
-            #"upload": f"{_py3_} -m twine upload dist/*"
         },
 
         # data for building new project dir:
@@ -165,8 +165,9 @@ class ConfigAccess(UserDict):
             f"/opt/{_project_}/configuration",
             f"/opt/{_project_}/database",
             f"/opt/{_project_}/documentation",
-            f"/opt/{_project_}/documentation/book",
-            f"/opt/{_project_}/documentation/src",
+            f"/opt/{_project_}/documentation/sweetbook",
+            f"/opt/{_project_}/documentation/sweetbook/book",
+            f"/opt/{_project_}/documentation/sweetbook/src",
             f"/opt/{_project_}/programs",
             f"/opt/{_project_}/programs/scripts",
             f"/opt/{_project_}/webpages",
@@ -179,9 +180,9 @@ class ConfigAccess(UserDict):
         "__copyfiles__": """{
             "cherrypy.conf": f"/opt/{_project_}/configuration",
             "config.xlaunch": f"/opt/{_project_}/configuration",
-            "book.toml": f"/opt/{_project_}/documentation",
-            "SUMMARY.md": f"/opt/{_project_}/documentation/src",
-            "README.md": f"/opt/{_project_}/documentation/src",
+            "book.toml": f"/opt/{_project_}/documentation/sweetbook",
+            "SUMMARY.md": f"/opt/{_project_}/documentation/sweetbook/src",
+            "README.md": f"/opt/{_project_}/documentation/sweetbook/src",
             "sweet.HTML": f"/opt/{_project_}/webpages",
             "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
             "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
@@ -250,7 +251,6 @@ def echo(*args, mode="default"):
         _msg_ = []
     else:
         print("[%s]"% _config_["echolabel"].upper(), *args)
-
 
 def verbose(*args):
     """convenient function for verbose messages"""
@@ -371,7 +371,7 @@ class cloud:
 class mdbook:
     """build documentation from markdown files"""
 
-    def __init__(self,working_dir=None):
+    def __init__(self,working_dir:str=""):
         """command line interface: sweet book -> mdbook()"""
 
         # set the current working directory:
@@ -398,15 +398,16 @@ class mdbook:
                 capture_output=True, text=True, input="n")
 
     @staticmethod
-    def build(dir:str=""):
-        subproc.run(["mdbook","build",dir])
+    def build(directory:str=""):
+        subproc.run(["mdbook","build",directory])
 
     @staticmethod
-    def open():
-        subproc.webbrowser(_config_["static_book"])
+    def open(directory:str=""):
+        if not directory: directory = _config_["book"]
+        subproc.webbrowser(directory)
 
     @staticmethod
-    def serve(directory=None):
+    def serve(directory:str=""):
         if not directory: directory= _config_["working_dir"]
         echo("start the mdbook server (rust)")
         #FIXME: rust toolchain not implemented
@@ -417,10 +418,8 @@ class mdbook:
 [book]
 multilingual = false
 src = "markdown_files"
-
 [build]
 build-dir = "markdown_book"
-
 [preprocessor.toc]
 command = "mdbook-toc"
 renderer = ["html"]
@@ -429,7 +428,7 @@ renderer = ["html"]
     SUMMARY = """
 # Summary
 
-- [Welcome](./welcome.md)
+[Welcome](./welcome.md)
 """
 
 
@@ -466,7 +465,7 @@ class ini:
         ini.ln(["/usr/share/javascript",
             f"/opt/{_project_}/webpages/javascript_libs"])
 
-        ini.ln([f"/opt/{_project_}/documentation/book",
+        ini.ln([f"/opt/{_project_}/documentation/sweetbook/book",
             f"/opt/{_project_}/webpages/sweet_documentation"])
 
         ini.label("build python3 virtual env")
@@ -495,7 +494,7 @@ class ini:
         cloud.download(_.copyfiles)
 
         # build sweetheart documentation:
-        mdbook.build(f"/opt/{_project_}/documentation")
+        mdbook.build(f"/opt/{_project_}/documentation/sweetbook")
         
         # *change current working directory:
         os.chdir(f"/opt/{_project_}/programs/scripts")
@@ -879,7 +878,7 @@ except:
             pass
 
 
-###############################################################################
+  #############################################################################
  ##########  BOTTLE TEMPLATING ###############################################
 #############################################################################
 # MIT Lisence 
