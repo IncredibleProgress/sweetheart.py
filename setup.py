@@ -10,7 +10,8 @@ setup(
     name="sweetheart",
     version= __version__,
     license= __license__,
-    packages=[""],
+    #setup_requires= [""],
+    #packages=[""],
     scripts=["sweet.py"],
 
     # metadata to display on PyPI
@@ -20,11 +21,11 @@ setup(
     long_description = long_description,
     long_description_content_type = "text/markdown",
 
-    keywords="ubuntu mongodb starlette webapp industry4.0",
+    keywords="ubuntu rust python3 mongodb webapp machinelearning industry4.0",
     # url="http://",
     project_urls={
         # "Bug Tracker": "https://",
-        # "Documentation": "https://",
+        "Documentation": "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetbook/",
         "Source Code": "https://github.com/IncredibleProgress/sweetheart.py",
     },
 

@@ -43,12 +43,12 @@ _py3_ = f"/opt/{_project_}/programs/envPy/bin/python3"
 # should be updated using _config_.update({ "key": value })
 _config_ = {
 
-    ## default json configuration file (harcoded here):
+    ## default json configuration file (hardcoded here):
     "__conffile__": f"/opt/{_project_}/configuration/sweet.json",
 
     ## webapps settings:
     "working_dir": f"/opt/{_project_}/webpages",
-    "book": "\\\\wsl$\\Ubuntu\\opt\\incredible\\webpages\\markdown_book\\index.html",
+    "book": f"\\\\wsl$\\Ubuntu\\opt\\{_project_}\\webpages\\markdown_book\\index.html",
     "webbrowser": "msedge.exe",
 
     "ai_modules": "sklearn",# select py3 imports
@@ -80,8 +80,10 @@ _config_ = {
     "terminal": "winterm",# xterm|winterm
 
     "scripts": {
-        "setup": f"{_py3_} setup.py sdist bdist_wheel",
-        "twine": f"{_py3_} -m twine upload dist/*",
+        #FIXME: set _project_ venv
+        "setup": f"python3 setup.py sdist bdist_wheel",
+        "twine": f"python3 -m twine upload dist/*",
+        "test": f"echo build webapps at the speedlight with sweetheart !",
     },
 
     ## settings for the --init process:
@@ -148,8 +150,8 @@ class ConfigAccess(UserDict):
         self.data = {
             
         "install": {
-            "setuptools": "$pip setuptools twine wheel",
-            "excel": "$pip openpyxl" },
+            "setuptools": "pip: setuptools twine wheel",
+            "excel": "pip: openpyxl pandas" },
 
         "run": {
             # webbrowsers shell commands:
@@ -233,7 +235,8 @@ class ConfigAccess(UserDict):
 
 # set the json configuration filename here:
 #NOTE: loaded only with '-cf' option given within CLI
-_ = CONF = ConfigAccess(_config_["__conffile__"])
+_ = ConfigAccess(_config_["__conffile__"])
+del _config_["__conffile__"]
 
 
 _msg_ = []
@@ -287,17 +290,21 @@ class subproc:
         assert _config_["terminal"] in "xterm|winterm"
 
     @classmethod
-    def exec(cls,args):
-        cmd:str = _config_["scripts"].get(
-            f"{args.script}",
-            "echo invalid script name given" )
-        echo("bash:$", cmd)
+    def exec(cls,args:list):
+        """execute scripts provided within _config_"""
+        cmd:str = _config_["scripts"].get(f"{args.script[0]}","")
 
-        # stop here any 'sudo' cmd given within 'script':
+        # stop any 'sudo' cmd given here:
         #FIXME: make it safer
         assert cmd.find("sudo") == -1
 
-        cls.bash(cmd)
+        if not cmd:
+            echo("shell: invalid script name given")
+        else:
+            del args.script[0]
+            cmd = [*cmd.split(),*args.script]
+            echo("bash:$",*cmd)
+            cls.run(cmd)
 
     @classmethod
     def webbrowser(cls,url):
@@ -369,7 +376,7 @@ class cloud:
 
 
 class mdbook:
-    """build documentation from markdown files"""
+    """build nice documentation from markdown files"""
 
     def __init__(self,working_dir:str=""):
         """command line interface: sweet book -> mdbook()"""
@@ -500,7 +507,7 @@ class ini:
         os.chdir(f"/opt/{_project_}/programs/scripts")
 
         ini.label("build local bash commands")
-        ini.locbin("sweet","uvicorn")
+        ini.locbin("sweet","uvicorn","swsh")
 
         print("\nINIT all done!\n")
 
@@ -508,6 +515,11 @@ class ini:
     _sweet_ = f"""
 #!/bin/sh
 {_py3_} -m sweet $*
+"""
+
+    _swsh_ = f"""
+#!/bin/sh
+{_py3_} -m sweet shell $*
 """
 
     _uvicorn_ = f"""
@@ -577,6 +589,22 @@ run(argv[1],host='{_.uargs["host"]}',port={_.uargs["port"]})
                 "/usr/local/bin/" ])
 
             cls.sh(["sudo","chmod","777",f"/usr/local/bin/{scriptname}"])
+    
+    @classmethod
+    def install(cls,args):
+        """install extra packages defined within ConfigAccess"""
+
+        # *change current working directory:
+        #NOTE: mandatory for using ini.npm
+        os.chdir(_config_["working_dir"])
+
+        for package in args:
+            instrucs:str = _["install"].get(package,"").split(";")
+            for cmd in instrucs:
+                if cmd.startswith("pip:"): ini.pip(cmd[4:].split())
+                elif cmd.startswith("apt:"): ini.apt(cmd[4:].split())
+                elif cmd.startswith("cargo:"): ini.cargo(cmd[6:].split())
+                elif cmd.startswith("npm:"): ini.npm(cmd[4:].split())
 
 
   #############################################################################
@@ -646,10 +674,10 @@ if __name__ == "__main__":
 
 
     # create the subparser for the "sh" command:
-    cli.sub("sh",help="execute script given by the current config")
+    cli.sub("shell",help="execute script given by the current config")
     cli.set(subproc.exec)
 
-    cli.add("script",help=f'name of a script given in _config_:\
+    cli.add("script",nargs='+',help=f'name of a script given in _config_:\
         {[i for i in _config_["scripts"].keys()]}')
 
 
@@ -1278,7 +1306,7 @@ from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
 if AI_enabled: exec(f"import {_config_['ai_modules']}")
-else: echo("AI not implemented within current config", mode="stack")
+else: echo("AI not implemented within current config",mode="stack")
 
 ###############################################################################
 ###############################################################################
@@ -1452,7 +1480,6 @@ class WebApp(UserList):
 # convenient features for building webapp:
 webapp = WebApp()
 routing = lambda routes: webapp.extend(routes)
-welcome = lambda request: html("WELCOME")
 
 
   #############################################################################
