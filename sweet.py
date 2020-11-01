@@ -51,9 +51,9 @@ _config_ = {
     "description": "build at the speedlight full-stacked webapps including AI",
     "webbook": f"\\\\wsl$\\Ubuntu\\opt\\{_project_}\\webpages\\markdown_book\\index.html",
 
-    "ai_modules": "sklearn",# select py3 imports
+    "webbrowser": "msedge.exe", # msedge.exe|brave.exe|firefox.exe
     "web_framework": "starlette",# starlette|fastapi
-    "webbrowser": "msedge.exe",
+    "ai_modules": "sklearn",# select py3 imports
 
     "templates_dir": "bottle_templates",
     "templates_settings" : {
@@ -108,17 +108,25 @@ _config_ = {
         "sweetheart",
         "pymongo",
         "uvicorn",
-        "aiofiles",#NOTE: required with starlette
+        "aiofiles",# required with starlette
         "bottle",
+        "setuptools",
+        "twine",
+        "wheel",
     ],
     "npm-install": [
-        "brython",
-        "assemblyscript"
+        "brython",# allow python scripts within html
+        "assemblyscript",# Webassembly with Typescript
     ],
     "wget-install-resources": [
         "https://raw.githubusercontent.com/alsacreations/KNACSS/master/css/knacss.css",
         "https://www.w3schools.com/w3css/4/w3.css"
     ],
+
+    ## extra install settings:
+    "install": {
+        "excel": "pip: openpyxl pandas",
+    },
 }
 class ConfigAccess(UserDict):
     """provide a convenient _config_ accessor tool"""
@@ -148,10 +156,6 @@ class ConfigAccess(UserDict):
 
         # deep config settings:
         self.data = {
-            
-        "install": {
-            "setuptools": "pip: setuptools twine wheel",
-            "excel": "pip: openpyxl pandas" },
 
         "run": {
             # webbrowsers shell commands:
@@ -716,7 +720,7 @@ if __name__ == "__main__":
     cli.add("-b","--build",action="store_true",
         help="build html documentation from markdown files")
 
-    #TODO: add argument for setting new book name
+    #TODO: add argument for creating new book directory
 
 
     # create the subparser for the "start" command:
