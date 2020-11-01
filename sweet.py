@@ -2,7 +2,7 @@
 provide simple use of highest quality components
 for building full-stacked webapps including AI
 """
-__version__ = "0.1.0-beta4"
+__version__ = "0.1.0-beta5"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -48,11 +48,12 @@ _config_ = {
 
     ## webapps settings:
     "working_dir": f"/opt/{_project_}/webpages",
-    "book": f"\\\\wsl$\\Ubuntu\\opt\\{_project_}\\webpages\\markdown_book\\index.html",
-    "webbrowser": "msedge.exe",
+    "description": "build at the speedlight full-stacked webapps including AI",
+    "webbook": f"\\\\wsl$\\Ubuntu\\opt\\{_project_}\\webpages\\markdown_book\\index.html",
 
     "ai_modules": "sklearn",# select py3 imports
     "web_framework": "starlette",# starlette|fastapi
+    "webbrowser": "msedge.exe",
 
     "templates_dir": "bottle_templates",
     "templates_settings" : {
@@ -80,10 +81,8 @@ _config_ = {
     "terminal": "winterm",# xterm|winterm
 
     "scripts": {
-        #FIXME: set _project_ venv
-        "setup": f"python3 setup.py sdist bdist_wheel",
-        "twine": f"python3 -m twine upload dist/*",
-        "test": f"echo build webapps at the speedlight with sweetheart !",
+        "setup": f"{_py3_} setup.py sdist bdist_wheel",
+        "twine": f"{_py3_} -m twine upload dist/*",
     },
 
     ## settings for the --init process:
@@ -129,6 +128,7 @@ class ConfigAccess(UserDict):
     cherrypy = False
     webapp = False # ENABLE= set url
     mdbook = _config_["templates_settings"].get("_book_")
+    winapp = _config_["webbrowser"].endswith(".exe")
 
     # uvicorn arguments dict:
     uargs = {
@@ -184,7 +184,7 @@ class ConfigAccess(UserDict):
             "config.xlaunch": f"/opt/{_project_}/configuration",
             "book.toml": f"/opt/{_project_}/documentation/sweetbook",
             "SUMMARY.md": f"/opt/{_project_}/documentation/sweetbook/src",
-            "README.md": f"/opt/{_project_}/documentation/sweetbook/src",
+            "welcome.md": f"/opt/{_project_}/documentation/sweetbook/src",
             "sweet.HTML": f"/opt/{_project_}/webpages",
             "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
             "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
@@ -291,7 +291,8 @@ class subproc:
 
     @classmethod
     def exec(cls,args:list):
-        """execute scripts provided within _config_"""
+        """execute scripts provided within _config_
+        NOTE: sudo bash commands are forbidden here"""
         cmd:str = _config_["scripts"].get(f"{args.script[0]}","")
 
         # stop any 'sudo' cmd given here:
@@ -308,8 +309,15 @@ class subproc:
 
     @classmethod
     def webbrowser(cls,url):
+        """open given url in webbrowser defined within _config_"""
         if not url[0] in ["'",'"']: url= f"'{url}'"
         cls.bash( _.webbrowser + url )
+    
+    @staticmethod
+    def wslpath(path):
+        """switch a linux path to a wsl path"""
+        #FIXME: works only for ubuntu
+        return "\\".join(["\\","wsl$","ubuntu",*path.split(os.sep)])
 
     @classmethod
     def mongod(cls):
@@ -341,21 +349,24 @@ class cloud:
     pmount = "sudo mount -t drvfs p: /mnt/p"
     local = "/mnt/p/Public Folder/sweetheart"
     public = "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetheart/"
+    SwtBookSrc = "/opt/incredible/documentation/sweetbook/book/"
+    SwtBookDest = local.replace("sweetheart","sweetbook")
 
     @staticmethod
     def update_files():
         #FIXME: dev tool not for users
         echo("updating init files provided from pcloud...")
+        if not os.path.isdir(cloud.local): subproc.bash(cloud.pmount)
         for filename, path in _.copyfiles.items():
 
             source = os.path.join(path, filename)
             dest = cloud.local
             verbose(source, " -> ", dest)
-
-            if not os.path.isdir(cloud.local):
-                subproc.bash(cloud.pmount)
-
             subproc.run(["cp", source, dest])
+
+        echo("updating sweetbook files...")
+        subproc.run(["cp","-R",cloud.SwtBookSrc,cloud.SwtBookDest])
+
         echo("all updates done to the pcloud drive")
 
     @staticmethod
@@ -376,32 +387,39 @@ class cloud:
 
 
 class mdbook:
-    """build nice documentation from markdown files"""
+    """markdown documentation tools using rust/mdBook"""
 
-    def __init__(self,working_dir:str=""):
-        """command line interface: sweet book -> mdbook()"""
+    @staticmethod
+    def start(args):
+        """command line interface facilities:
+        $ sweet book            open default book for the project
+        $ sweet book --build    init/build book within current directory
+        $ sweet book --open     open book within current directory"""
 
-        # set the current working directory:
-        if not working_dir: working_dir=_config_["working_dir"]
-        os.chdir(working_dir)
-        echo("set working directory:", os.getcwd())
-
-        # build static docs website:
-        if hasattr(argv,"build") and argv.build:
-            mdbook.init(working_dir)
+        if args.build:
+            # init/build book within current directory:
+            echo("build mdBook within directory:", os.getcwd())
+            mdbook.init(os.getcwd())
             mdbook.build()
+        
+        if args.open:
+            # open book within current directory:
+            path = os.path.join(os.getcwd(),"book","index.html")
+            if _.winapp: path = subproc.wslpath(path)
+            echo("open mdBook at",path)
+            mdbook.open(path)
 
-        # open static docs website:
-        if hasattr(argv,"open") and argv.open:
+        if not args.build and not args.open:
+            # open default book for the project:
             mdbook.open()
 
     @staticmethod
-    def init(working_dir):
-
+    def init(directory:str):
+        """init a new mdbbok within given directory"""
         # check if a doc is existing and create it if not:
-        if not os.path.isfile(os.path.join(working_dir,"book.toml")):
+        if not os.path.isfile(os.path.join(directory,"book.toml")):
             #FIXME: input="n" means git features not activated
-            subproc.run(["mdbook","init","--force",working_dir],
+            subproc.run(["mdbook","init","--force",directory],
                 capture_output=True, text=True, input="n")
 
     @staticmethod
@@ -410,7 +428,7 @@ class mdbook:
 
     @staticmethod
     def open(directory:str=""):
-        if not directory: directory = _config_["book"]
+        if not directory: directory = _config_["webbook"]
         subproc.webbrowser(directory)
 
     @staticmethod
@@ -420,23 +438,6 @@ class mdbook:
         #FIXME: rust toolchain not implemented
         subproc.service(
             f"~/.cargo/bin/mdbook serve {directory}" )
-    
-    toml = """
-[book]
-multilingual = false
-src = "markdown_files"
-[build]
-build-dir = "markdown_book"
-[preprocessor.toc]
-command = "mdbook-toc"
-renderer = ["html"]
-"""
-
-    SUMMARY = """
-# Summary
-
-[Welcome](./welcome.md)
-"""
 
 
 class ini:
@@ -483,11 +484,37 @@ class ini:
         # *change current working directory:
         os.chdir(f"/opt/{_project_}/webpages")
 
+        toml = """
+[book]
+multilingual = false
+src = "markdown_files"
+[build]
+build-dir = "markdown_book"
+[preprocessor.toc]
+command = "mdbook-toc"
+renderer = ["html"]
+"""
+        SUMMARY = """
+# Summary
+[Welcome](./welcome.md)
+"""
+        welcome = f"""
+# Welcome !
+write your documentation in */markdown_files* directory\n
+`sweet book --build` for building it\n
+`sweet book --open` for open it
+"""
         # build documentation setting files:
+        ini.label("init project documentation")
+
         with open("book.toml","w") as fo:
-            fo.write(mdbook.toml)
+            fo.write(toml.strip())
         with open("markdown_files/SUMMARY.md","w") as fo:
-            fo.write(mdbook.SUMMARY)
+            fo.write(SUMMARY.strip())
+        with open("markdown_files/welcome.md","w") as fo:
+            fo.write(welcome.strip())
+
+        mdbook.build()
 
         ini.label("install node modules")
         ini.sh("npm init --yes",shell=True)
@@ -507,7 +534,7 @@ class ini:
         os.chdir(f"/opt/{_project_}/programs/scripts")
 
         ini.label("build local bash commands")
-        ini.locbin("sweet","uvicorn","swsh")
+        ini.locbin("sweet","uvicorn","sws")
 
         print("\nINIT all done!\n")
 
@@ -516,12 +543,10 @@ class ini:
 #!/bin/sh
 {_py3_} -m sweet $*
 """
-
-    _swsh_ = f"""
+    _sws_ = f"""
 #!/bin/sh
 {_py3_} -m sweet shell $*
 """
-
     _uvicorn_ = f"""
 #!{_py3_}
 from os import chdir
@@ -655,7 +680,7 @@ if __name__ == "__main__":
     cli = CommandLine()
 
     cli.add("-cf","--conffile",action="store_true",
-        help="load config from the 'sweet.json' configuration file")
+        help=f"load config from configuration file: {_.conffile}")
 
     cli.add("-ai","--machine-learn",action="store_true",
         help="enable machine learning capabilities (AI)")
@@ -673,7 +698,7 @@ if __name__ == "__main__":
     cli.add("--update-cloud",action="store_true")
 
 
-    # create the subparser for the "sh" command:
+    # create the subparser for the "shell" command:
     cli.sub("shell",help="execute script given by the current config")
     cli.set(subproc.exec)
 
@@ -682,8 +707,8 @@ if __name__ == "__main__":
 
 
     # creat the subparser for the 'book' command:
-    cli.sub("book",help="provide nice documentation from markdown files")
-    cli.set(lambda args: mdbook())
+    cli.sub("book",help="provide documentation from markdown files")
+    cli.set(mdbook.start)
 
     cli.add("-o","--open",action="store_true",
         help="open documentation within webbrowser")
@@ -691,9 +716,11 @@ if __name__ == "__main__":
     cli.add("-b","--build",action="store_true",
         help="build html documentation from markdown files")
 
+    #TODO: add argument for setting new book name
+
 
     # create the subparser for the "start" command:
-    cli.sub("start",help="cli required services for running webapps")
+    cli.sub("start",help="start required services for running webapps")
     cli.set(lambda args: quickstart())
 
     cli.add("-x","--mongo-disabled",action="store_true",
@@ -898,7 +925,7 @@ try:
 
 
 except:
-    echo("cherrypy not implemented within current config", mode="stack")
+    echo("cherrypy not implemented within current config",mode="stack")
     class cherrypy:
         """implement cherrypy.expose as a ghost method"""
         @classmethod

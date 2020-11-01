@@ -1,5 +1,5 @@
 import os
-from sweet import __version__, __license__
+from sweet import __version__, __license__,_config_
 from setuptools import setup
 
 readme = os.path.join(os.getcwd(),"README.md")
@@ -10,14 +10,14 @@ setup(
     name="sweetheart",
     version= __version__,
     license= __license__,
-    #setup_requires= [""],
-    #packages=[""],
-    scripts=["sweet.py"],
+    #setup_requires = [""],
+    #packages = [""],
+    scripts = ["sweet.py"],
 
     # metadata to display on PyPI
-    author="Nicolas Champion",
-    author_email="champion.nicolas@gmail.com",
-    description="build at the speedlight full-stacked webapps including AI",
+    author = "Nicolas Champion",
+    author_email = "champion.nicolas@gmail.com",
+    description = _config_["description"],
     long_description = long_description,
     long_description_content_type = "text/markdown",
 
