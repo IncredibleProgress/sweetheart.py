@@ -11,7 +11,7 @@ setup(
     version= __version__,
     license= __license__,
     #setup_requires = [""],
-    #packages = [""],
+    packages = [""],
     scripts = ["sweet.py"],
 
     # metadata to display on PyPI

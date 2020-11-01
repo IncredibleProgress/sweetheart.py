@@ -81,6 +81,7 @@ _config_ = {
     "terminal": "winterm",# xterm|winterm
 
     "scripts": {
+        "python": f"{_py3_}",
         "setup": f"{_py3_} setup.py sdist bdist_wheel",
         "twine": f"{_py3_} -m twine upload dist/*",
     },
@@ -686,11 +687,8 @@ if __name__ == "__main__":
     cli.add("-cf","--conffile",action="store_true",
         help=f"load config from configuration file: {_.conffile}")
 
-    cli.add("-ai","--machine-learn",action="store_true",
+    cli.add("-ai","--intelligence",action="store_true",
         help="enable machine learning capabilities (AI)")
-        
-    cli.add("-py","--python-venv",action="store_true",
-        help="execute python3 in virtual env built for sweetheart")
 
     cli.add("--init",action="store_true",
         help="launch init process for building new sweetheart project")
@@ -706,16 +704,17 @@ if __name__ == "__main__":
     cli.sub("shell",help="execute script given by the current config")
     cli.set(subproc.exec)
 
-    cli.add("script",nargs='+',help=f'name of a script given in _config_:\
-        {[i for i in _config_["scripts"].keys()]}')
+    cli.add("script",nargs='+',
+        help=f'name(s) of script(s) given in _config_: \
+            {[i for i in _config_["scripts"].keys()]}')
 
 
     # creat the subparser for the 'book' command:
-    cli.sub("book",help="provide documentation from markdown files")
+    cli.sub("book",help="provide full featured documentation from markdown files")
     cli.set(mdbook.start)
 
     cli.add("-o","--open",action="store_true",
-        help="open documentation within webbrowser")
+        help="open html documentation within webbrowser")
 
     cli.add("-b","--build",action="store_true",
         help="build html documentation from markdown files")
@@ -765,11 +764,6 @@ if __name__ == "__main__":
     if argv.update_cloud: cloud.update_files()
     if argv.edit_config: ConfigAccess.edit()
     if argv.init: ini()
-
-    # start standalone action when required:
-    if argv.python_venv:
-        subproc.bash(_py3_)
-        quit()
 
 
   #############################################################################
@@ -1524,7 +1518,7 @@ if __name__ == "__main__":
         # inform about current version:
         verbose("sweet.py running version:", __version__)
         verbose("written by ", __author__)
-        verbose("shared under CeCILL-C FREE SOFTWARE LICENSE AGREEMENT")
+        verbose("shared under CeCILL-C FREE SOFTWARE LICENSE AGREEMENT\n")
 
         if _.verbose == 2:
 
