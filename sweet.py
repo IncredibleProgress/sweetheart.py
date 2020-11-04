@@ -2,7 +2,7 @@
 provide simple use of highest quality components
 for building full-stacked webapps including AI
 """
-__version__ = "0.1.0-beta5"
+__version__ = "0.1.0-beta6"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -29,8 +29,8 @@ from collections import UserList, UserDict
 # - some modules import from standard libs are within relevant objects
 
 # allow dedicated configs for dev purpose:
-_dir_ = os.path.split(os.environ["PWD"])
-if _dir_[0] == "/opt" and _dir_[1]: _project_ = _dir_[1]
+_dir_ = os.environ["PWD"].split(os.sep)
+if _dir_[1] == "opt" and _dir_[2:]: _project_ = _dir_[2]
 else: _project_ = "sweetheart"
 _py3_ = f"/opt/{_project_}/programs/envPy/bin/python3"
 
@@ -81,13 +81,19 @@ _config_ = {
     "terminal": "winterm",# xterm|winterm
 
     "scripts": {
+
         "python": f"{_py3_}",
         "setup": f"{_py3_} setup.py sdist bdist_wheel",
         "twine": f"{_py3_} -m twine upload dist/*",
+        "remote": "git remote add origin $*",
+        "commit": "git commit -m $*;git push origin master",
+        "info": "sweet -vv",
+        "test": "echo $*;echo OK"
     },
 
     ## settings for the --init process:
     "apt-install": [
+
         "python3-venv",
         "rustc",
         "mongodb",
@@ -101,11 +107,13 @@ _config_ = {
         "libjs-highlight.js",
     ],
     "cargo-install": [
+
         "mdbook",
         "mdbook-toc",
         #"mdbook-mermaid",
     ],
     "pip-install": [
+
         "sweetheart",
         "pymongo",
         "uvicorn",
@@ -116,16 +124,18 @@ _config_ = {
         "wheel",
     ],
     "npm-install": [
+
         "brython",# allow python scripts within html
         "assemblyscript",# Webassembly with Typescript
     ],
     "wget-install-resources": [
+
         "https://raw.githubusercontent.com/alsacreations/KNACSS/master/css/knacss.css",
         "https://www.w3schools.com/w3css/4/w3.css"
     ],
-
     ## extra install settings:
-    "install": {
+    "pkg-install": {
+
         "excel": "pip: openpyxl pandas",
     },
 }
@@ -138,12 +148,6 @@ class ConfigAccess(UserDict):
     webapp = False # ENABLE= set url
     mdbook = _config_["templates_settings"].get("_book_")
     winapp = _config_["webbrowser"].endswith(".exe")
-
-    # uvicorn arguments dict:
-    uargs = {
-        "host": async_host.split(":")[1].strip("/"),
-        "port": int(async_host.split(":")[2]),
-        "log_level": "info" }
     
     locker = 0
     def __init__(self, conffile:str=None):
@@ -165,6 +169,12 @@ class ConfigAccess(UserDict):
                 "brave.exe": f"cmd.exe /c start brave.exe --app=",
                 "firefox.exe": f"cmd.exe /c start firefox.exe --app=" },
         },
+
+        # uvicorn arguments dict:
+        "uargs": {
+            "host": async_host.split(":")[1].strip("/"),
+            "port": int(async_host.split(":")[2]),
+            "log_level": "info" },
 
         # data for building new project dir:
         "__basedirs__": """[
@@ -216,7 +226,7 @@ class ConfigAccess(UserDict):
         try:
             # look for keys in self.data:
             return eval(f"self.data{ConfigAccess.ksplit(keys)}")
-        finally:
+        except:
             # if not, look for keys within _config_:
             verbose("get _config_ item via ConfigAcess:", keys)
             return eval(f"_config_{ConfigAccess.ksplit(keys)}")
@@ -227,21 +237,22 @@ class ConfigAccess(UserDict):
     @classmethod
     def edit(cls):
         """edit _config_ as json configuration file"""
-        with open(cls.conffile,"w") as fo:
+        echo("edit config as json file: %s"%_config_["__conffile__"])
+        with open(_config_["__conffile__"],"w") as fo:
             fo.write(json.dumps(_config_, indent=2))
     
     @classmethod
     def update(cls):
         """update _config_ from setted json conffile"""
-        assert cls.conffile
+        assert cls.conffile is not None
         with open(cls.conffile) as fi:
             _config_.update(json.load(fi))
 
 
 # set the json configuration filename here:
 #NOTE: loaded only with '-cf' option given within CLI
-_ = ConfigAccess(_config_["__conffile__"])
-del _config_["__conffile__"]
+_ = _CONF_ = ConfigAccess(_config_["__conffile__"])
+_deepconfig_ = _CONF_.data
 
 
 _msg_ = []
@@ -296,21 +307,26 @@ class subproc:
 
     @classmethod
     def exec(cls,args:list):
-        """execute scripts provided within _config_
-        NOTE: sudo bash commands are forbidden here"""
-        cmd:str = _config_["scripts"].get(f"{args.script[0]}","")
+        """
+        execute scripts provided within _config_["scripts"]
+        should be called from the command line interface
 
-        # stop any 'sudo' cmd given here:
-        #FIXME: make it safer
-        assert cmd.find("sudo") == -1
+        - accepts multilines-commands separated with ;
+        - arguments can be passed-through using $* pattern
+        - sudo bash commands are forbidden
+        """
+        script:str = _config_["scripts"].get(f"{args.script[0]}","")
+        if script:
+            # stop any 'sudo' cmd given here:
+            assert script.find("sudo") == -1
 
-        if not cmd:
-            echo("shell: invalid script name given")
-        else:
             del args.script[0]
-            cmd = [*cmd.split(),*args.script]
-            echo("bash:$",*cmd)
-            cls.run(cmd)
+            script = script.replace("$*"," ".join(args.script))
+            for cmd in script.split(";"):
+                echo("shell$",cmd)
+                cls.bash(cmd)
+        else:
+            echo("sweet.py shell: Error, invalid script name given")
 
     @classmethod
     def webbrowser(cls,url):
@@ -354,8 +370,8 @@ class cloud:
     pmount = "sudo mount -t drvfs p: /mnt/p"
     local = "/mnt/p/Public Folder/sweetheart"
     public = "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetheart/"
-    SwtBookSrc = "/opt/incredible/documentation/sweetbook/book/"
-    SwtBookDest = local.replace("sweetheart","sweetbook")
+    SwtBookSrc = "/opt/incredible/documentation/sweetbook/book"
+    SwtBookDest = local
 
     @staticmethod
     def update_files():
@@ -367,10 +383,10 @@ class cloud:
             source = os.path.join(path, filename)
             dest = cloud.local
             verbose(source, " -> ", dest)
-            subproc.run(["cp", source, dest])
+            subproc.run(["cp","-u",source,dest])
 
         echo("updating sweetbook files...")
-        subproc.run(["cp","-R",cloud.SwtBookSrc,cloud.SwtBookDest])
+        subproc.run(["cp","-R","-u",cloud.SwtBookSrc,cloud.SwtBookDest])
 
         echo("all updates done to the pcloud drive")
 
@@ -467,6 +483,9 @@ class ini:
         echo(f"start init process for new project: {_project_}")
         ini.label("install required packages")
         ini.apt(_config_["apt-install"])
+
+        ini.label("set rust toolchain")
+        ini.sh(["rustup","update"])
         ini.cargo(_config_["cargo-install"])
         
         ini.label("create directories")
@@ -558,7 +577,7 @@ from os import chdir
 from sys import argv
 from uvicorn import run
 chdir("{_config_['working_dir']}")
-run(argv[1],host='{_.uargs["host"]}',port={_.uargs["port"]})
+run(argv[1],host='{_["uargs.host"]}',port={_["uargs.port"]})
 """
 
     @classmethod
@@ -1414,7 +1433,7 @@ def quickstart(routes=None, endpoint=None):
 
     elif routes is None and endpoint is None:
         echo("route a default welcome message at", async_host)
-        webapp.append( Route("/", welcome) )
+        webapp.append( Route("/", html("WELCOME")) )
 
     elif routes is None and isinstance(endpoint, function):
         echo("route a single webpage at", async_host)
@@ -1444,7 +1463,7 @@ def quickstart(routes=None, endpoint=None):
         subproc.service("uvicorn sweet:webapp.star")
     else:
         echo("quickstart: uvicorn multi-threading is not available here")
-        uvicorn.run(webapp.star, **_.uargs)
+        uvicorn.run(webapp.star, **_["uargs"])
 
 
 class WebApp(UserList):
@@ -1526,7 +1545,7 @@ if __name__ == "__main__":
             objects = dict( (k,v) for k,v in globals().items() \
                 if k[0] != "_" and not repr(v).startswith("<module") )
 
-            print("\n**available objects provided by sweet.py:\n")
+            print("**available objects provided by sweet.py:\n")
             import pprint
             pprint.pprint(objects); print()
 
@@ -1543,7 +1562,7 @@ if __name__ == "__main__":
 
         # inform about config status:
         if _.verbose and _project_ != "sweetheart":
-            echo(f"config built for the {_dir_} project directory")
+            echo(f"config built for the {_dir_[1:3]} project directory")
 
     # execute dedicated function related to the cli:
     argv.func(argv)
