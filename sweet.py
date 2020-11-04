@@ -86,9 +86,9 @@ _config_ = {
         "setup": f"{_py3_} setup.py sdist bdist_wheel",
         "twine": f"{_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
-        "commit": "git commit -m $*;git push origin master",
+        "commit": 'git add *;git commit -m "$*";git push origin master',
         "info": "sweet -vv",
-        "test": "echo $*;echo OK"
+        "test": "echo $*;echo all done"
     },
 
     ## settings for the --init process:
