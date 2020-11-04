@@ -8,7 +8,7 @@ __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
 
 # hardcoded default module settings:
-AI_enabled = False
+ai_enabled = False
 mongo_disabled = False
 cherrypy_enabled = False
 multi_threading = False
@@ -83,12 +83,10 @@ _config_ = {
     "scripts": {
 
         "python": f"{_py3_}",
-        "setup": f"{_py3_} setup.py sdist bdist_wheel",
-        "twine": f"{_py3_} -m twine upload dist/*",
+        "upload": f"{_py3_} setup.py sdist bdist_wheel;{_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
         "commit": 'git add *;git commit -m "$*";git push origin master',
-        "info": "sweet -vv",
-        "test": "echo $*;echo all done"
+        "newbk": "mdbook init $*",
     },
 
     ## settings for the --init process:
@@ -98,7 +96,7 @@ _config_ = {
         "rustc",
         "mongodb",
         #"xterm",
-        #"git",
+        "git",
         "npm",
         "node-typescript",
         #"node-vue",
@@ -133,7 +131,7 @@ _config_ = {
         "https://raw.githubusercontent.com/alsacreations/KNACSS/master/css/knacss.css",
         "https://www.w3schools.com/w3css/4/w3.css"
     ],
-    ## extra install settings:
+    ## extra packages install settings:
     "pkg-install": {
 
         "excel": "pip: openpyxl pandas",
@@ -251,8 +249,8 @@ class ConfigAccess(UserDict):
 
 # set the json configuration filename here:
 #NOTE: loaded only with '-cf' option given within CLI
-_ = _CONF_ = ConfigAccess(_config_["__conffile__"])
-_deepconfig_ = _CONF_.data
+_ = ConfigAccess(_config_["__conffile__"])
+_deepconfig_ = _.data
 
 
 _msg_ = []
@@ -281,11 +279,7 @@ def verbose(*args):
 #############################################################################
 
 class subproc:
-    """tools for executing linux shell commands:
-    >>> subproc.bash("command line")
-    >>> subproc.run(["list","of","bash","intruc"])
-    >>> subproc.service("command line")
-    """
+    """tools for executing linux shell commands"""
     bash = lambda *args,**kwargs: subprocess.run(*args,shell=True,**kwargs)
     run = subprocess.run
 
@@ -308,12 +302,12 @@ class subproc:
     @classmethod
     def exec(cls,args:list):
         """
-        execute scripts provided within _config_["scripts"]
-        should be called from the command line interface
+        execute given script provided by _config_["scripts"]
+        it should be called from the command line interface
 
-        - accepts multilines-commands separated with ;
-        - arguments can be passed-through using $* pattern
-        - sudo bash commands are forbidden
+        - accepts multilines-commands separated by ;
+        - arguments can be passed-through using the $* pattern
+        - sudo bash commands are forbidden here
         """
         script:str = _config_["scripts"].get(f"{args.script[0]}","")
         if script:
@@ -412,11 +406,12 @@ class mdbook:
 
     @staticmethod
     def start(args):
-        """command line interface facilities:
+        """
+        Command Line Interface facilities:
         $ sweet book            open default book for the project
         $ sweet book --build    init/build book within current directory
-        $ sweet book --open     open book within current directory"""
-
+        $ sweet book --open     open book within current directory
+        """
         if args.build:
             # init/build book within current directory:
             echo("build mdBook within directory:", os.getcwd())
@@ -439,6 +434,7 @@ class mdbook:
         """init a new mdbbok within given directory"""
         # check if a doc is existing and create it if not:
         if not os.path.isfile(os.path.join(directory,"book.toml")):
+
             #FIXME: input="n" means git features not activated
             subproc.run(["mdbook","init","--force",directory],
                 capture_output=True, text=True, input="n")
@@ -503,7 +499,7 @@ class ini:
         ini.label("build python3 virtual env")
         ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/envPy"])
         ini.pip(_config_["pip-install"]+_config_["web_framework"].split())
-        if AI_enabled: ini.pip(_config_["ai_modules"].split())
+        if ai_enabled: ini.pip(_config_["ai_modules"].split())
 
         # *change current working directory:
         os.chdir(f"/opt/{_project_}/webpages")
@@ -777,7 +773,7 @@ if __name__ == "__main__":
     mongo_disabled = getattr(argv, "mongo_disabled", mongo_disabled)
     cherrypy_enabled = getattr(argv, "cherrypy", cherrypy_enabled)
     multi_threading = getattr(argv, "multi_threading", multi_threading)
-    AI_enabled = getattr(argv, "machine_learning", AI_enabled)
+    ai_enabled = getattr(argv, "machine_learning", ai_enabled)
     
     # start early processes when required:
     if argv.update_cloud: cloud.update_files()
@@ -1349,7 +1345,7 @@ from starlette.responses import HTMLResponse, FileResponse
 from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
-if AI_enabled: exec(f"import {_config_['ai_modules']}")
+if ai_enabled: exec(f"import {_config_['ai_modules']}")
 else: echo("AI not implemented within current config",mode="stack")
 
 ###############################################################################
