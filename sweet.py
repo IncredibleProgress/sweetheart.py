@@ -83,9 +83,9 @@ _config_ = {
     "scripts": {
 
         "python": f"{_py3_}",
-        "upload": f"{_py3_} setup.py sdist bdist_wheel;{_py3_} -m twine upload dist/*",
+        "upload": f"{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
-        "commit": 'git add *;git commit -m "$*";git push origin master',
+        "commit": 'git add * && git commit -m "$*" && git push origin master',
         "newbk": "mdbook init $*",
     },
 
@@ -720,8 +720,7 @@ if __name__ == "__main__":
     cli.set(subproc.exec)
 
     cli.add("script",nargs='+',
-        help=f'name(s) of script(s) given in _config_: \
-            {[i for i in _config_["scripts"].keys()]}')
+        help=f'{ "|".join(_config_["scripts"].keys()) }')
 
 
     # creat the subparser for the 'book' command:
