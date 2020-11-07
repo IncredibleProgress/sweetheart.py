@@ -8,7 +8,6 @@ __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
 
 # hardcoded default module settings:
-ai_enabled = False
 mongo_disabled = False
 cherrypy_enabled = False
 multi_threading = False
@@ -49,11 +48,11 @@ _config_ = {
     ## webapps settings:
     "working_dir": f"/opt/{_project_}/webpages",
     "description": "build at the speedlight full-stacked webapps including AI",
-    "webbook": f"\\\\wsl$\\Ubuntu\\opt\\{_project_}\\webpages\\markdown_book\\index.html",
+    "webbook": f"\\\\wsl$\\ubuntu\\opt\\{_project_}\\webpages\\markdown_book\\index.html",
 
     "webbrowser": "msedge.exe", # msedge.exe|brave.exe|firefox.exe
     "web_framework": "starlette",# starlette|fastapi
-    "ai_modules": "sklearn",# select py3 imports
+    "ai_modules": "",# select py3 imports e.g.: sklearn
 
     "templates_dir": "bottle_templates",
     "templates_settings" : {
@@ -86,7 +85,6 @@ _config_ = {
         "upload": f"{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
         "commit": 'git add * && git commit -m "$*" && git push origin master',
-        "newbk": "mdbook init $*",
     },
 
     ## settings for the --init process:
@@ -258,16 +256,21 @@ def echo(*args, mode="default"):
     """convenient function for printing messages
     mode = 0|default|stack|release"""
 
-    if mode == "stack" or mode == 0:
+    if mode.lower() == "stack" or mode == 0:
         global _msg_
         _msg_.append(" ".join(args))
 
-    elif mode == "release":
+    elif mode.lower() == "release":
         for msg in _msg_:
-            print("[%s]"% _config_["echolabel"].upper(), msg)
+            print("[%s]"% _config_["echolabel"].upper(),msg)
         _msg_ = []
+
+    elif mode.lower() == "exit":
+        print("[%s]"% _config_["echolabel"].upper(),*args)
+        quit()
+
     else:
-        print("[%s]"% _config_["echolabel"].upper(), *args)
+        print("[%s]"% _config_["echolabel"].upper(),*args)
 
 def verbose(*args):
     """convenient function for verbose messages"""
@@ -300,9 +303,9 @@ class subproc:
         assert _config_["terminal"] in "xterm|winterm"
 
     @classmethod
-    def exec(cls,args:list):
+    def execCLI(cls,args):
         """
-        execute given script provided by _config_["scripts"]
+        execute a given script provided by _config_["scripts"]
         it should be called from the command line interface
 
         - accepts multilines-commands separated by ;
@@ -312,7 +315,8 @@ class subproc:
         script:str = _config_["scripts"].get(f"{args.script[0]}","")
         if script:
             # stop any 'sudo' cmd given here:
-            assert script.find("sudo") == -1
+            assert "sudo" not in script
+            assert "su " not in script
 
             del args.script[0]
             script = script.replace("$*"," ".join(args.script))
@@ -326,13 +330,14 @@ class subproc:
     def webbrowser(cls,url):
         """open given url in webbrowser defined within _config_"""
         if not url[0] in ["'",'"']: url= f"'{url}'"
-        cls.bash( _.webbrowser + url )
+        cls.bash( _.webbrowser + url + "&" )
     
     @staticmethod
     def wslpath(path):
         """switch a linux path to a wsl path"""
         #FIXME: works only for ubuntu
-        return "\\".join(["\\","wsl$","ubuntu",*path.split(os.sep)])
+        assert path[0] == os.sep
+        return "\\".join(["\\","wsl$","ubuntu",*path.split(os.sep)[1:]])
 
     @classmethod
     def mongod(cls):
@@ -402,51 +407,71 @@ class cloud:
 
 
 class mdbook:
-    """markdown documentation tools using rust/mdBook"""
+    """for using mdBook command line tool
+    a Rust crate to create books using Markdown"""
 
     @staticmethod
-    def start(args):
-        """
-        Command Line Interface facilities:
-        $ sweet book            open default book for the project
-        $ sweet book --build    init/build book within current directory
-        $ sweet book --open     open book within current directory
-        """
+    def sweetCLI(args):
+        """provide mdBook tools via the 'sweet' command line interface"""
+
+        if not args.name:
+            echo("no book name given, default settings applied")
+
+        if args.anywhere: directory= os.path.join(os.getcwd(),args.name)
+        else: directory= f"/opt/{_project_}/documentation/{args.name}"
+        isbook= os.path.isfile(os.path.join(directory,"book.toml"))
+
         if args.build:
             # init/build book within current directory:
-            echo("build mdBook within directory:", os.getcwd())
-            mdbook.init(os.getcwd())
-            mdbook.build()
+            mdbook.init(directory)
+            mdbook.build(directory)
+
+        elif args.newbook:
+            # init book within directory without building it:
+            mdbook.init(directory)
+
+        elif not args.open and not args.name:
+            # open the default book of the project:
+            mdbook.open()
+
+        elif not isbook:
+            if args.name: msg= f"Error, book '{args.name}' not existing"
+            else: msg= f"WARNING: root book not existing within documentation"
+            echo(msg, mode="exit")
+        
+        elif args.name: args.open=True
         
         if args.open:
-            # open book within current directory:
-            path = os.path.join(os.getcwd(),"book","index.html")
+            #FIXME: provide default settings:
+            if directory==_config_["working_dir"]: bkdir="markdown_book"
+            else: bkdir="book"
+            # open book for given directory:
+            path = os.path.join(directory,bkdir,"index.html")
             if _.winapp: path = subproc.wslpath(path)
-            echo("open mdBook at",path)
             mdbook.open(path)
 
-        if not args.build and not args.open:
-            # open default book for the project:
-            mdbook.open()
 
     @staticmethod
     def init(directory:str):
         """init a new mdbbok within given directory"""
+
         # check if a doc is existing and create it if not:
         if not os.path.isfile(os.path.join(directory,"book.toml")):
-
+            echo("init new mdBook within directory:",directory)
             #FIXME: input="n" means git features not activated
             subproc.run(["mdbook","init","--force",directory],
                 capture_output=True, text=True, input="n")
 
     @staticmethod
     def build(directory:str=""):
+        echo("build mdBook within directory:",directory)
         subproc.run(["mdbook","build",directory])
 
     @staticmethod
-    def open(directory:str=""):
-        if not directory: directory = _config_["webbook"]
-        subproc.webbrowser(directory)
+    def open(path:str=""):
+        if not path: path= _config_["webbook"]
+        echo("open built mdBook:",path)
+        subproc.webbrowser(path)
 
     @staticmethod
     def serve(directory:str=""):
@@ -458,8 +483,7 @@ class mdbook:
 
 
 class ini:
-    """initialize, build, and configure sweetheart
-    FIXME: local rust toolchain not implemented"""
+    """initialize, build, and configure sweetheart"""
 
     token = 0
     sh = subprocess.run
@@ -480,6 +504,7 @@ class ini:
         ini.label("install required packages")
         ini.apt(_config_["apt-install"])
 
+        #FIXME: rust toolchain not implemented
         ini.label("set rust toolchain")
         ini.sh(["rustup","update"])
         ini.cargo(_config_["cargo-install"])
@@ -498,8 +523,10 @@ class ini:
 
         ini.label("build python3 virtual env")
         ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/envPy"])
-        ini.pip(_config_["pip-install"]+_config_["web_framework"].split())
-        if ai_enabled: ini.pip(_config_["ai_modules"].split())
+        ini.pip(
+            _config_["pip-install"]\
+            + _config_["web_framework"].split()\
+            + _config_["ai_modules"].split() )
 
         # *change current working directory:
         os.chdir(f"/opt/{_project_}/webpages")
@@ -702,9 +729,6 @@ if __name__ == "__main__":
     cli.add("-cf","--conffile",action="store_true",
         help=f"load config from configuration file: {_.conffile}")
 
-    cli.add("-ai","--intelligence",action="store_true",
-        help="enable machine learning capabilities (AI)")
-
     cli.add("--init",action="store_true",
         help="launch init process for building new sweetheart project")
 
@@ -717,7 +741,7 @@ if __name__ == "__main__":
 
     # create the subparser for the "shell" command:
     cli.sub("shell",help="execute script given by the current config")
-    cli.set(subproc.exec)
+    cli.set(subproc.execCLI)
 
     cli.add("script",nargs='+',
         help=f'{ "|".join(_config_["scripts"].keys()) }')
@@ -725,15 +749,22 @@ if __name__ == "__main__":
 
     # creat the subparser for the 'book' command:
     cli.sub("book",help="provide full featured documentation from markdown files")
-    cli.set(mdbook.start)
+    cli.set(mdbook.sweetCLI)
+
+    cli.add("name",nargs="?",default="",
+        help="name of the documentation root directory")
+
+    cli.add("-a","--anywhere",action="store_true",
+        help=f"set the current dir as root dir instead of /opt/{_project_}/documentation")
+
+    cli.add("-i","--init",action="store_true",dest="newbook",
+        help="create a new empty documentation root directory")
+
+    cli.add("-b","--build",action="store_true",
+        help="init/build html documentation from markdown files")
 
     cli.add("-o","--open",action="store_true",
         help="open html documentation within webbrowser")
-
-    cli.add("-b","--build",action="store_true",
-        help="build html documentation from markdown files")
-
-    #TODO: add argument for creating new book directory
 
 
     # create the subparser for the "start" command:
@@ -772,7 +803,6 @@ if __name__ == "__main__":
     mongo_disabled = getattr(argv, "mongo_disabled", mongo_disabled)
     cherrypy_enabled = getattr(argv, "cherrypy", cherrypy_enabled)
     multi_threading = getattr(argv, "multi_threading", multi_threading)
-    ai_enabled = getattr(argv, "machine_learning", ai_enabled)
     
     # start early processes when required:
     if argv.update_cloud: cloud.update_files()
@@ -1344,7 +1374,7 @@ from starlette.responses import HTMLResponse, FileResponse
 from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
-if ai_enabled: exec(f"import {_config_['ai_modules']}")
+if _config_["ai_modules"]: exec(f"import {_config_['ai_modules']}")
 else: echo("AI not implemented within current config",mode="stack")
 
 ###############################################################################

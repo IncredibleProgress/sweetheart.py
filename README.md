@@ -104,6 +104,6 @@ Now start the standalone welcome webapp providing the documentation. With the gi
 sweet start --webapp
 ```
 
-## Epilog: a new incredible life starts now
+## Epilogue: a new incredible life starts now
 
 Even at this early step, sweetheart allows you to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using amazing raw materials widely used by GAFAM and others!
