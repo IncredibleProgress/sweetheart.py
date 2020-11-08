@@ -25,7 +25,7 @@ setup(
     # url="http://",
     project_urls={
         # "Bug Tracker": "https://",
-        "Documentation": "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetbook/",
+        "Documentation": "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetheart/book",
         "Source Code": "https://github.com/IncredibleProgress/sweetheart.py",
     },
 

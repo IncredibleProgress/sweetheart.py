@@ -2,7 +2,7 @@
 provide simple use of highest quality components
 for building full-stacked webapps including AI
 """
-__version__ = "0.1.0-beta6"
+__version__ = "0.1.0-beta7"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -15,19 +15,18 @@ multi_threading = False
 # allow setting of 3 webservers respectively for data, statics, mdbook
 async_host = "http://127.0.0.1:8000"# uvicorn webserver
 static_host = "http://127.0.0.1:8080"# cherrypy webserver
-book_host = "http://127.0.0.1:3000"# serve mdbook (rust lib)
+book_host = "http://127.0.0.1:3000"# serve mdbook (rust crate)
 
 
-# early import:
 import os, subprocess, json
 from collections import UserList, UserDict
 
 # - main modules import are within the WEBAPP FACILITIES section
 # - cherrypy import is within the CHERRYPY FACILITIES section
 # - pymongo import is within the subroc.mongod method
-# - some modules import from standard libs are within relevant objects
+# - imports from standard libs are included within relevant objects
 
-# allow dedicated configs for dev purpose:
+# allow dedicated configs for custom projects:
 _dir_ = os.environ["PWD"].split(os.sep)
 if _dir_[1] == "opt" and _dir_[2:]: _project_ = _dir_[2]
 else: _project_ = "sweetheart"
@@ -48,9 +47,9 @@ _config_ = {
     ## webapps settings:
     "working_dir": f"/opt/{_project_}/webpages",
     "description": "build at the speedlight full-stacked webapps including AI",
-    "webbook": f"\\\\wsl$\\ubuntu\\opt\\{_project_}\\webpages\\markdown_book\\index.html",
+    "webbook": f"/opt/{_project_}/webpages/markdown_book/index.html",
 
-    "webbrowser": "msedge.exe", # msedge.exe|brave.exe|firefox.exe
+    "webbrowser": "app:msedge.exe", # msedge.exe|brave.exe|firefox.exe
     "web_framework": "starlette",# starlette|fastapi
     "ai_modules": "",# select py3 imports e.g.: sklearn
 
@@ -93,11 +92,10 @@ _config_ = {
         "python3-venv",
         "rustc",
         "mongodb",
-        #"xterm",
+        "xterm",
         "git",
         "npm",
         "node-typescript",
-        #"node-vue",
         "libjs-vue",
         "libjs-bootstrap4",
         "libjs-highlight.js",
@@ -133,6 +131,7 @@ _config_ = {
     "pkg-install": {
 
         "excel": "pip: openpyxl pandas",
+        "sweetx": "apt: node-vue; pip: cherrypy",
     },
 }
 class ConfigAccess(UserDict):
@@ -141,14 +140,15 @@ class ConfigAccess(UserDict):
     # general settings:
     verbose = False
     cherrypy = False
-    webapp = False # ENABLE= set url
+    webapp = False
     mdbook = _config_["templates_settings"].get("_book_")
     winapp = _config_["webbrowser"].endswith(".exe")
-    
+
     locker = 0
     def __init__(self, conffile:str=None):
         """final configuration completion
         allowing json configuration file selection"""
+
         cls = ConfigAccess
         assert cls.locker == 0; cls.locker = 1
 
@@ -161,10 +161,13 @@ class ConfigAccess(UserDict):
         "run": {
             # webbrowsers shell commands:
             "webbrowser": {
-                "msedge.exe": f"cmd.exe /c start msedge.exe --app=",
-                "brave.exe": f"cmd.exe /c start brave.exe --app=",
-                "firefox.exe": f"cmd.exe /c start firefox.exe --app=" },
-        },
+                "msedge.exe": "cmd.exe /c start msedge.exe ",#FIXME:last space required
+                "brave.exe": "cmd.exe /c start brave.exe ",
+                "firefox.exe": "cmd.exe /c start firefox.exe ",
+                "app:msedge.exe": "cmd.exe /c start msedge.exe --app=",
+                "app:brave.exe": "cmd.exe /c start brave.exe --app=",
+                "app:firefox.exe": "cmd.exe /c start firefox.exe --app=" },
+            },
 
         # uvicorn arguments dict:
         "uargs": {
@@ -173,7 +176,7 @@ class ConfigAccess(UserDict):
             "log_level": "info" },
 
         # data for building new project dir:
-        "__basedirs__": """[
+        "__basedirs__": lambda: [
             f"/opt/{_project_}",
             f"/opt/{_project_}/configuration",
             f"/opt/{_project_}/database",
@@ -184,13 +187,13 @@ class ConfigAccess(UserDict):
             f"/opt/{_project_}/programs",
             f"/opt/{_project_}/programs/scripts",
             f"/opt/{_project_}/webpages",
-            f"/opt/{_project_}/webpages/bottle_templates",
+            f"/opt/{_project_}/webpages/{_['templates_dir']}",
             f"/opt/{_project_}/webpages/markdown_files",
             f"/opt/{_project_}/webpages/markdown_book",
             f"/opt/{_project_}/webpages/usual_resources"
-        ]""",
+            ],
         
-        "__copyfiles__": """{
+        "__copyfiles__": lambda: {
             "cherrypy.conf": f"/opt/{_project_}/configuration",
             "config.xlaunch": f"/opt/{_project_}/configuration",
             "book.toml": f"/opt/{_project_}/documentation/sweetbook",
@@ -200,8 +203,8 @@ class ConfigAccess(UserDict):
             "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
             "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
             "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
-        }""",
-    }
+            },
+        }
 
     @property
     def webbrowser(self) -> str:
@@ -209,10 +212,10 @@ class ConfigAccess(UserDict):
         return self.data["run"]["webbrowser"][select]
     @property
     def copyfiles(self) -> dict:
-        return eval(self.data["__copyfiles__"])
+        return self.data["__copyfiles__"]()
     @property
     def basedirs(self) -> list:
-        return eval(self.data["__basedirs__"])
+        return self.data["__basedirs__"]()
     
     # "key1.key2" -> ["key1"]["key2"]
     ksplit = lambda keys:\
@@ -224,7 +227,7 @@ class ConfigAccess(UserDict):
             return eval(f"self.data{ConfigAccess.ksplit(keys)}")
         except:
             # if not, look for keys within _config_:
-            verbose("get _config_ item via ConfigAcess:", keys)
+            verbose("** get _config_ item via ConfigAccess:",keys,"**")
             return eval(f"_config_{ConfigAccess.ksplit(keys)}")
 
     def __setitem__(self,key,val):
@@ -246,7 +249,7 @@ class ConfigAccess(UserDict):
 
 
 # set the json configuration filename here:
-#NOTE: loaded only with '-cf' option given within CLI
+#NOTE: loaded only with '-c' option given within CLI
 _ = ConfigAccess(_config_["__conffile__"])
 _deepconfig_ = _.data
 
@@ -274,7 +277,7 @@ def echo(*args, mode="default"):
 
 def verbose(*args):
     """convenient function for verbose messages"""
-    if _.verbose: print("|",*args)
+    if _.verbose: print(">",*args)
 
 
   #############################################################################
@@ -315,8 +318,8 @@ class subproc:
         script:str = _config_["scripts"].get(f"{args.script[0]}","")
         if script:
             # stop any 'sudo' cmd given here:
-            assert "sudo" not in script
-            assert "su " not in script
+            assert not "sudo" in script
+            assert not "su " in script
 
             del args.script[0]
             script = script.replace("$*"," ".join(args.script))
@@ -329,15 +332,21 @@ class subproc:
     @classmethod
     def webbrowser(cls,url):
         """open given url in webbrowser defined within _config_"""
+        if _.winapp: url = cls.wslpath(url)
         if not url[0] in ["'",'"']: url= f"'{url}'"
         cls.bash( _.webbrowser + url + "&" )
     
     @staticmethod
     def wslpath(path):
-        """switch a linux path to a wsl path"""
+        """switch a linux path to wsl path"""
         #FIXME: works only for ubuntu
-        assert path[0] == os.sep
-        return "\\".join(["\\","wsl$","ubuntu",*path.split(os.sep)[1:]])
+        if path[0] == os.sep:
+            return "\\".join(["\\","wsl$","ubuntu",*path.split(os.sep)[1:]])
+        elif path.startswith("http"):
+            return "\\".join([*path.split(os.sep)])
+        else:
+            raise NotImplementedError
+        
 
     @classmethod
     def mongod(cls):
@@ -447,7 +456,7 @@ class mdbook:
             else: bkdir="book"
             # open book for given directory:
             path = os.path.join(directory,bkdir,"index.html")
-            if _.winapp: path = subproc.wslpath(path)
+            #if _.winapp: path = subproc.wslpath(path)
             mdbook.open(path)
 
 
@@ -488,16 +497,15 @@ class ini:
     token = 0
     sh = subprocess.run
 
-    def __init__(self, project_name=None):
+    def __init__(self,args):
 
         global _project_, _py3_
         assert ini.token == 0
-        assert _project_ == "sweetheart"
 
         # set custom project name if given:
         #FIXME: not fully implemented
-        if project_name:
-            _project_ = project_name
+        if args.project:
+            _project_ = args.project
             _py3_ = f"/opt/{_project_}/programs/envPy/bin/python3"
 
         echo(f"start init process for new project: {_project_}")
@@ -545,9 +553,9 @@ renderer = ["html"]
 # Summary
 [Welcome](./welcome.md)
 """
-        welcome = f"""
+        welcome = """
 # Welcome !
-write your documentation in */markdown_files* directory\n
+write your documentation in `/markdown_files` directory\n
 `sweet book --build` for building it\n
 `sweet book --open` for open it
 """
@@ -586,15 +594,15 @@ write your documentation in */markdown_files* directory\n
         print("\nINIT all done!\n")
 
 
-    _sweet_ = f"""
-#!/bin/sh
+    _sweet_ = lambda: f"""
+#!/bin/bash
 {_py3_} -m sweet $*
 """
-    _sws_ = f"""
-#!/bin/sh
+    _sws_ = lambda: f"""
+#!/bin/bash
 {_py3_} -m sweet shell $*
 """
-    _uvicorn_ = f"""
+    _uvicorn_ = lambda: f"""
 #!{_py3_}
 from os import chdir
 from sys import argv
@@ -654,7 +662,7 @@ run(argv[1],host='{_["uargs.host"]}',port={_["uargs.port"]})
             # create 'scriptname' in the current working dir:
             with open(scriptname,"w") as fo:
                 verbose(f"write new script: {scriptname}")
-                fo.write(eval(f"ini._{scriptname}_").strip())
+                fo.write(eval(f"ini._{scriptname}_()").strip())
 
             cls.ln([
                 f"/opt/{_project_}/programs/scripts/{scriptname}",
@@ -667,12 +675,14 @@ run(argv[1],host='{_["uargs.host"]}',port={_["uargs.port"]})
         """install extra packages defined within ConfigAccess"""
 
         # *change current working directory:
-        #NOTE: mandatory for using ini.npm
+        #NOTE: needed for using ini.npm
         os.chdir(_config_["working_dir"])
 
-        for package in args:
-            instrucs:str = _["install"].get(package,"").split(";")
+        for package in args.packages:
+            instrucs:str = _["pkg-install"].get(package,"").split(";")
             for cmd in instrucs:
+                cmd = cmd.strip()
+                echo("install new packages using",cmd)
                 if cmd.startswith("pip:"): ini.pip(cmd[4:].split())
                 elif cmd.startswith("apt:"): ini.apt(cmd[4:].split())
                 elif cmd.startswith("cargo:"): ini.cargo(cmd[6:].split())
@@ -698,9 +708,6 @@ class CommandLine:
 
         cls.set(lambda args:\
             print("use the '--help' or '-h' option for getting some help"))
-
-        cls.add("-v","--verbose",action="count",
-            help="get additional messages about on-going process")
     
     @classmethod
     def add(cls,*args,**kwargs):
@@ -726,10 +733,16 @@ if __name__ == "__main__":
     # will launch here early processes before modules import
     cli = CommandLine()
 
-    cli.add("-cf","--conffile",action="store_true",
+    cli.add("-p",dest="project",action="store",#nargs="?",#const=_project_,
+        help="set a project name different of sweetheart")
+
+    cli.add("-v","--verbose",action="count",
+            help="get additional messages about on-going process")
+
+    cli.add("-c","--conffile",action="store_true",
         help=f"load config from configuration file: {_.conffile}")
 
-    cli.add("--init",action="store_true",
+    cli.add("-i","--init",action="store_true",
         help="launch init process for building new sweetheart project")
 
     cli.add("--edit-config",action="store_true",
@@ -740,7 +753,7 @@ if __name__ == "__main__":
 
 
     # create the subparser for the "shell" command:
-    cli.sub("shell",help="execute script given by the current config")
+    cli.sub("shell",help="execute a script given by the current config")
     cli.set(subproc.execCLI)
 
     cli.add("script",nargs='+',
@@ -755,7 +768,7 @@ if __name__ == "__main__":
         help="name of the documentation root directory")
 
     cli.add("-a","--anywhere",action="store_true",
-        help=f"set the current dir as root dir instead of /opt/{_project_}/documentation")
+        help=f"set the current dir as a documentation dir")
 
     cli.add("-i","--init",action="store_true",dest="newbook",
         help="create a new empty documentation root directory")
@@ -780,8 +793,16 @@ if __name__ == "__main__":
     cli.add("-c","--cherrypy",action="store_true",
         help="start cherrypy as an extra webserver for static contents")
 
-    cli.add("-m","--multi-threading",action="store_true",
+    cli.add("-m","--multi-thread",action="store_true",
         help="start uvicorn webserver allowing multi-threading")
+
+
+    # create the subparser for the "install" command:
+    cli.sub("install",help="install given extra packages using apt,cargo,pip,npm")
+    cli.set(ini.install)
+
+    cli.add("packages",nargs='+',
+        help=f'{ "|".join(_config_["pkg-install"].keys()) }')
 
 
     # create the subparser for the "run-cherrypy" command:
@@ -797,17 +818,19 @@ if __name__ == "__main__":
         
     # update current settings when required:
     ConfigAccess.verbose = getattr(argv, "verbose", _.verbose)
-    ConfigAccess.webapp = async_host \
-        if hasattr(argv,"webapp") and argv.webapp else None
+    ConfigAccess.webapp = getattr(argv, "webapp", _.webapp)
 
     mongo_disabled = getattr(argv, "mongo_disabled", mongo_disabled)
     cherrypy_enabled = getattr(argv, "cherrypy", cherrypy_enabled)
-    multi_threading = getattr(argv, "multi_threading", multi_threading)
+    multi_threading = getattr(argv, "multi_thread", multi_threading)
+
+    if argv.project is not None:
+        echo("custom project name given:",argv.project)
     
     # start early processes when required:
     if argv.update_cloud: cloud.update_files()
     if argv.edit_config: ConfigAccess.edit()
-    if argv.init: ini()
+    if argv.init: ini(argv)
 
 
   #############################################################################
@@ -1480,7 +1503,7 @@ def quickstart(routes=None, endpoint=None):
         assert isinstance(route,Route) or isinstance(route,Mount)
     
     # auto start the webapp within webbrowser:
-    if _.webapp: subproc.webbrowser(_.webapp)
+    if _.webapp: subproc.webbrowser(async_host)
     
     # at last start the uvicorn webserver:
     if multi_threading:
@@ -1557,7 +1580,7 @@ routing = lambda routes: webapp.extend(routes)
 
 if __name__ == "__main__":
     
-    if not hasattr(argv,"script"):
+    if not hasattr(argv,"script") and not hasattr(argv,"name"):
 
         # inform about current version:
         verbose("sweet.py running version:", __version__)
@@ -1565,17 +1588,16 @@ if __name__ == "__main__":
         verbose("shared under CeCILL-C FREE SOFTWARE LICENSE AGREEMENT\n")
 
         if _.verbose == 2:
-
             # provide the available public objects list:
             objects = dict( (k,v) for k,v in globals().items() \
                 if k[0] != "_" and not repr(v).startswith("<module") )
-
-            print("**available objects provided by sweet.py:\n")
+            print("** available objects provided by sweet.py: **\n")
             import pprint
             pprint.pprint(objects); print()
 
+        if _.verbose and _.winapp:
             # give the current wsl statement:
-            print("**current WSL statement:\n")
+            print("** current WSL statement: **\n")
             subproc.bash("cmd.exe /c 'wsl -l -v'")
             print("")
 
