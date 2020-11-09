@@ -161,9 +161,9 @@ class ConfigAccess(UserDict):
         "run": {
             # webbrowsers shell commands:
             "webbrowser": {
-                "msedge.exe": "cmd.exe /c start msedge.exe ",#FIXME:last space required
-                "brave.exe": "cmd.exe /c start brave.exe ",
-                "firefox.exe": "cmd.exe /c start firefox.exe ",
+                "msedge.exe": "cmd.exe /c start msedge.exe",
+                "brave.exe": "cmd.exe /c start brave.exe",
+                "firefox.exe": "cmd.exe /c start firefox.exe",
                 "app:msedge.exe": "cmd.exe /c start msedge.exe --app=",
                 "app:brave.exe": "cmd.exe /c start brave.exe --app=",
                 "app:firefox.exe": "cmd.exe /c start firefox.exe --app=" },
@@ -206,10 +206,6 @@ class ConfigAccess(UserDict):
             },
         }
 
-    @property
-    def webbrowser(self) -> str:
-        select = _config_["webbrowser"]
-        return self.data["run"]["webbrowser"][select]
     @property
     def copyfiles(self) -> dict:
         return self.data["__copyfiles__"]()
@@ -328,13 +324,6 @@ class subproc:
                 cls.bash(cmd)
         else:
             echo("sweet.py shell: Error, invalid script name given")
-
-    @classmethod
-    def webbrowser(cls,url):
-        """open given url in webbrowser defined within _config_"""
-        if _.winapp: url = cls.wslpath(url)
-        if not url[0] in ["'",'"']: url= f"'{url}'"
-        cls.bash( _.webbrowser + url + "&" )
     
     @staticmethod
     def wslpath(path):
@@ -346,7 +335,23 @@ class subproc:
             return "\\".join([*path.split(os.sep)])
         else:
             raise NotImplementedError
-        
+
+
+    @classmethod
+    def webbrowser(cls,url,select=None):
+        """
+        open the given url in selected webbrowser within
+        '_config_["webbrowser"]' or defined with 'run' if given
+        """
+        # build bash command:
+        if not select: select= _config_["webbrowser"]
+        cmd= _deepconfig_["run"]["webbrowser"][select]
+        if not cmd.endswith("=") and not cmd.endswith(" "): cmd+=" "
+        # open the given url:
+        if _.winapp: url = cls.wslpath(url)
+        if not url[0] in ["'",'"']: url= f"'{url}'"
+        cls.bash( cmd + url + "&" )
+
 
     @classmethod
     def mongod(cls):
@@ -378,25 +383,20 @@ class cloud:
     pmount = "sudo mount -t drvfs p: /mnt/p"
     local = "/mnt/p/Public Folder/sweetheart"
     public = "https://filedn.eu/l2gmEvR5C1WbxfsrRYz9Kh4/sweetheart/"
-    SwtBookSrc = "/opt/incredible/documentation/sweetbook/book"
-    SwtBookDest = local
+    swBookSrc = "/opt/incredible/documentation/sweetbook/book"
 
     @staticmethod
     def update_files():
         #FIXME: dev tool not for users
-        echo("updating init files provided from pcloud...")
         if not os.path.isdir(cloud.local): subproc.bash(cloud.pmount)
         for filename, path in _.copyfiles.items():
-
             source = os.path.join(path, filename)
             dest = cloud.local
-            verbose(source, " -> ", dest)
+            verbose("copy:",source," -> ", dest)
             subproc.run(["cp","-u",source,dest])
 
-        echo("updating sweetbook files...")
-        subproc.run(["cp","-R","-u",cloud.SwtBookSrc,cloud.SwtBookDest])
-
-        echo("all updates done to the pcloud drive")
+        subproc.run(["cp","-R","-u",cloud.swBookSrc,cloud.local])
+        echo("copy or update files in the cloud done")
 
     @staticmethod
     def download(files:dict):
@@ -679,6 +679,7 @@ run(argv[1],host='{_["uargs.host"]}',port={_["uargs.port"]})
         os.chdir(_config_["working_dir"])
 
         for package in args.packages:
+            #FIXME: works only with CLI arguments
             instrucs:str = _["pkg-install"].get(package,"").split(";")
             for cmd in instrucs:
                 cmd = cmd.strip()
