@@ -51,7 +51,7 @@ _config_ = {
 
     "webbrowser": "app:msedge.exe", # msedge.exe|brave.exe|firefox.exe
     "web_framework": "starlette",# starlette|fastapi
-    "ai_modules": "",# select py3 imports e.g.: sklearn
+    "ai_modules": "",# select py3 imports FIXME:
 
     "templates_dir": "bottle_templates",
     "templates_settings" : {
@@ -61,7 +61,17 @@ _config_ = {
         "_async_": async_host,
         "_book_": "",# ""=disabled,
     },
+    "static_dirs": {
 
+        "/resources": "usual_resources",
+        "/libs": "javascript_libs",
+        "/modules": "node_modules",
+        "/documentation": "sweet_documentation",
+    },
+    "static_files": {
+
+        "favicon": "usual_resources/favicon.ico",
+    },
     ## set cherrypy default url segments configs:
     "cherrypy": {
         "/": f"/opt/{_project_}/configuration/cherrypy.conf",
@@ -93,12 +103,12 @@ _config_ = {
         "rustc",
         "mongodb",
         "xterm",
-        "git",
         "npm",
         "node-typescript",
-        "libjs-vue",
         "libjs-bootstrap4",
         "libjs-highlight.js",
+        "libjs-vue",
+        #"node-vue",
     ],
     "cargo-install": [
 
@@ -113,9 +123,6 @@ _config_ = {
         "uvicorn",
         "aiofiles",# required with starlette
         "bottle",
-        "setuptools",
-        "twine",
-        "wheel",
     ],
     "npm-install": [
 
@@ -131,7 +138,9 @@ _config_ = {
     "pkg-install": {
 
         "excel": "pip: openpyxl pandas",
-        "sweetx": "apt: node-vue; pip: cherrypy",
+        "science": "pip:pandas seaborn scikit-learn[alldeps]",
+        "pack": "apt: git; pip: setuptools twine wheel",
+        "options": "pip: cherrypy",
     },
 }
 class ConfigAccess(UserDict):
@@ -159,14 +168,17 @@ class ConfigAccess(UserDict):
         self.data = {
 
         "run": {
-            # webbrowsers shell commands:
-            "webbrowser": {
+            "webbrowser": {# webrowsers shell commands:
+                
                 "msedge.exe": "cmd.exe /c start msedge.exe",
                 "brave.exe": "cmd.exe /c start brave.exe",
                 "firefox.exe": "cmd.exe /c start firefox.exe",
+
                 "app:msedge.exe": "cmd.exe /c start msedge.exe --app=",
                 "app:brave.exe": "cmd.exe /c start brave.exe --app=",
                 "app:firefox.exe": "cmd.exe /c start firefox.exe --app=" },
+            
+            "cherrypy": f"{_py3_} -m sweet run-cherrypy",
             },
 
         # uvicorn arguments dict:
@@ -218,12 +230,13 @@ class ConfigAccess(UserDict):
         "".join([f"['{key}']" for key in keys.split(".")])
 
     def __getitem__(self,keys:str):
+        """get any config items providing a verbose message"""
         try:
-            # look for keys in self.data:
+            # first look for keys in self.data:
             return eval(f"self.data{ConfigAccess.ksplit(keys)}")
         except:
-            # if not, look for keys within _config_:
-            verbose("** get _config_ item via ConfigAccess:",keys,"**")
+            # if not look for keys within _config_:
+            verbose(f"GET '{keys}' from current config")
             return eval(f"_config_{ConfigAccess.ksplit(keys)}")
 
     def __setitem__(self,key,val):
@@ -273,7 +286,7 @@ def echo(*args, mode="default"):
 
 def verbose(*args):
     """convenient function for verbose messages"""
-    if _.verbose: print(">",*args)
+    if _.verbose: print("..",*args)
 
 
   #############################################################################
@@ -531,10 +544,7 @@ class ini:
 
         ini.label("build python3 virtual env")
         ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/envPy"])
-        ini.pip(
-            _config_["pip-install"]\
-            + _config_["web_framework"].split()\
-            + _config_["ai_modules"].split() )
+        ini.pip(_config_["pip-install"]+_config_["web_framework"].split())
 
         # *change current working directory:
         os.chdir(f"/opt/{_project_}/webpages")
@@ -1494,13 +1504,13 @@ def quickstart(routes=None, endpoint=None):
         # start cherrypy as external service:
         # this will happen with bash command 'sweet -c start'
         echo("try running cherrypy webserver as external service")
-        subproc.service(f"{_py3_} -m sweet run-cherrypy")
+        subproc.service(_deepconfig_["run"]["cherrypy"])
 
     # set routing and create Starlette object:
     webapp.mount(route_options=True)
 
     for i, route in enumerate(webapp):
-        verbose(i+1,"  type:", type(route))
+        if _.verbose == 2: verbose(i+1,"  type:", type(route))
         assert isinstance(route,Route) or isinstance(route,Mount)
     
     # auto start the webapp within webbrowser:
@@ -1522,9 +1532,6 @@ class WebApp(UserList):
         
     def index(self, request):
         return html("login.txt")
-    
-    def favicon(self, request):
-        return FileResponse("usual_resources/favicon.ico")
 
     # webapp settings:
     # methodes for main settings: mount() star()
@@ -1533,18 +1540,14 @@ class WebApp(UserList):
         """set optionnal routing and mount static dirs"""
 
         # route options if required:
-        if route_options: 
+        if route_options:
             self.extend([
-                Route("/favicon.ico", self.favicon),
-            ])
+                Route("/favicon.ico",FileResponse(_["static_files.favicon"]))
+            ])      
         # mount static resources:
-        self.extend([
-            Mount("/resources", StaticFiles(directory="usual_resources")),
-            Mount("/libs", StaticFiles(directory="javascript_libs")),
-            Mount("/modules", StaticFiles(directory="node_modules")),
-            Mount("/documentation", StaticFiles(directory="sweet_documentation"))
-        ])
-    
+        self.extend([ Mount(path,StaticFiles(directory=dir)) \
+            for path,dir in _config_["static_dirs"].items() ])
+        
     @property
     def star(self) -> Starlette:
         # typical use: uvicorn.run(webapp.star)
@@ -1566,7 +1569,7 @@ class WebApp(UserList):
 
     @cherrypy.expose
     def static(self):
-        #FIXME: not yet implemented
+        #FIXME: not implemented
         return CherryPy.serve_file()
 
 
@@ -1598,7 +1601,7 @@ if __name__ == "__main__":
 
         if _.verbose and _.winapp:
             # give the current wsl statement:
-            print("** current WSL statement: **\n")
+            verbose("current WSL statement:")
             subproc.bash("cmd.exe /c 'wsl -l -v'")
             print("")
 
