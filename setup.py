@@ -1,5 +1,5 @@
 import os
-from sweet import __version__, __license__,_config_
+from sweet import __version__, __license__,__author__,_config_
 from setuptools import setup
 
 readme = os.path.join(os.getcwd(),"README.md")
@@ -15,13 +15,14 @@ setup(
     scripts = ["sweet.py"],
 
     # metadata to display on PyPI
-    author = "Nicolas Champion",
-    author_email = "champion.nicolas@gmail.com",
+    author = __author__.rsplit("<")[0].strip(),
+    author_email = __author__.rsplit("<")[1].strip(" >"),
     description = _config_["description"],
     long_description = long_description,
     long_description_content_type = "text/markdown",
 
     keywords="ubuntu rust python3 mongodb webapp machinelearning industry4.0",
+
     # url="http://",
     project_urls={
         # "Bug Tracker": "https://",

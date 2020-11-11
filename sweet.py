@@ -87,6 +87,7 @@ _config_ = {
     "echolabel": _project_,
     "display": "DISPLAY=:0",
     "terminal": "winterm",# xterm|winterm
+    "gitignore": "y",# y|n
 
     "scripts": {
 
@@ -153,6 +154,9 @@ class ConfigAccess(UserDict):
     mdbook = _config_["templates_settings"].get("_book_")
     winapp = _config_["webbrowser"].endswith(".exe")
 
+    get_host= lambda self,name:eval(f'{name}_host.split(":")[1].strip("/")')
+    get_port= lambda self,name:eval(f'int({name}_host.split(":")[2])')
+
     locker = 0
     def __init__(self, conffile:str=None):
         """final configuration completion
@@ -183,8 +187,8 @@ class ConfigAccess(UserDict):
 
         # uvicorn arguments dict:
         "uargs": {
-            "host": async_host.split(":")[1].strip("/"),
-            "port": int(async_host.split(":")[2]),
+            "host": self.get_host("async"),
+            "port": self.get_port("async"),
             "log_level": "info" },
 
         # data for building new project dir:
@@ -480,9 +484,8 @@ class mdbook:
         # check if a doc is existing and create it if not:
         if not os.path.isfile(os.path.join(directory,"book.toml")):
             echo("init new mdBook within directory:",directory)
-            #FIXME: input="n" means git features not activated
             subproc.run(["mdbook","init","--force",directory],
-                capture_output=True, text=True, input="n")
+                capture_output=True, text=True, input=_config_["gitignore"])
 
     @staticmethod
     def build(directory:str=""):
@@ -498,10 +501,10 @@ class mdbook:
     @staticmethod
     def serve(directory:str=""):
         if not directory: directory= _config_["working_dir"]
-        echo("start the mdbook server (rust)")
-        #FIXME: rust toolchain not implemented
+        host, port = _.get_host("book"), _.get_port("book")
+        echo("start the rust mdbook server")
         subproc.service(
-            f"~/.cargo/bin/mdbook serve {directory}" )
+            f"~/.cargo/bin/mdbook serve -n {host} -p {port} {directory}")
 
 
 class ini:
@@ -516,7 +519,6 @@ class ini:
         assert ini.token == 0
 
         # set custom project name if given:
-        #FIXME: not fully implemented
         if args.project:
             _project_ = args.project
             _py3_ = f"/opt/{_project_}/programs/envPy/bin/python3"
@@ -525,7 +527,6 @@ class ini:
         ini.label("install required packages")
         ini.apt(_config_["apt-install"])
 
-        #FIXME: rust toolchain not implemented
         ini.label("set rust toolchain")
         ini.sh(["rustup","update"])
         ini.cargo(_config_["cargo-install"])
