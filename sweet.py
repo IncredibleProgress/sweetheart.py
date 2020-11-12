@@ -51,7 +51,7 @@ _config_ = {
 
     "webbrowser": "app:msedge.exe", # msedge.exe|brave.exe|firefox.exe
     "web_framework": "starlette",# starlette|fastapi
-    "modules": "",# select py3 imports FIXME:
+    "modules": "",#FIXME: select py3 imports
 
     "templates_dir": "bottle_templates",
     "templates_settings" : {
@@ -687,7 +687,8 @@ run(argv[1],host='{_["uargs.host"]}',port={_["uargs.port"]})
     
     @classmethod
     def install(cls,args):
-        """install extra packages defined within ConfigAccess"""
+        """install extra packages defined within ConfigAccess
+        two accepted special values: all|options"""
 
         # *change current working directory:
         #NOTE: needed for using ini.npm
@@ -1014,7 +1015,6 @@ try:
 
 
 except:
-    echo("cherrypy not implemented within current config",mode="stack")
     class cherrypy:
         """implement cherrypy.expose as a ghost method"""
         @classmethod
@@ -1603,11 +1603,6 @@ if __name__ == "__main__":
         verbose("written by ", __author__)
         verbose("shared under CeCILL-C FREE SOFTWARE LICENSE AGREEMENT\n")
 
-        try:
-            sklearn
-        except:
-            echo("AI not implemented within current config",mode="stack")
-
         if _.verbose == 2:
             # provide the available public objects list:
             objects = dict( (k,v) for k,v in globals().items() \
@@ -1622,15 +1617,21 @@ if __name__ == "__main__":
             subproc.bash("cmd.exe /c 'wsl -l -v'")
             print("")
 
-        # release stacked messages:
-        echo(mode="release")
-
         # force config and settings:
-        if not _.cherrypy: cherrypy_enabled = False
+        if not _.cherrypy:
+            cherrypy_enabled = False
+        if not cherrypy_enabled:
+            echo("cherrypy server not available with current config",mode="stack")
 
         # inform about config status:
+        try: sklearn
+        except: echo("AI not implemented within current config",mode="stack")
+
         if _.verbose and _project_ != "sweetheart":
             echo(f"config built for the {_dir_[1:3]} project directory")
+
+        # release stacked messages:
+        echo(mode="release")
 
     # execute dedicated function related to the cli:
     argv.func(argv)
