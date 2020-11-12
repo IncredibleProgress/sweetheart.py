@@ -1,6 +1,6 @@
 import os
-from sweet import __version__, __license__,__author__,_config_
 from setuptools import setup
+from sweet import __version__, __license__, __author__, _config_
 
 readme = os.path.join(os.getcwd(),"README.md")
 with open(readme) as file:

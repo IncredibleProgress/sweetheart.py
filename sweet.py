@@ -51,7 +51,7 @@ _config_ = {
 
     "webbrowser": "app:msedge.exe", # msedge.exe|brave.exe|firefox.exe
     "web_framework": "starlette",# starlette|fastapi
-    "ai_modules": "",# select py3 imports FIXME:
+    "modules": "",# select py3 imports FIXME:
 
     "templates_dir": "bottle_templates",
     "templates_settings" : {
@@ -140,9 +140,10 @@ _config_ = {
 
         "excel": "pip: openpyxl pandas",
         "science": "pip:pandas seaborn scikit-learn[alldeps]",
-        "pack": "apt: git; pip: setuptools twine wheel",
-        "options": "pip: cherrypy",
+        "packing": "apt: git; pip: setuptools twine wheel",
+        "servers": "pip: cherrypy",
     },
+    "pkg-options": "packing science excel",
 }
 class ConfigAccess(UserDict):
     """provide a convenient _config_ accessor tool"""
@@ -545,7 +546,10 @@ class ini:
 
         ini.label("build python3 virtual env")
         ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/envPy"])
-        ini.pip(_config_["pip-install"]+_config_["web_framework"].split())
+        ini.pip(
+            _config_["pip-install"]\
+            + _config_["web_framework"].split()\
+            + _config_["modules"].split() )
 
         # *change current working directory:
         os.chdir(f"/opt/{_project_}/webpages")
@@ -689,9 +693,17 @@ run(argv[1],host='{_["uargs.host"]}',port={_["uargs.port"]})
         #NOTE: needed for using ini.npm
         os.chdir(_config_["working_dir"])
 
+        if "all" in args.packages:
+            # install all given packages listed
+            args.packages= _config_["pkg-install"].keys()
+        elif "options" in args.packages:
+            args.packages= [i for i in args.packages if i != "options"]
+            args.packages.extend(_config_["pkg-options"].split())
+        
+        echo("set optionnal packages:",[*args.packages])
         for package in args.packages:
             #FIXME: works only with CLI arguments
-            instrucs:str = _["pkg-install"].get(package,"").split(";")
+            instrucs = _["pkg-install"][package].split(";")
             for cmd in instrucs:
                 cmd = cmd.strip()
                 echo("install new packages using",cmd)
@@ -1409,8 +1421,7 @@ from starlette.responses import HTMLResponse, FileResponse
 from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
-if _config_["ai_modules"]: exec(f"import {_config_['ai_modules']}")
-else: echo("AI not implemented within current config",mode="stack")
+if _config_["modules"]: exec(f"import {_config_['modules']}")
 
 ###############################################################################
 ###############################################################################
@@ -1591,6 +1602,11 @@ if __name__ == "__main__":
         verbose("sweet.py running version:", __version__)
         verbose("written by ", __author__)
         verbose("shared under CeCILL-C FREE SOFTWARE LICENSE AGREEMENT\n")
+
+        try:
+            sklearn
+        except:
+            echo("AI not implemented within current config",mode="stack")
 
         if _.verbose == 2:
             # provide the available public objects list:
