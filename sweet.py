@@ -51,8 +51,7 @@ _config_ = {
 
     "webbrowser": "app:msedge.exe", # msedge.exe|brave.exe|firefox.exe
     "web_framework": "starlette",# starlette|fastapi
-    "modules": "",#FIXME: select py3 imports
-
+    
     "templates_dir": "bottle_templates",
     "templates_settings" : {
 
@@ -72,6 +71,7 @@ _config_ = {
 
         "favicon": "usual_resources/favicon.ico",
     },
+
     ## set cherrypy default url segments configs:
     "cherrypy": {
         "/": f"/opt/{_project_}/configuration/cherrypy.conf",
@@ -91,7 +91,7 @@ _config_ = {
 
     "scripts": {
 
-        "python": f"{_py3_}",
+        "python": f"{_py3_}".replace("python","ipython"),
         "upload": f"{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
         "commit": 'git add * && git commit -m "$*" && git push origin master',
@@ -123,6 +123,7 @@ _config_ = {
         "pymongo",
         "uvicorn",
         "aiofiles",# required with starlette
+        "ipython",
         "bottle",
     ],
     "npm-install": [
@@ -144,6 +145,12 @@ _config_ = {
         "servers": "pip: cherrypy",
     },
     "pkg-options": "packing science excel",
+
+    ##FIXME: set python3 modules imports:
+    "py_imports": {
+        
+        "sys": "exit",
+    },
 }
 class ConfigAccess(UserDict):
     """provide a convenient _config_ accessor tool"""
@@ -1421,7 +1428,16 @@ from starlette.responses import HTMLResponse, FileResponse
 from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
-if _config_["modules"]: exec(f"import {_config_['modules']}")
+for module in _config_["py_imports"].keys():
+
+    objectToImport = _config_["py_imports"].get(module)
+    assert not objectToImport in globals()
+
+    # import selected objects from a module:
+    if objectToImport: exec(f"from {module} import {objectToImport}")
+    # full import of the module:
+    else: exec(f"import {module}")
+    del objectToImport
 
 ###############################################################################
 ###############################################################################
