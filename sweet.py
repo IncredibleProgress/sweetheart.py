@@ -95,6 +95,7 @@ _config_ = {
         "upload": f"{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
         "commit": 'git add * && git commit -m "$*" && git push origin master',
+        "sweetbook": "sweet book --open sweetbook"
     },
 
     ## settings for the --init process:
@@ -123,8 +124,8 @@ _config_ = {
         "pymongo",
         "uvicorn",
         "aiofiles",# required with starlette
-        "ipython",
         "bottle",
+        "ipython",
     ],
     "npm-install": [
 
@@ -150,6 +151,7 @@ _config_ = {
 
     ## set python3 modules imports:
     "py_imports": {
+        #FIXME: modules have to be installed previoulsy
         # "module": "", -> will import the module itself
         "sys": "exit",
     },
@@ -187,7 +189,6 @@ class ConfigAccess(UserDict):
                 "msedge.exe": "cmd.exe /c start msedge.exe",
                 "brave.exe": "cmd.exe /c start brave.exe",
                 "firefox.exe": "cmd.exe /c start firefox.exe",
-
                 "app:msedge.exe": "cmd.exe /c start msedge.exe --app=",
                 "app:brave.exe": "cmd.exe /c start brave.exe --app=",
                 "app:firefox.exe": "cmd.exe /c start firefox.exe --app=" },
@@ -555,10 +556,7 @@ class ini:
 
         ini.label("build python3 virtual env")
         ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/envPy"])
-        ini.pip(
-            _config_["pip-install"]\
-            + _config_["web_framework"].split()\
-            + [*_config_["py_imports"].keys()] )
+        ini.pip(_config_["pip-install"]+_config_["web_framework"].split())
 
         # *change current working directory:
         os.chdir(f"/opt/{_project_}/webpages")
@@ -1436,9 +1434,9 @@ for module in _config_["py_imports"].keys():
     objectToImport = _config_["py_imports"].get(module)
     assert not objectToImport in globals()
 
-    # import selected objects from a module:
+    # import selected objects from module:
     if objectToImport: exec(f"from {module} import {objectToImport}")
-    # full import of the module:
+    # or import module:
     else: exec(f"import {module}")
     del objectToImport
 
