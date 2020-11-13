@@ -95,7 +95,7 @@ _config_ = {
         "upload": f"{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
         "commit": 'git add * && git commit -m "$*" && git push origin master',
-        "sweetbook": "sweet book --open sweetbook"
+        "sweetbook": "sweet book --open sweetbook",
     },
 
     ## settings for the --init process:
