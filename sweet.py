@@ -144,11 +144,13 @@ _config_ = {
         "packing": "apt: git; pip: setuptools twine wheel",
         "servers": "pip: cherrypy",
     },
-    "pkg-options": "packing science excel",
+    #$ sweet install all -> for installing all within "pkg-install"
+    #$ sweet install options -> for installing given "pkg-options"
+    "pkg-options": "packing science",
 
-    ##FIXME: set python3 modules imports:
+    ## set python3 modules imports:
     "py_imports": {
-        
+        # "module": "", -> will import the module itself
         "sys": "exit",
     },
 }
@@ -556,7 +558,7 @@ class ini:
         ini.pip(
             _config_["pip-install"]\
             + _config_["web_framework"].split()\
-            + _config_["modules"].split() )
+            + [*_config_["py_imports"].keys()] )
 
         # *change current working directory:
         os.chdir(f"/opt/{_project_}/webpages")
@@ -636,7 +638,7 @@ run(argv[1],host='{_["uargs.host"]}',port={_["uargs.port"]})
     @classmethod
     def label(cls,text):
         cls.token += 1
-        print(f"\nINIT step{ini.token}: {text}...\n")
+        print(f"\nINIT step{ini.token}: {text}\n")
 
     @classmethod
     def apt(cls,data:list):
@@ -708,17 +710,18 @@ run(argv[1],host='{_["uargs.host"]}',port={_["uargs.port"]})
             args.packages= [i for i in args.packages if i != "options"]
             args.packages.extend(_config_["pkg-options"].split())
         
-        echo("set optionnal packages:",[*args.packages])
         for package in args.packages:
             #FIXME: works only with CLI arguments
             instrucs = _["pkg-install"][package].split(";")
             for cmd in instrucs:
                 cmd = cmd.strip()
-                echo("install new packages using",cmd)
+                ini.label(f"install new packages using {cmd}")
                 if cmd.startswith("pip:"): ini.pip(cmd[4:].split())
                 elif cmd.startswith("apt:"): ini.apt(cmd[4:].split())
                 elif cmd.startswith("cargo:"): ini.cargo(cmd[6:].split())
                 elif cmd.startswith("npm:"): ini.npm(cmd[4:].split())
+        
+        print(); echo("optionnal packages installed:",*args.packages)
 
 
   #############################################################################
