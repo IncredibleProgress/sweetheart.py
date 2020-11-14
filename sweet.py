@@ -2,7 +2,7 @@
 provide simple use of highest quality components
 for building full-stacked webapps including AI
 """
-__version__ = "0.1.0-beta7"
+__version__ = "0.1.0-beta8"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -72,6 +72,13 @@ _config_ = {
         "favicon": "usual_resources/favicon.ico",
     },
 
+    ## set python3 extra modules imports:
+    "py_imports": {
+        #FIXME: install error msg with module from standard libs 
+        # "module": "", will import the module itself
+        "mistune": "markdown",
+    },
+
     ## set cherrypy default url segments configs:
     "cherrypy": {
         "/": f"/opt/{_project_}/configuration/cherrypy.conf",
@@ -92,13 +99,13 @@ _config_ = {
     "scripts": {
 
         "python": f"{_py3_}".replace("python","ipython"),
-        "upload": f"{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
+        "upload": f"rm -R build;rm -R dist;rm -R *.egg-info;{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
         "commit": 'git add * && git commit -m "$*" && git push origin master',
         "sweetbook": "sweet book --open sweetbook",
     },
 
-    ## settings for the --init process:
+    ## basic config settings for the --init process:
     "apt-install": [
 
         "python3-venv",
@@ -137,25 +144,21 @@ _config_ = {
         "https://raw.githubusercontent.com/alsacreations/KNACSS/master/css/knacss.css",
         "https://www.w3schools.com/w3css/4/w3.css"
     ],
+
     ## extra packages install settings:
+    #$ sweet install all -> for installing all within "pkg-install"
+    #$ sweet install options -> for installing given "pkg-options"
     "pkg-install": {
 
         "excel": "pip: openpyxl pandas",
         "science": "pip:pandas seaborn scikit-learn[alldeps]",
-        "packing": "apt: git; pip: setuptools twine wheel",
+        "pack": "apt: git; pip: setuptools twine wheel",
         "servers": "pip: cherrypy",
     },
-    #$ sweet install all -> for installing all within "pkg-install"
-    #$ sweet install options -> for installing given "pkg-options"
-    "pkg-options": "packing science",
-
-    ## set python3 modules imports:
-    "py_imports": {
-        #FIXME: modules have to be installed previoulsy
-        # "module": "", -> will import the module itself
-        "sys": "exit",
-    },
+    
+    "pkg-options": "pack science",
 }
+
 class ConfigAccess(UserDict):
     """provide a convenient _config_ accessor tool"""
 
@@ -558,6 +561,10 @@ class ini:
         ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/envPy"])
         ini.pip(_config_["pip-install"]+_config_["web_framework"].split())
 
+        for module in _config_["py_imports"].keys():
+            try: ini.pip([module])
+            except: pass
+
         # *change current working directory:
         os.chdir(f"/opt/{_project_}/webpages")
 
@@ -669,7 +676,7 @@ run(argv[1],host='{_["uargs.host"]}',port={_["uargs.port"]})
         # download files using 'wget'
         for url in data:
             verbose(f"download file: {url}")
-            cls.sh(["wget","-q","--no-check-certificate",url])
+            cls.sh(["wget","-nv","-nc","--no-hsts","--no-check-certificate",url])
     
     @classmethod
     def ln(cls,data:list):
@@ -766,7 +773,7 @@ if __name__ == "__main__":
     # will launch here early processes before modules import
     cli = CommandLine()
 
-    cli.add("-p",dest="project",action="store",#nargs="?",#const=_project_,
+    cli.add("-p",dest="project",action="store",#const=_project_,
         help="set a project name different of sweetheart")
 
     cli.add("-v","--verbose",action="count",
@@ -1440,6 +1447,13 @@ for module in _config_["py_imports"].keys():
     else: exec(f"import {module}")
     del objectToImport
 
+# inform about config status:
+try: sklearn
+except: echo("AI not implemented within current config",mode="stack")
+
+try: markdown
+except: echo("markdown files rendering is not available",mode="stack")
+
 ###############################################################################
 ###############################################################################
 
@@ -1471,15 +1485,15 @@ def html(source:str="WELCOME",**kwargs):
             **_config_["templates_settings"],
             **kwargs ))
 
-    # elif source.endswith(".md") and os.path.isfile(source):
+    elif source.endswith(".md") and os.path.isfile(source):
 
-    #     # render html content from given markdown file:
-    #     with open(source) as file:
-    #         return HTMLResponse(template(
-    #             os.path.join(_config_["templates_dir"],"document.txt"),
-    #             text= markdown(file.read()),
-    #             **_config_["templates_settings"],
-    #             **kwargs ))
+        # render html content from given markdown file:
+        with open(source) as file:
+            return HTMLResponse(template(
+                os.path.join(_config_["templates_dir"],"document.txt"),
+                text= markdown(file.read()),
+                **_config_["templates_settings"],
+                **kwargs ))
 
     elif "</" in source:
         #FIXME: not safe for detecting html content
@@ -1639,10 +1653,6 @@ if __name__ == "__main__":
             cherrypy_enabled = False
         if not cherrypy_enabled:
             echo("cherrypy server not available with current config",mode="stack")
-
-        # inform about config status:
-        try: sklearn
-        except: echo("AI not implemented within current config",mode="stack")
 
         if _.verbose and _project_ != "sweetheart":
             echo(f"config built for the {_dir_[1:3]} project directory")
