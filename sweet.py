@@ -18,7 +18,7 @@ static_host = "http://127.0.0.1:8080"# cherrypy webserver
 book_host = "http://127.0.0.1:3000"# serve mdbook (rust crate)
 
 
-import os, subprocess, json
+import os, sys, subprocess, json
 from collections import UserList, UserDict
 
 # - main modules import are within the WEBAPP FACILITIES section
@@ -49,9 +49,9 @@ _config_ = {
     "description": "build at the speedlight full-stacked webapps including AI",
     "webbook": f"/opt/{_project_}/webpages/markdown_book/index.html",
 
-    "webbrowser": "app:msedge.exe", # msedge.exe|brave.exe|firefox.exe
     "web_framework": "starlette",# starlette|fastapi
-    
+    "webbrowser": "app:msedge.exe", # msedge.exe|brave.exe|firefox.exe
+
     "templates_dir": "bottle_templates",
     "templates_settings" : {
 
@@ -71,19 +71,18 @@ _config_ = {
 
         "favicon": "usual_resources/favicon.ico",
     },
-
     ## set python3 extra modules imports:
     "py_imports": {
         #FIXME: install error msg with module from standard libs 
         # "module": "", will import the module itself
-        "mistune": "markdown",
-    },
 
+        "mistune": "markdown",
+        "sys": "exit",
+    },
     ## set cherrypy default url segments configs:
     "cherrypy": {
         "/": f"/opt/{_project_}/configuration/cherrypy.conf",
     },
-
     ## database settings:
     "db_host": "localhost",
     "db_port": 27017,
@@ -98,11 +97,10 @@ _config_ = {
 
     "scripts": {
 
-        "python": f"{_py3_}".replace("python","ipython"),
-        "upload": f"rm -R build;rm -R dist;rm -R *.egg-info;{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
+        "python": f"/opt/{_project_}/programs/envPy/bin/ipython3",
+        "upload": f"rm -rf dist;{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
         "commit": 'git add * && git commit -m "$*" && git push origin master',
-        "sweetbook": "sweet book --open sweetbook",
     },
 
     ## basic config settings for the --init process:
@@ -144,20 +142,45 @@ _config_ = {
         "https://raw.githubusercontent.com/alsacreations/KNACSS/master/css/knacss.css",
         "https://www.w3schools.com/w3css/4/w3.css"
     ],
-
     ## extra packages install settings:
     #$ sweet install all -> for installing all within "pkg-install"
     #$ sweet install options -> for installing given "pkg-options"
     "pkg-install": {
 
-        "excel": "pip: openpyxl pandas",
-        "science": "pip:pandas seaborn scikit-learn[alldeps]",
-        "pack": "apt: git; pip: setuptools twine wheel",
+        "excel": "pip: xlrd xlwt pyxlsb openpyxl xlsxwriter pandas",
+        "science": "pip:pandas seaborn scikit-learn[alldeps] jupyter",
+        "pypack": "apt: git; pip: setuptools twine wheel pytest",
         "servers": "pip: cherrypy",
     },
-    
-    "pkg-options": "pack science",
+    "pkg-options": "pypack science excel",
 }
+
+
+_msg_ = []
+def echo(*args, mode="default"):
+    """convenient function for printing messages
+    mode = 0|default|stack|release"""
+
+    if mode.lower() == "stack" or mode == 0:
+        global _msg_
+        _msg_.append(" ".join(args))
+
+    elif mode.lower() == "release":
+        for msg in _msg_:
+            print("[%s]"% _config_["echolabel"].upper(),msg)
+        _msg_ = []
+
+    elif mode.lower() == "exit":
+        print("[%s]"% _config_["echolabel"].upper(),*args)
+        sys.exit()
+
+    else:
+        print("[%s]"% _config_["echolabel"].upper(),*args)
+
+def verbose(*args):
+    """convenient function for verbose messages"""
+    if _.verbose: print("..",*args)
+
 
 class ConfigAccess(UserDict):
     """provide a convenient _config_ accessor tool"""
@@ -168,6 +191,10 @@ class ConfigAccess(UserDict):
     webapp = False
     mdbook = _config_["templates_settings"].get("_book_")
     winapp = _config_["webbrowser"].endswith(".exe")
+
+    if winapp and os.environ["WSL_DISTRO_NAME"] != "Ubuntu":
+        echo("WARNING: WSL is not running with Ubuntu")
+        verbose = True
 
     get_host= lambda self,name:eval(f'{name}_host.split(":")[1].strip("/")')
     get_port= lambda self,name:eval(f'int({name}_host.split(":")[2])')
@@ -189,7 +216,13 @@ class ConfigAccess(UserDict):
         "run": {
             "webbrowser": {# webrowsers shell commands:
                 
-                "msedge.exe": "cmd.exe /c start msedge.exe",
+                # usual linux webbrowsers:
+                "*": f"{_py3_} -m webbrowser -t",
+                "firefox": "firefox",
+                "app:firefox": "firefox --app=",
+
+                # usual windows webbrowsers:
+                "msedge.exe": "cmd.exe /c start msedge.exe",# windows
                 "brave.exe": "cmd.exe /c start brave.exe",
                 "firefox.exe": "cmd.exe /c start firefox.exe",
                 "app:msedge.exe": "cmd.exe /c start msedge.exe --app=",
@@ -230,7 +263,7 @@ class ConfigAccess(UserDict):
             "SUMMARY.md": f"/opt/{_project_}/documentation/sweetbook/src",
             "welcome.md": f"/opt/{_project_}/documentation/sweetbook/src",
             "sweet.HTML": f"/opt/{_project_}/webpages",
-            "login.txt": f"/opt/{_project_}/webpages/bottle_templates",
+            "login.txt": f"/opt/{_project_}/webpages/{_['templates_dir']}",
             "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
             "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
             },
@@ -281,32 +314,6 @@ _ = ConfigAccess(_config_["__conffile__"])
 _deepconfig_ = _.data
 
 
-_msg_ = []
-def echo(*args, mode="default"):
-    """convenient function for printing messages
-    mode = 0|default|stack|release"""
-
-    if mode.lower() == "stack" or mode == 0:
-        global _msg_
-        _msg_.append(" ".join(args))
-
-    elif mode.lower() == "release":
-        for msg in _msg_:
-            print("[%s]"% _config_["echolabel"].upper(),msg)
-        _msg_ = []
-
-    elif mode.lower() == "exit":
-        print("[%s]"% _config_["echolabel"].upper(),*args)
-        quit()
-
-    else:
-        print("[%s]"% _config_["echolabel"].upper(),*args)
-
-def verbose(*args):
-    """convenient function for verbose messages"""
-    if _.verbose: print("..",*args)
-
-
   #############################################################################
  ########## EXTERNAL SERVICES FACILITIES #####################################
 #############################################################################
@@ -351,7 +358,7 @@ class subproc:
             del args.script[0]
             script = script.replace("$*"," ".join(args.script))
             for cmd in script.split(";"):
-                echo("shell$",cmd)
+                echo("shell$",cmd.strip())
                 cls.bash(cmd)
         else:
             echo("sweet.py shell: Error, invalid script name given")
@@ -374,12 +381,20 @@ class subproc:
         open the given url in selected webbrowser within
         '_config_["webbrowser"]' or defined with 'run' if given
         """
+
+        if _.winapp and not "/mnt/c/Windows" in os.environ["PATH"]:
+            echo("NO WSL: set default native webbrowser for linux")
+            select = "*"
+
         # build bash command:
         if not select: select= _config_["webbrowser"]
         cmd= _deepconfig_["run"]["webbrowser"][select]
         if not cmd.endswith("=") and not cmd.endswith(" "): cmd+=" "
+
         # open the given url:
-        if _.winapp: url = cls.wslpath(url)
+        if _.winapp:
+            url = cls.wslpath(url)
+            echo("WSL1 is recommended opening a windows webbrowser")
         if not url[0] in ["'",'"']: url= f"'{url}'"
         cls.bash( cmd + url + "&" )
 
@@ -584,9 +599,9 @@ renderer = ["html"]
 """
         welcome = """
 # Welcome !
-write your documentation in `/markdown_files` directory\n
-`sweet book --build` for building it\n
-`sweet book --open` for open it
+make documentation writing files in *markdown_files* directory\n
+`sweet book --build` or `sweet book -b` for building it\n
+`sweet book --open` or `sweet book -o` for open it
 """
         # build documentation setting files:
         ini.label("init project documentation")
@@ -1447,13 +1462,6 @@ for module in _config_["py_imports"].keys():
     else: exec(f"import {module}")
     del objectToImport
 
-# inform about config status:
-try: sklearn
-except: echo("AI not implemented within current config",mode="stack")
-
-try: markdown
-except: echo("markdown files rendering is not available",mode="stack")
-
 ###############################################################################
 ###############################################################################
 
@@ -1469,7 +1477,7 @@ def html(source:str="WELCOME",**kwargs):
             <h1><br><br>Welcome {user} !<br><br></h1>
             <h3>sweetheart</h3>
             <p>a supercharged heart for the non-expert hands</p>
-            <p>be aware that you could fall in love with it</p>
+            <p>{_config_["description"]}</p>
             <p><a href="documentation/index.html"
                 class="btn" role="button">Get Started Now!</a></p>
             <p><br><br><br><em>this message appears because there
@@ -1522,14 +1530,14 @@ def quickstart(routes=None, endpoint=None):
     echo("set working directory:", os.getcwd())
     
     # then build routing depending of given arguments:
-    if isinstance(routes, dict):
+    if isinstance(routes,dict):
         echo("create and route starlette objects from dict")
         for segment,endpoint in routes.items():
             webapp.append( Route(segment,endpoint) )
 
             verbose("callable segment:",callable(endpoint),"",segment)
 
-    elif isinstance(routes, str) and callable(endpoint) :
+    elif isinstance(routes,str) and endpoint is None:
         echo("route directly given html content at /")
         webapp.append( Route("/", lambda request: html(routes)) )
 
@@ -1537,7 +1545,7 @@ def quickstart(routes=None, endpoint=None):
         echo("route a default welcome message at", async_host)
         webapp.append( Route("/", html("WELCOME")) )
 
-    elif routes is None and isinstance(endpoint, function):
+    elif callable(routes) and endpoint is None:
         echo("route a single webpage at", async_host)
         webapp.append( Route("/", routes) )
     else:
@@ -1630,6 +1638,7 @@ if __name__ == "__main__":
     if not hasattr(argv,"script") and not hasattr(argv,"name"):
 
         # inform about current version:
+        echo("sweetheart helps you getting coding full power")
         verbose("sweet.py running version:", __version__)
         verbose("written by ", __author__)
         verbose("shared under CeCILL-C FREE SOFTWARE LICENSE AGREEMENT\n")
@@ -1649,10 +1658,7 @@ if __name__ == "__main__":
             print("")
 
         # force config and settings:
-        if not _.cherrypy:
-            cherrypy_enabled = False
-        if not cherrypy_enabled:
-            echo("cherrypy server not available with current config",mode="stack")
+        if not _.cherrypy: cherrypy_enabled = False
 
         if _.verbose and _project_ != "sweetheart":
             echo(f"config built for the {_dir_[1:3]} project directory")
