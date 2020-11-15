@@ -50,7 +50,7 @@ _config_ = {
     "webbook": f"/opt/{_project_}/webpages/markdown_book/index.html",
 
     "web_framework": "starlette",# starlette|fastapi
-    "webbrowser": "app:msedge.exe", # msedge.exe|brave.exe|firefox.exe
+    "webbrowser": "msedge.exe", # msedge.exe|brave.exe|firefox.exe
 
     "templates_dir": "bottle_templates",
     "templates_settings" : {
@@ -75,7 +75,6 @@ _config_ = {
     "py_imports": {
         #FIXME: install error msg with module from standard libs 
         # "module": "", will import the module itself
-
         "mistune": "markdown",
         "sys": "exit",
     },
@@ -101,6 +100,7 @@ _config_ = {
         "upload": f"rm -rf dist;{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
         "commit": 'git add * && git commit -m "$*" && git push origin master',
+        "notebook": "sweet run-jupyter --notebook",
     },
 
     ## basic config settings for the --init process:
@@ -323,11 +323,13 @@ class subproc:
     bash = lambda *args,**kwargs: subprocess.run(*args,shell=True,**kwargs)
     run = subprocess.run
 
-    @staticmethod
-    def service(cmd:str):
+    @classmethod
+    def service(cls,cmd:str):
         """select the way for starting external service:
         used for starting mongod, cherrypy, uvicorn within external terminal"""
         
+        assert _config_["terminal"] in "xterm|winterm"
+
         if _config_["terminal"] == "winterm":
             # start an external service within Windows Terminal
             os.system(f'cmd.exe /c start wt.exe ubuntu.exe run {cmd} &')
@@ -336,8 +338,6 @@ class subproc:
             # start an external service within xterm"""
             os.system("%s xterm -C -geometry 190x19 -e %s &"
                 % (_config_["display"], cmd))
-
-        assert _config_["terminal"] in "xterm|winterm"
 
     @classmethod
     def execCLI(cls,args):
@@ -420,16 +420,19 @@ class subproc:
 
 
     @classmethod
-    def jupyter(cls):
+    def jupyterCLI(cls,args):
         """start jupyter notebook server"""
         #FIXME: only for test
+        if args.password: cls.bash("jupyter-notebook password")
+        if args.notebook: cls.webbrowser("http://localhost:8888/")
+        echo("start the jupyter notebook server")
+
+        if args.set_kernel:
+            os.chdir(f"/opt/{_project_}/programs")
+            cls.bash(f"{_py3_} -m ipykernel install --user --name=envPy")
+
         dir = f"/opt/{_project_}/documentation/notebooks"
-        #cls.bash("jupyter-notebook password")
-        cls.run([
-            "jupyter","notebook","--no-browser",
-            f"--notebook-dir",dir ])
-        #cls.webbrowser("http://localhost:8888/")
-        sys.exit()
+        os.system(f"{_py3_} -m jupyter notebook --no-browser --notebook-dir={dir}")
 
 
 class cloud:
@@ -812,7 +815,6 @@ if __name__ == "__main__":
         help="provide a default configuration json file")
 
     #FIXME: provisional dev tool:
-    cli.add("--jupyter",action="store_true")
     cli.add("--update-cloud",action="store_true")
 
 
@@ -869,9 +871,22 @@ if __name__ == "__main__":
         help=f'{ "|".join(_config_["pkg-install"].keys()) }')
 
 
+    # create the subparser for the "run-jupyter" command:
+    cli.sub("run-jupyter",help="run the jupyter notebook server")
+    cli.set(subproc.jupyterCLI)
+
+    cli.add("-p","--password",action="store_true",
+        help="ask for setting server password (can be empty)")
+    
+    cli.add("-n","--notebook",action="store_true",
+        help="start jupyter notebook within webbrowser")
+
+    cli.add("-k","--set-kernel",action="store_true",
+        help="init ipykernel setting sweetheart python env ")
+
+
     # create the subparser for the "run-cherrypy" command:
-    cli.sub("run-cherrypy",
-        help="run cherrypy webserver for serving static contents")
+    cli.sub("run-cherrypy",help="run cherrypy webserver for serving statics")
     cli.set(lambda args: CherryPy.start(webapp))
 
 
@@ -895,8 +910,6 @@ if __name__ == "__main__":
     if argv.update_cloud: cloud.update_files()
     if argv.edit_config: ConfigAccess.edit()
     if argv.init: ini(argv)
-
-    if argv.jupyter: subproc.jupyter() #FIXME:
 
 
   #############################################################################
@@ -1646,7 +1659,9 @@ routing = lambda routes: webapp.extend(routes)
 
 if __name__ == "__main__":
     
-    if not hasattr(argv,"script") and not hasattr(argv,"name"):
+    if not hasattr(argv,"script")\
+        and not hasattr(argv,"name")\
+        and not hasattr(argv,"notebook"):
 
         # inform about current version:
         echo("sweetheart helps you getting coding full power")
