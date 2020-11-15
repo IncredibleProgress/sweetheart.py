@@ -219,7 +219,6 @@ class ConfigAccess(UserDict):
                 # usual linux webbrowsers:
                 "*": f"{_py3_} -m webbrowser -t",
                 "firefox": "firefox",
-                "app:firefox": "firefox --app=",
 
                 # usual windows webbrowsers:
                 "msedge.exe": "cmd.exe /c start msedge.exe",# windows
@@ -244,6 +243,7 @@ class ConfigAccess(UserDict):
             f"/opt/{_project_}/configuration",
             f"/opt/{_project_}/database",
             f"/opt/{_project_}/documentation",
+            f"/opt/{_project_}/documentation/notebooks",
             f"/opt/{_project_}/documentation/sweetbook",
             f"/opt/{_project_}/documentation/sweetbook/book",
             f"/opt/{_project_}/documentation/sweetbook/src",
@@ -362,18 +362,16 @@ class subproc:
                 cls.bash(cmd)
         else:
             echo("sweet.py shell: Error, invalid script name given")
-    
+
+
     @staticmethod
     def wslpath(path):
         """switch a linux path to wsl path"""
-        #FIXME: works only for ubuntu
+        distro = os.environ['WSL_DISTRO_NAME']
         if path[0] == os.sep:
-            return "\\".join(["\\","wsl$","ubuntu",*path.split(os.sep)[1:]])
-        elif path.startswith("http"):
-            return "\\".join([*path.split(os.sep)])
-        else:
-            raise NotImplementedError
-
+            return "\\".join(["\\","wsl$",distro,*path.split(os.sep)[1:]])
+        elif path.startswith("http"): return path
+        else: raise NotImplementedError
 
     @classmethod
     def webbrowser(cls,url,select=None):
@@ -392,9 +390,7 @@ class subproc:
         if not cmd.endswith("=") and not cmd.endswith(" "): cmd+=" "
 
         # open the given url:
-        if _.winapp:
-            url = cls.wslpath(url)
-            echo("WSL1 is recommended opening a windows webbrowser")
+        if _.winapp: url = cls.wslpath(url)
         if not url[0] in ["'",'"']: url= f"'{url}'"
         cls.bash( cmd + url + "&" )
 
@@ -421,6 +417,19 @@ class subproc:
             "'%s'"% _config_["db_select"] )
         echo("existing mongodb collections:",
             database.list_collection_names() )
+
+
+    @classmethod
+    def jupyter(cls):
+        """start jupyter notebook server"""
+        #FIXME: only for test
+        dir = f"/opt/{_project_}/documentation/notebooks"
+        #cls.bash("jupyter-notebook password")
+        cls.run([
+            "jupyter","notebook","--no-browser",
+            f"--notebook-dir",dir ])
+        #cls.webbrowser("http://localhost:8888/")
+        sys.exit()
 
 
 class cloud:
@@ -502,7 +511,6 @@ class mdbook:
             else: bkdir="book"
             # open book for given directory:
             path = os.path.join(directory,bkdir,"index.html")
-            #if _.winapp: path = subproc.wslpath(path)
             mdbook.open(path)
 
 
@@ -804,6 +812,7 @@ if __name__ == "__main__":
         help="provide a default configuration json file")
 
     #FIXME: provisional dev tool:
+    cli.add("--jupyter",action="store_true")
     cli.add("--update-cloud",action="store_true")
 
 
@@ -886,6 +895,8 @@ if __name__ == "__main__":
     if argv.update_cloud: cloud.update_files()
     if argv.edit_config: ConfigAccess.edit()
     if argv.init: ini(argv)
+
+    if argv.jupyter: subproc.jupyter() #FIXME:
 
 
   #############################################################################
@@ -1665,6 +1676,6 @@ if __name__ == "__main__":
 
         # release stacked messages:
         echo(mode="release")
-
+    
     # execute dedicated function related to the cli:
     argv.func(argv)
