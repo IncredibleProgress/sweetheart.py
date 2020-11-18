@@ -2,7 +2,7 @@
 provide simple use of highest quality components
 for building full-stacked webapps including AI
 """
-__version__ = "0.1.0-beta8"
+__version__ = "0.1.0-beta9"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -50,7 +50,7 @@ _config_ = {
     "webbook": f"/opt/{_project_}/webpages/markdown_book/index.html",
 
     "web_framework": "starlette",# starlette|fastapi
-    "webbrowser": "msedge.exe", # msedge.exe|brave.exe|firefox.exe
+    "webbrowser": "app:msedge.exe", # msedge.exe|brave.exe|firefox.exe
 
     "templates_dir": "bottle_templates",
     "templates_settings" : {
@@ -76,7 +76,6 @@ _config_ = {
         #FIXME: install error msg with module from standard libs 
         # "module": "", will import the module itself
         "mistune": "markdown",
-        "sys": "exit",
     },
     ## set cherrypy default url segments configs:
     "cherrypy": {
@@ -100,7 +99,7 @@ _config_ = {
         "upload": f"rm -rf dist;{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
         "commit": 'git add * && git commit -m "$*" && git push origin master',
-        "notebook": "sweet run-jupyter --notebook",
+        "notebook": "swdev run-jupyter --notebook",
     },
 
     ## basic config settings for the --init process:
@@ -130,7 +129,7 @@ _config_ = {
         "uvicorn",
         "aiofiles",# required with starlette
         "bottle",
-        "ipython",
+        "jupyterlab",
     ],
     "npm-install": [
 
@@ -147,8 +146,8 @@ _config_ = {
     #$ sweet install options -> for installing given "pkg-options"
     "pkg-install": {
 
-        "excel": "pip: xlrd xlwt pyxlsb openpyxl xlsxwriter pandas",
-        "science": "pip:pandas seaborn scikit-learn[alldeps] jupyter",
+        "excel": "pip: xlrd xlwt pyxlsb openpyxl xlsxwriter",
+        "science": "pip:pandas seaborn scikit-learn[alldeps]",
         "pypack": "apt: git; pip: setuptools twine wheel pytest",
         "servers": "pip: cherrypy",
     },
@@ -212,6 +211,8 @@ class ConfigAccess(UserDict):
 
         # deep config settings:
         self.data = {
+
+        "force-pip-install": ["wheel"],
 
         "run": {
             "webbrowser": {# webrowsers shell commands:
@@ -392,7 +393,7 @@ class subproc:
         # open the given url:
         if _.winapp: url = cls.wslpath(url)
         if not url[0] in ["'",'"']: url= f"'{url}'"
-        cls.bash( cmd + url + "&" )
+        cls.bash( cmd + url + " &" )
 
 
     @classmethod
@@ -422,17 +423,21 @@ class subproc:
     @classmethod
     def jupyterCLI(cls,args):
         """start jupyter notebook server"""
-        #FIXME: only for test
+        
         if args.password: cls.bash("jupyter-notebook password")
-        if args.notebook: cls.webbrowser("http://localhost:8888/")
-        echo("start the jupyter notebook server")
+        if args.lab: cls.webbrowser(f"http://localhost:8888/lab")
+        elif args.notebook: cls.webbrowser(f"http://localhost:8888/tree")
+        echo("start enhanced jupyterlab server")
 
         if args.set_kernel:
             os.chdir(f"/opt/{_project_}/programs")
             cls.bash(f"{_py3_} -m ipykernel install --user --name=envPy")
 
-        dir = f"/opt/{_project_}/documentation/notebooks"
-        os.system(f"{_py3_} -m jupyter notebook --no-browser --notebook-dir={dir}")
+        os.chdir(os.environ["HOME"])
+        if args.home: dir= os.environ["HOME"]
+        else: dir= f"/opt/{_project_}/documentation/notebooks"
+        os.system(f"{_py3_} -m jupyterlab --no-browser --notebook-dir={dir}")
+        sys.exit()
 
 
 class cloud:
@@ -585,6 +590,7 @@ class ini:
 
         ini.label("build python3 virtual env")
         ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/envPy"])
+        ini.pip(_deepconfig_["force-pip-install"])
         ini.pip(_config_["pip-install"]+_config_["web_framework"].split())
 
         for module in _config_["py_imports"].keys():
@@ -751,8 +757,6 @@ run(argv[1],host='{_["uargs.host"]}',port={_["uargs.port"]})
                 elif cmd.startswith("apt:"): ini.apt(cmd[4:].split())
                 elif cmd.startswith("cargo:"): ini.cargo(cmd[6:].split())
                 elif cmd.startswith("npm:"): ini.npm(cmd[4:].split())
-        
-        print(); echo("optionnal packages installed:",*args.packages)
 
 
   #############################################################################
@@ -879,10 +883,16 @@ if __name__ == "__main__":
         help="ask for setting server password (can be empty)")
     
     cli.add("-n","--notebook",action="store_true",
-        help="start jupyter notebook within webbrowser")
+        help="open jupyter notebook within webbrowser")
 
-    cli.add("-k","--set-kernel",action="store_true",
-        help="init ipykernel setting sweetheart python env ")
+    cli.add("-l","--lab",action="store_true",
+        help="start the JupyterLab application within webbrowser")
+
+    cli.add("-H","--home",action="store_true",
+        help=f"set {os.environ['HOME']} directory as the working dir")
+
+    cli.add("-x","--skip-kernel",action="store_false",dest="set_kernel",
+         help="skip the init ipykernel setting within sweetheart python env")
 
 
     # create the subparser for the "run-cherrypy" command:
@@ -1651,6 +1661,7 @@ class WebApp(UserList):
 # convenient features for building webapp:
 webapp = WebApp()
 routing = lambda routes: webapp.extend(routes)
+exit = sys.exit
 
 
   #############################################################################

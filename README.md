@@ -34,7 +34,7 @@ Sweetheart delivers ready-to-use features for any projects:
 - optionnal webserver for static contents: [CherryPy](https://cherrypy.org/)
 - provided asgi framework that shines: [Starlette](https://www.starlette.io/)
 - optionnal asgi framework (built on Starlette): [FastApi](https://fastapi.tiangolo.com/)
-- responsive user interfaces: [Html5](https://www.w3schools.com/), [mdBook](https://rust-lang.github.io/mdBook/)
+- responsive user interfaces: [Html5](https://www.w3schools.com/), [mdBook](https://rust-lang.github.io/mdBook/), [Jupyter](https://jupyter.org/)
 - provided web libs for going fast: [**Knacss**](https://www.knacss.com/), [W3css](https://www.w3schools.com/w3css/)
 - provided web libs for high-level featuring: [Bootstrap4](https://getbootstrap.com/), [Vue.js](https://vuejs.org/)
 - optionnal frontend language: [Typescript](https://www.typescriptlang.org/), [WebAssembly](https://www.assemblyscript.org/)
