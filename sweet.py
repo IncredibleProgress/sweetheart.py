@@ -30,7 +30,7 @@ from collections import UserList, UserDict
 _dir_ = os.environ["PWD"].split(os.sep)
 if _dir_[1] == "opt" and _dir_[2:]: _project_ = _dir_[2]
 else: _project_ = "sweetheart"
-_py3_ = f"/opt/{_project_}/programs/envPy/bin/python3"
+_py3_ = f"/opt/{_project_}/programs/sweetenv.py/bin/python3"
 
 
   #############################################################################
@@ -95,11 +95,13 @@ _config_ = {
 
     "scripts": {
 
-        "python": f"/opt/{_project_}/programs/envPy/bin/ipython3",
+        "python": f"/opt/{_project_}/programs/sweetenv.py/bin/ipython3",
         "upload": f"rm -rf dist;{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
         "commit": 'git add * && git commit -m "$*" && git push origin master',
-        "notebook": "swdev run-jupyter --notebook",
+        "notebook": "sweet run-jupyter --notebook",
+        "jupyter":  "sweet run-jupyter --lab",
+        "rmkern": "jupyter kernelspec list && jupyter kernelspec uninstall $*",
     },
 
     ## basic config settings for the --init process:
@@ -127,7 +129,6 @@ _config_ = {
         "sweetheart",
         "pymongo",
         "uvicorn",
-        "aiofiles",# required with starlette
         "bottle",
         "jupyterlab",
     ],
@@ -147,9 +148,10 @@ _config_ = {
     "pkg-install": {
 
         "excel": "pip: xlrd xlwt pyxlsb openpyxl xlsxwriter",
-        "science": "pip:pandas seaborn scikit-learn[alldeps]",
+        "science": "pip:scipy tabulate pandas seaborn scikit-learn[alldeps]",
         "pypack": "apt: git; pip: setuptools twine wheel pytest",
-        "servers": "pip: cherrypy",
+        "html": "pip: jinja2 beautifulsoup4 html5lib lxml",
+        "servers": "pip: cherrypy voila",
     },
     "pkg-options": "pypack science excel",
 }
@@ -212,16 +214,20 @@ class ConfigAccess(UserDict):
         # deep config settings:
         self.data = {
 
-        "force-pip-install": ["wheel"],
+        "force-pip-install": [
+
+            "aiofiles",# required with starlette
+            "wheel",# required installing jupyter
+            ],
 
         "run": {
-            "webbrowser": {# webrowsers shell commands:
-                
-                # usual linux webbrowsers:
+
+            "webbrowser": {                
+                # start cmd for usual linux webbrowsers:
                 "*": f"{_py3_} -m webbrowser -t",
                 "firefox": "firefox",
 
-                # usual windows webbrowsers:
+                # start cmd for usual windows webbrowsers:
                 "msedge.exe": "cmd.exe /c start msedge.exe",# windows
                 "brave.exe": "cmd.exe /c start brave.exe",
                 "firefox.exe": "cmd.exe /c start firefox.exe",
@@ -419,20 +425,22 @@ class subproc:
         echo("existing mongodb collections:",
             database.list_collection_names() )
 
+    @classmethod
+    def setipykernel(cls):
+        """set sweetenv ipython kernel for running jupyter"""
+        os.chdir(f"/opt/{_project_}/programs")
+        cls.bash(f"{_py3_} -m ipykernel install --user --name=sweetenv.py")
 
     @classmethod
-    def jupyterCLI(cls,args):
+    def jupyterCommandLine(cls,args):
         """start jupyter notebook server"""
         
         if args.password: cls.bash("jupyter-notebook password")
         if args.lab: cls.webbrowser(f"http://localhost:8888/lab")
         elif args.notebook: cls.webbrowser(f"http://localhost:8888/tree")
         echo("start enhanced jupyterlab server")
-
-        if args.set_kernel:
-            os.chdir(f"/opt/{_project_}/programs")
-            cls.bash(f"{_py3_} -m ipykernel install --user --name=envPy")
-
+        if args.set_kernel: cls.setipykernel(cls)
+            
         os.chdir(os.environ["HOME"])
         if args.home: dir= os.environ["HOME"]
         else: dir= f"/opt/{_project_}/documentation/notebooks"
@@ -563,10 +571,10 @@ class ini:
         global _project_, _py3_
         assert ini.token == 0
 
-        # set custom project name if given:
+        # set custom project name if given
         if args.project:
             _project_ = args.project
-            _py3_ = f"/opt/{_project_}/programs/envPy/bin/python3"
+            _py3_ = f"/opt/{_project_}/programs/sweetenv.py/bin/python3"
 
         echo(f"start init process for new project: {_project_}")
         ini.label("install required packages")
@@ -579,7 +587,7 @@ class ini:
         ini.label("create directories")
         ini.mkdirs(_.basedirs)
 
-        # directories settings:
+        # directories settings
         ini.sh(["sudo","chmod","777","-R",f"/opt/{_project_}"])
 
         ini.ln(["/usr/share/javascript",
@@ -589,7 +597,7 @@ class ini:
             f"/opt/{_project_}/webpages/sweet_documentation"])
 
         ini.label("build python3 virtual env")
-        ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/envPy"])
+        ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/sweetenv.py"])
         ini.pip(_deepconfig_["force-pip-install"])
         ini.pip(_config_["pip-install"]+_config_["web_framework"].split())
 
@@ -597,7 +605,10 @@ class ini:
             try: ini.pip([module])
             except: pass
 
-        # *change current working directory:
+        # set sweetenv.py ipykernel for running jupyter
+        subproc.setipykernel()
+
+        # *change current working directory
         os.chdir(f"/opt/{_project_}/webpages")
 
         toml = """
@@ -620,7 +631,7 @@ make documentation writing files in *markdown_files* directory\n
 `sweet book --build` or `sweet book -b` for building it\n
 `sweet book --open` or `sweet book -o` for open it
 """
-        # build documentation setting files:
+        # build documentation setting files
         ini.label("init project documentation")
 
         with open("book.toml","w") as fo:
@@ -636,17 +647,17 @@ make documentation writing files in *markdown_files* directory\n
         ini.sh("npm init --yes",shell=True)
         ini.npm(_config_["npm-install"])
 
-        # *change current working directory:
+        # *change current working directory
         os.chdir(f"/opt/{_project_}/webpages/usual_resources")
 
         ini.label("download webapp resources")
         ini.wget(_config_["wget-install-resources"])
         cloud.download(_.copyfiles)
 
-        # build sweetheart documentation:
+        # build sweetheart documentation
         mdbook.build(f"/opt/{_project_}/documentation/sweetbook")
         
-        # *change current working directory:
+        # *change current working directory
         os.chdir(f"/opt/{_project_}/programs/scripts")
 
         ini.label("build local bash commands")
@@ -877,7 +888,7 @@ if __name__ == "__main__":
 
     # create the subparser for the "run-jupyter" command:
     cli.sub("run-jupyter",help="run the jupyter notebook server")
-    cli.set(subproc.jupyterCLI)
+    cli.set(subproc.jupyterCommandLine)
 
     cli.add("-p","--password",action="store_true",
         help="ask for setting server password (can be empty)")
@@ -891,7 +902,7 @@ if __name__ == "__main__":
     cli.add("-H","--home",action="store_true",
         help=f"set {os.environ['HOME']} directory as the working dir")
 
-    cli.add("-x","--skip-kernel",action="store_false",dest="set_kernel",
+    cli.add("-k","--set-kernel",action="store_true",
          help="skip the init ipykernel setting within sweetheart python env")
 
 
