@@ -2,7 +2,7 @@
 provide simple use of highest quality components
 for building full-stacked webapps including AI
 """
-__version__ = "0.1.0-beta9"
+__version__ = "0.1.0-beta10"
 __license__ = "CeCILL-C"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -71,12 +71,6 @@ _config_ = {
 
         "favicon": "usual_resources/favicon.ico",
     },
-    ## set python3 extra modules imports:
-    "py_imports": {
-        #FIXME: install error msg with module from standard libs 
-        # "module": "", will import the module itself
-        "mistune": "markdown",
-    },
     ## set cherrypy default url segments configs:
     "cherrypy": {
         "/": f"/opt/{_project_}/configuration/cherrypy.conf",
@@ -93,21 +87,9 @@ _config_ = {
     "terminal": "winterm",# xterm|winterm
     "gitignore": "y",# y|n
 
-    "scripts": {
-
-        "python": f"/opt/{_project_}/programs/sweetenv.py/bin/ipython3",
-        "upload": f"rm -rf dist;{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
-        "remote": "git remote add origin $*",
-        "commit": 'git add * && git commit -m "$*" && git push origin master',
-        "notebook": "sweet run-jupyter --notebook",
-        "jupyter":  "sweet run-jupyter --lab",
-        "rmkern": "jupyter kernelspec list && jupyter kernelspec uninstall $*",
-    },
-
     ## basic config settings for the --init process:
     "apt-install": [
 
-        "python3-venv",
         "rustc",
         "mongodb",
         "xterm",
@@ -116,7 +98,6 @@ _config_ = {
         "libjs-bootstrap4",
         "libjs-highlight.js",
         "libjs-vue",
-        #"node-vue",
     ],
     "cargo-install": [
 
@@ -154,6 +135,25 @@ _config_ = {
         "servers": "pip: cherrypy voila",
     },
     "pkg-options": "pypack science excel",
+
+    ## set python3 extra modules imports:
+    "py_imports": {
+        #FIXME: install error msg with module from standard libs 
+        # "module": "", will import the module itself
+        "mistune": "markdown",
+    },
+    ## custom bash commands called by sws
+    "scripts": {
+
+        "python": f"/opt/{_project_}/programs/sweetenv.py/bin/ipython3",
+        "upload": f"rm -rf dist;{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
+        "remote": "git remote add origin $*",
+        "commit": 'git add * && git commit -m "$*" && git push origin master',
+        "notebook": "sweet run-jupyter --notebook",
+        "jupyter":  "sweet run-jupyter --lab",
+        "rmkern": "jupyter kernelspec list && jupyter kernelspec uninstall $*",
+        "help": "sweet book sweetbook",
+    },
 }
 
 
@@ -191,11 +191,8 @@ class ConfigAccess(UserDict):
     cherrypy = False
     webapp = False
     mdbook = _config_["templates_settings"].get("_book_")
+    #FIXME: winapp selection not well implemented
     winapp = _config_["webbrowser"].endswith(".exe")
-
-    if winapp and os.environ["WSL_DISTRO_NAME"] != "Ubuntu":
-        echo("WARNING: WSL is not running with Ubuntu")
-        verbose = True
 
     get_host= lambda self,name:eval(f'{name}_host.split(":")[1].strip("/")')
     get_port= lambda self,name:eval(f'int({name}_host.split(":")[2])')
@@ -205,21 +202,20 @@ class ConfigAccess(UserDict):
         """final configuration completion
         allowing json configuration file selection"""
 
-        cls = ConfigAccess
-        assert cls.locker == 0; cls.locker = 1
-
-        # top-level config settings:
-        cls.conffile= conffile if os.path.isfile(conffile) else None
-
         # deep config settings:
+        ConfigAccess.conffile=\
+             conffile if os.path.isfile(conffile) else None
         self.data = {
 
+        "force-apt-install": [
+
+            "python3-venv",
+        ],
         "force-pip-install": [
 
             "aiofiles",# required with starlette
             "wheel",# required installing jupyter
-            ],
-
+        ],
         "run": {
 
             "webbrowser": {                
@@ -228,22 +224,19 @@ class ConfigAccess(UserDict):
                 "firefox": "firefox",
 
                 # start cmd for usual windows webbrowsers:
-                "msedge.exe": "cmd.exe /c start msedge.exe",# windows
-                "brave.exe": "cmd.exe /c start brave.exe",
-                "firefox.exe": "cmd.exe /c start firefox.exe",
-                "app:msedge.exe": "cmd.exe /c start msedge.exe --app=",
-                "app:brave.exe": "cmd.exe /c start brave.exe --app=",
-                "app:firefox.exe": "cmd.exe /c start firefox.exe --app=" },
+                "msedge.exe": "cmd.exe /c start msedge",# windows
+                "brave.exe": "cmd.exe /c start brave",
+                "app:msedge.exe": "cmd.exe /c start msedge --app=",
+                "app:brave.exe": "cmd.exe /c start brave --app=" },
             
             "cherrypy": f"{_py3_} -m sweet run-cherrypy",
-            },
-
+        },
         # uvicorn arguments dict:
         "uargs": {
             "host": self.get_host("async"),
             "port": self.get_port("async"),
-            "log_level": "info" },
-
+            "log_level": "info"
+        },
         # data for building new project dir:
         "__basedirs__": lambda: [
             f"/opt/{_project_}",
@@ -261,8 +254,7 @@ class ConfigAccess(UserDict):
             f"/opt/{_project_}/webpages/markdown_files",
             f"/opt/{_project_}/webpages/markdown_book",
             f"/opt/{_project_}/webpages/usual_resources"
-            ],
-        
+        ],
         "__copyfiles__": lambda: {
             "cherrypy.conf": f"/opt/{_project_}/configuration",
             "config.xlaunch": f"/opt/{_project_}/configuration",
@@ -273,8 +265,11 @@ class ConfigAccess(UserDict):
             "login.txt": f"/opt/{_project_}/webpages/{_['templates_dir']}",
             "favicon.ico": f"/opt/{_project_}/webpages/usual_resources",
             "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
-            },
+        },
         }
+        # allow only one instance of ConfigAccess
+        assert ConfigAccess.locker == 0
+        ConfigAccess.locker = 1
 
     @property
     def copyfiles(self) -> dict:
@@ -320,6 +315,16 @@ class ConfigAccess(UserDict):
 _ = ConfigAccess(_config_["__conffile__"])
 _deepconfig_ = _.data
 
+try: # is wsl is running with Ubuntu?
+    if _.winapp and os.environ["WSL_DISTRO_NAME"] != "Ubuntu":
+        echo("WARNING: WSL is not running with Ubuntu")
+        _.verbose = True
+
+except: # when not working on windows with WSL
+    echo("NO WSL: set default native webbrowser for linux")
+    _.winapp = False
+    _config_["webbrowser"] = "*"
+
 
   #############################################################################
  ########## EXTERNAL SERVICES FACILITIES #####################################
@@ -347,7 +352,7 @@ class subproc:
                 % (_config_["display"], cmd))
 
     @classmethod
-    def execCLI(cls,args):
+    def execCommandLine(cls,args):
         """
         execute a given script provided by _config_["scripts"]
         it should be called from the command line interface
@@ -387,9 +392,10 @@ class subproc:
         '_config_["webbrowser"]' or defined with 'run' if given
         """
 
-        if _.winapp and not "/mnt/c/Windows" in os.environ["PATH"]:
-            echo("NO WSL: set default native webbrowser for linux")
-            select = "*"
+        #FIXME:
+        # if _.winapp and not "/mnt/c/Windows" in os.environ["PATH"]:
+        #     echo("NO WSL: set default native webbrowser for linux")
+        #     select = "*"
 
         # build bash command:
         if not select: select= _config_["webbrowser"]
@@ -434,13 +440,16 @@ class subproc:
     @classmethod
     def jupyterCommandLine(cls,args):
         """start jupyter notebook server"""
+        global mongo_disabled, multi_threading
+        mongo_disabled = True
+        multi_threading = True
         
         if args.password: cls.bash("jupyter-notebook password")
         if args.lab: cls.webbrowser(f"http://localhost:8888/lab")
         elif args.notebook: cls.webbrowser(f"http://localhost:8888/tree")
         echo("start enhanced jupyterlab server")
         if args.set_kernel: cls.setipykernel(cls)
-            
+        
         os.chdir(os.environ["HOME"])
         if args.home: dir= os.environ["HOME"]
         else: dir= f"/opt/{_project_}/documentation/notebooks"
@@ -491,7 +500,7 @@ class mdbook:
     a Rust crate to create books using Markdown"""
 
     @staticmethod
-    def sweetCLI(args):
+    def commandLine(args):
         """provide mdBook tools via the 'sweet' command line interface"""
 
         if not args.name:
@@ -578,11 +587,15 @@ class ini:
 
         echo(f"start init process for new project: {_project_}")
         ini.label("install required packages")
+        ini.apt(_deepconfig_["force-apt-install"])
         ini.apt(_config_["apt-install"])
 
-        ini.label("set rust toolchain")
-        ini.sh(["rustup","update"])
-        ini.cargo(_config_["cargo-install"])
+        try:
+            ini.label("set rust toolchain")
+            ini.sh(["rustup","update"])
+            ini.cargo(_config_["cargo-install"])
+        except:
+            pass
         
         ini.label("create directories")
         ini.mkdirs(_.basedirs)
@@ -596,6 +609,17 @@ class ini:
         ini.ln([f"/opt/{_project_}/documentation/sweetbook/book",
             f"/opt/{_project_}/webpages/sweet_documentation"])
 
+        if _.winapp:
+            # provide windows commands within c:/sws
+            #FIXME: require Windows Terminal to be installed
+            os.mkdir("/mnt/c/sws")
+            os.system("echo 'wt bash sweet start --mongo-disabled --webapp' >> /mnt/c/sws/sweet.bat")
+            os.symlink("/mnt/c/sws/sweet.bat","/mnt/c/sws/sweet")
+            os.system("echo 'wt bash sweet run-jupyter --lab' >> /mnt/c/sws/jupyter.bat")
+            os.symlink("/mnt/c/sws/jupyter.bat","/mnt/c/sws/jupyter")
+            os.system("echo 'wt bash sweet shell python' >> /mnt/c/sws/python.bat")
+            os.symlink("/mnt/c/sws/python.bat","/mnt/c/sws/python")
+            
         ini.label("build python3 virtual env")
         ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/sweetenv.py"])
         ini.pip(_deepconfig_["force-pip-install"])
@@ -641,11 +665,16 @@ make documentation writing files in *markdown_files* directory\n
         with open("markdown_files/welcome.md","w") as fo:
             fo.write(welcome.strip())
 
-        mdbook.build()
-
-        ini.label("install node modules")
-        ini.sh("npm init --yes",shell=True)
-        ini.npm(_config_["npm-install"])
+        try: 
+            mdbook.build()
+        except:
+            pass
+        try:
+            ini.label("install node modules")
+            ini.sh("npm init --yes",shell=True)
+            ini.npm(_config_["npm-install"])
+        except:
+            pass
 
         # *change current working directory
         os.chdir(f"/opt/{_project_}/webpages/usual_resources")
@@ -835,7 +864,7 @@ if __name__ == "__main__":
 
     # create the subparser for the "shell" command:
     cli.sub("shell",help="execute a script given by the current config")
-    cli.set(subproc.execCLI)
+    cli.set(subproc.execCommandLine)
 
     cli.add("script",nargs='+',
         help=f'{ "|".join(_config_["scripts"].keys()) }')
@@ -843,7 +872,7 @@ if __name__ == "__main__":
 
     # creat the subparser for the 'book' command:
     cli.sub("book",help="provide full featured documentation from markdown files")
-    cli.set(mdbook.sweetCLI)
+    cli.set(mdbook.commandLine)
 
     cli.add("name",nargs="?",default="",
         help="name of the documentation root directory")
