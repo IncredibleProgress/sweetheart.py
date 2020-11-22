@@ -16,6 +16,7 @@ multi_threading = False
 async_host = "http://127.0.0.1:8000"# uvicorn webserver
 static_host = "http://127.0.0.1:8080"# cherrypy webserver
 book_host = "http://127.0.0.1:3000"# serve mdbook (rust crate)
+jupyter_host = "http://localhost:8888/lab" # jupyterlab server
 
 
 import os, sys, subprocess, json
@@ -47,10 +48,10 @@ _config_ = {
     ## webapps settings:
     "working_dir": f"/opt/{_project_}/webpages",
     "description": "build at the speedlight full-stacked webapps including AI",
-    "webbook": f"/opt/{_project_}/webpages/markdown_book/index.html",
 
-    "web_framework": "starlette",# starlette|fastapi
-    "webbrowser": "app:msedge.exe", # msedge.exe|brave.exe|firefox.exe
+    "webbrowser": "app:msedge.exe", # msedge.exe|brave.exe|firefox
+    "webbook": f"/opt/{_project_}/webpages/markdown_book/index.html",
+    "notebook_dir": f"/opt/{_project_}/documentation/notebooks",
 
     "templates_dir": "bottle_templates",
     "templates_settings" : {
@@ -76,7 +77,7 @@ _config_ = {
         "/": f"/opt/{_project_}/configuration/cherrypy.conf",
     },
     ## database settings:
-    "db_host": "localhost",
+    "db_host": "localhost",# "localhost" start mongod locally
     "db_port": 27017,
     "db_path": f"/opt/{_project_}/database",
     "db_select": "demo",
@@ -84,8 +85,11 @@ _config_ = {
     ## bash settings:
     "echolabel": _project_,
     "display": "DISPLAY=:0",
-    "terminal": "winterm",# xterm|winterm
+    "terminal": "wsl",# xterm|winterm|wsl
     "gitignore": "y",# y|n
+
+    ## select python3 asgi webframework:
+    "web_framework": "starlette",# starlette|fastapi
 
     ## basic config settings for the --init process:
     "apt-install": [
@@ -129,10 +133,10 @@ _config_ = {
     "pkg-install": {
 
         "excel": "pip: xlrd xlwt pyxlsb openpyxl xlsxwriter",
-        "science": "pip:scipy tabulate pandas seaborn scikit-learn[alldeps]",
+        "science": "apt: fish; pip:scipy tabulate pandas seaborn scikit-learn[alldeps]",
         "pypack": "apt: git; pip: setuptools twine wheel pytest",
         "html": "pip: jinja2 beautifulsoup4 html5lib lxml",
-        "servers": "pip: cherrypy voila",
+        "servers": "pip: cherrypy",
     },
     "pkg-options": "pypack science excel",
 
@@ -144,7 +148,8 @@ _config_ = {
     },
     ## custom bash commands called by sws
     "scripts": {
-
+        #bash -> sws <command>
+        #cmd -> wsl sws <command>
         "python": f"/opt/{_project_}/programs/sweetenv.py/bin/ipython3",
         "upload": f"rm -rf dist;{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
@@ -152,10 +157,10 @@ _config_ = {
         "notebook": "sweet run-jupyter --notebook",
         "jupyter":  "sweet run-jupyter --lab",
         "rmkern": "jupyter kernelspec list && jupyter kernelspec uninstall $*",
+        "start": "sweet start --mongo-disabled --jupyter --webapp",
         "help": "sweet book sweetbook",
     },
 }
-
 
 _msg_ = []
 def echo(*args, mode="default"):
@@ -190,8 +195,8 @@ class ConfigAccess(UserDict):
     verbose = False
     cherrypy = False
     webapp = False
+    jupyter= False
     mdbook = _config_["templates_settings"].get("_book_")
-    #FIXME: winapp selection not well implemented
     winapp = _config_["webbrowser"].endswith(".exe")
 
     get_host= lambda self,name:eval(f'{name}_host.split(":")[1].strip("/")')
@@ -208,16 +213,13 @@ class ConfigAccess(UserDict):
         self.data = {
 
         "force-apt-install": [
-
             "python3-venv",
         ],
         "force-pip-install": [
-
             "aiofiles",# required with starlette
             "wheel",# required installing jupyter
         ],
         "run": {
-
             "webbrowser": {                
                 # start cmd for usual linux webbrowsers:
                 "*": f"{_py3_} -m webbrowser -t",
@@ -310,20 +312,21 @@ class ConfigAccess(UserDict):
             _config_.update(json.load(fi))
 
 
-# set the json configuration filename here:
+# set the json configuration filename here
 #NOTE: loaded only with '-c' option given within CLI
 _ = ConfigAccess(_config_["__conffile__"])
 _deepconfig_ = _.data
 
-try: # is wsl is running with Ubuntu?
-    if _.winapp and os.environ["WSL_DISTRO_NAME"] != "Ubuntu":
-        echo("WARNING: WSL is not running with Ubuntu")
-        _.verbose = True
-
-except: # when not working on windows with WSL
-    echo("NO WSL: set default native webbrowser for linux")
+# set wsl/linux services
+if _.winapp and not os.getenv("WSL_DISTRO_NAME"):
+    echo("NO WSL: set native services for linux")
     _.winapp = False
     _config_["webbrowser"] = "*"
+    _config_["terminal"] = "xterm"
+
+elif _.winapp and os.environ["WSL_DISTRO_NAME"] != "Ubuntu":
+    echo("WARNING: WSL is not running with Ubuntu")
+    _.verbose = True
 
 
   #############################################################################
@@ -340,11 +343,15 @@ class subproc:
         """select the way for starting external service:
         used for starting mongod, cherrypy, uvicorn within external terminal"""
         
-        assert _config_["terminal"] in "xterm|winterm"
+        assert _config_["terminal"] in "xterm|winterm|wsl"
 
         if _config_["terminal"] == "winterm":
             # start an external service within Windows Terminal
-            os.system(f'cmd.exe /c start wt.exe ubuntu.exe run {cmd} &')
+            os.system(f'cmd.exe /c start wt wsl {cmd} &')
+        
+        elif _config_["terminal"] == "wsl":
+            # start an external service within Windows Terminal
+            os.system(f'cmd.exe /c start wsl {cmd} &')
 
         elif _config_["terminal"] == "xterm":
             # start an external service within xterm"""
@@ -392,11 +399,6 @@ class subproc:
         '_config_["webbrowser"]' or defined with 'run' if given
         """
 
-        #FIXME:
-        # if _.winapp and not "/mnt/c/Windows" in os.environ["PATH"]:
-        #     echo("NO WSL: set default native webbrowser for linux")
-        #     select = "*"
-
         # build bash command:
         if not select: select= _config_["webbrowser"]
         cmd= _deepconfig_["run"]["webbrowser"][select]
@@ -408,15 +410,26 @@ class subproc:
         cls.bash( cmd + url + " &" )
 
 
+    # facilities for using MongoDB
     @classmethod
-    def mongod(cls):
+    def mongod(cls,service):
+        """
+        run locally the server for mongoDB
+        can be run as main process or external service when True
+        """
+        if _config_["db_host"]!="localhost": return
+        cmd = 'mongod --dbpath="%s"'% _config_["db_path"]
+        if service: cls.service(cmd)
+        else: cls.bash(cmd)
+        echo("the MongoDB server is running at 'localhost'")
+
+    @classmethod
+    def set_mongoclient(cls):
         """abstract mongoDB settings"""
         global mongoclient, database
         from pymongo import MongoClient
         
         echo("try for getting mongodb client...")
-        cls.service('mongod --dbpath="%s"'%_config_["db_path"])
-
         mongoclient = MongoClient(
             host=_config_["db_host"],
             port=_config_["db_port"] )
@@ -431,29 +444,63 @@ class subproc:
         echo("existing mongodb collections:",
             database.list_collection_names() )
 
+
+    # facilities for using JupyterLab
     @classmethod
-    def setipykernel(cls):
+    def set_ipykernel(cls):
         """set sweetenv ipython kernel for running jupyter"""
         os.chdir(f"/opt/{_project_}/programs")
+        echo("set sweetenv.py kernel for running jupyter")
         cls.bash(f"{_py3_} -m ipykernel install --user --name=sweetenv.py")
 
     @classmethod
+    def set_jupyter_password(cls):
+        #NOTE: this method exists to be used into ini.__init__
+        # _py3_ must be re-evaluted within the init process
+        cls.bash(f"{_py3_} -m jupyter notebook password -y")
+
+    jupyter_locker = 0
+    @classmethod
+    def jupyter(cls,directory=None,service=False):
+        """start jupyter server"""
+
+        # ensure that only one jupyter server is running
+        if cls.jupyter_locker: 
+            verbose("ask for running jupyterlab, but already started")
+            return
+        else: cls.jupyter_locker = 1
+
+        # set working/notebook root directories
+        os.chdir(os.environ["HOME"])
+        if not directory:
+            directory= _config_["notebook_dir"]
+
+        # start server
+        echo("start the enhanced jupyterlab server")
+        cmd=f"{_py3_} -m jupyterlab --no-browser --notebook-dir={directory}"
+        if service: cls.service(cmd)
+        else: cls.bash(cmd)
+            
+
+    @classmethod
     def jupyterCommandLine(cls,args):
-        """start jupyter notebook server"""
+        
         global mongo_disabled, multi_threading
         mongo_disabled = True
         multi_threading = True
         
-        if args.password: cls.bash("jupyter-notebook password")
-        if args.lab: cls.webbrowser(f"http://localhost:8888/lab")
-        elif args.notebook: cls.webbrowser(f"http://localhost:8888/tree")
-        echo("start enhanced jupyterlab server")
-        if args.set_kernel: cls.setipykernel(cls)
-        
-        os.chdir(os.environ["HOME"])
+        if args.password:
+            cls.set_jupyter_password()
+        if args.set_kernel:
+            cls.set_ipykernel()
+        if args.lab:
+            cls.webbrowser(jupyter_host)
+        elif args.notebook:
+            cls.webbrowser("http://localhost:8888/tree")
+
         if args.home: dir= os.environ["HOME"]
-        else: dir= f"/opt/{_project_}/documentation/notebooks"
-        os.system(f"{_py3_} -m jupyterlab --no-browser --notebook-dir={dir}")
+        else: dir= _config_["notebook_dir"]
+        cls.jupyter(dir,service=False)
         sys.exit()
 
 
@@ -592,10 +639,10 @@ class ini:
 
         try:
             ini.label("set rust toolchain")
-            ini.sh(["rustup","update"])
+            #ini.sh(["rustup","update"])
             ini.cargo(_config_["cargo-install"])
         except:
-            pass
+            verbose("Error, cargo install failed")
         
         ini.label("create directories")
         ini.mkdirs(_.basedirs)
@@ -608,17 +655,6 @@ class ini:
 
         ini.ln([f"/opt/{_project_}/documentation/sweetbook/book",
             f"/opt/{_project_}/webpages/sweet_documentation"])
-
-        if _.winapp:
-            # provide windows commands within c:/sws
-            #FIXME: require Windows Terminal to be installed
-            os.mkdir("/mnt/c/sws")
-            os.system("echo 'wt bash sweet start --mongo-disabled --webapp' >> /mnt/c/sws/sweet.bat")
-            os.symlink("/mnt/c/sws/sweet.bat","/mnt/c/sws/sweet")
-            os.system("echo 'wt bash sweet run-jupyter --lab' >> /mnt/c/sws/jupyter.bat")
-            os.symlink("/mnt/c/sws/jupyter.bat","/mnt/c/sws/jupyter")
-            os.system("echo 'wt bash sweet shell python' >> /mnt/c/sws/python.bat")
-            os.symlink("/mnt/c/sws/python.bat","/mnt/c/sws/python")
             
         ini.label("build python3 virtual env")
         ini.sh(["python3","-m","venv",f"/opt/{_project_}/programs/sweetenv.py"])
@@ -630,7 +666,12 @@ class ini:
             except: pass
 
         # set sweetenv.py ipykernel for running jupyter
-        subproc.setipykernel()
+        subproc.set_ipykernel()
+
+        # set now a password for running jupyter server
+        print("\nWARNING: This is required to set a password for the Jupyter server")
+        print("press [RETURN] directly for setting no password (but not recommended)")
+        subproc.set_jupyter_password()
 
         # *change current working directory
         os.chdir(f"/opt/{_project_}/webpages")
@@ -651,7 +692,7 @@ renderer = ["html"]
 """
         welcome = """
 # Welcome !
-make documentation writing files in *markdown_files* directory\n
+build incredible documentation writing files in the *markdown_files* directory\n
 `sweet book --build` or `sweet book -b` for building it\n
 `sweet book --open` or `sweet book -o` for open it
 """
@@ -668,13 +709,13 @@ make documentation writing files in *markdown_files* directory\n
         try: 
             mdbook.build()
         except:
-            pass
+            verbose("Error, mdbook build failed")
         try:
             ini.label("install node modules")
             ini.sh("npm init --yes",shell=True)
             ini.npm(_config_["npm-install"])
         except:
-            pass
+            verbose("Error, npm install failed")
 
         # *change current working directory
         os.chdir(f"/opt/{_project_}/webpages/usual_resources")
@@ -692,7 +733,7 @@ make documentation writing files in *markdown_files* directory\n
         ini.label("build local bash commands")
         ini.locbin("sweet","uvicorn","sws")
 
-        print("\nINIT all done!\n")
+        print("\nSWEET_INIT all done!\n")
 
 
     _sweet_ = lambda: f"""
@@ -715,7 +756,7 @@ run(argv[1],host='{_["uargs.host"]}',port={_["uargs.port"]})
     @classmethod
     def label(cls,text):
         cls.token += 1
-        print(f"\nINIT step{ini.token}: {text}\n")
+        print(f"\nSWEET_INIT_step{ini.token}: {text}\n")
 
     @classmethod
     def apt(cls,data:list):
@@ -900,6 +941,9 @@ if __name__ == "__main__":
     cli.add("-a","--webapp",action="store_true",
         help="start within the webbrowser as an app")
 
+    cli.add("-j","--jupyter",action="store_true",
+        help="start the enhanced jupyterlab server")
+
     cli.add("-c","--cherrypy",action="store_true",
         help="start cherrypy as an extra webserver for static contents")
 
@@ -916,7 +960,7 @@ if __name__ == "__main__":
 
 
     # create the subparser for the "run-jupyter" command:
-    cli.sub("run-jupyter",help="run the jupyter notebook server")
+    cli.sub("run-jupyter",help="run JupyterLab notebook server")
     cli.set(subproc.jupyterCommandLine)
 
     cli.add("-p","--password",action="store_true",
@@ -935,8 +979,12 @@ if __name__ == "__main__":
          help="skip the init ipykernel setting within sweetheart python env")
 
 
+    # create the subparser for the "run-mongod" command:
+    cli.sub("run-mongod",help="run MongoDB server daemon")
+    cli.set(lambda args: subproc.mongod(service=False))
+
     # create the subparser for the "run-cherrypy" command:
-    cli.sub("run-cherrypy",help="run cherrypy webserver for serving statics")
+    cli.sub("run-cherrypy",help="run CherryPy webserver for serving statics")
     cli.set(lambda args: CherryPy.start(webapp))
 
 
@@ -946,8 +994,9 @@ if __name__ == "__main__":
     if argv.conffile: ConfigAccess.update()
         
     # update current settings when required:
-    ConfigAccess.verbose = getattr(argv, "verbose", _.verbose)
-    ConfigAccess.webapp = getattr(argv, "webapp", _.webapp)
+    ConfigAccess.verbose = getattr(argv,"verbose", _.verbose)
+    ConfigAccess.webapp = getattr(argv,"webapp", _.webapp)
+    ConfigAccess.jupyter = getattr(argv,"jupyter",_.jupyter)
 
     mongo_disabled = getattr(argv, "mongo_disabled", mongo_disabled)
     cherrypy_enabled = getattr(argv, "cherrypy", cherrypy_enabled)
@@ -1521,7 +1570,7 @@ from bottle import template
 
 import uvicorn
 from starlette.applications import Starlette
-from starlette.responses import HTMLResponse, FileResponse
+from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
 from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
@@ -1554,7 +1603,8 @@ def html(source:str="WELCOME",**kwargs):
             <p>{_config_["description"]}</p>
             <p><a href="documentation/index.html"
                 class="btn" role="button">Get Started Now!</a></p>
-            <p><br><br><br><em>this message appears because there
+            <p><br>or code immediately using <a href="jupyter">JupyterLab</a></p>
+            <p><br><br><em>this message appears because there
                 was nothing else to render here</em></p>
             </div>""")
 
@@ -1592,12 +1642,18 @@ def quickstart(routes=None, endpoint=None):
     global webapp
 
     # at first set and start mongo database service:
-    if not mongo_disabled: subproc.mongod()
-    else: echo("mongoDB client is DISABLED")
+    if not mongo_disabled:
+        subproc.mongod(service=True)
+        subproc.set_mongoclient()
+    else: echo("the MongoDB server/client are disabled")
 
     # set mdbook service:
     if _.mdbook: mdbook.serve(_config_["working_dir"])
-    else: echo("mdbook server is DISABLED")
+    else: echo("the mdBook server is locally disabled")
+
+    # set mdbook service:
+    if _.jupyter: subproc.jupyter(service=True)
+    else: echo("the JupyterLab server is locally disabled")
 
     # set the current working directory:
     os.chdir(_config_["working_dir"])
@@ -1643,7 +1699,6 @@ def quickstart(routes=None, endpoint=None):
     
     # at last start the uvicorn webserver:
     if multi_threading:
-        #FIXME: only for test
         subproc.service("uvicorn sweet:webapp.star")
     else:
         echo("quickstart: uvicorn multi-threading is not available here")
@@ -1658,6 +1713,10 @@ class WebApp(UserList):
     def index(self, request):
         return html("login.txt")
 
+    def jupyter(self, request):
+        subproc.jupyter(service=True)
+        return RedirectResponse(jupyter_host)
+
     # webapp settings:
     # methodes for main settings: mount() star()
 
@@ -1667,7 +1726,8 @@ class WebApp(UserList):
         # route options if required:
         if route_options:
             self.extend([
-                Route("/favicon.ico",FileResponse(_["static_files.favicon"]))
+                Route("/favicon.ico",FileResponse(_["static_files.favicon"])),
+                Route("/jupyter",self.jupyter)
             ])      
         # mount static resources:
         self.extend([ Mount(path,StaticFiles(directory=dir)) \
