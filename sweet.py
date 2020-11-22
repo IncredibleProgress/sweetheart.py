@@ -16,10 +16,12 @@ multi_threading = False
 async_host = "http://127.0.0.1:8000"# uvicorn webserver
 static_host = "http://127.0.0.1:8080"# cherrypy webserver
 book_host = "http://127.0.0.1:3000"# serve mdbook (rust crate)
-jupyter_host = "http://localhost:8888/lab" # jupyterlab server
+jupyter_host = "http://localhost:8888" # jupyterlab server
 
 
+from argparse import ArgumentError
 import os, sys, subprocess, json
+from re import sub
 from collections import UserList, UserDict
 
 # - main modules import are within the WEBAPP FACILITIES section
@@ -233,12 +235,6 @@ class ConfigAccess(UserDict):
             
             "cherrypy": f"{_py3_} -m sweet run-cherrypy",
         },
-        # uvicorn arguments dict:
-        "uargs": {
-            "host": self.get_host("async"),
-            "port": self.get_port("async"),
-            "log_level": "info"
-        },
         # data for building new project dir:
         "__basedirs__": lambda: [
             f"/opt/{_project_}",
@@ -333,11 +329,26 @@ elif _.winapp and os.environ["WSL_DISTRO_NAME"] != "Ubuntu":
  ########## EXTERNAL SERVICES FACILITIES #####################################
 #############################################################################
 
-class subproc:
-    """tools for executing linux shell commands"""
-    bash = lambda *args,**kwargs: subprocess.run(*args,shell=True,**kwargs)
-    run = subprocess.run
+class SwServer:
 
+    def __init__(self,url:str="",host:str="",port:int=""):
+        
+        if url:
+            assert url.startswith("http")
+            self.url = url
+            self.host = url.split(":")[1].strip("/")
+            self.port = int(url.split(":")[2])
+
+        elif host and port:
+            self.url = f"http://{host}:{port}"
+            self.host = host
+            self.port = port
+
+        else: raise ArgumentError
+
+    def subproc(self,*args,**kwargs):
+        subprocess.run(*args,**kwargs)
+    
     @classmethod
     def service(cls,cmd:str):
         """select the way for starting external service:
@@ -358,8 +369,184 @@ class subproc:
             os.system("%s xterm -C -geometry 190x19 -e %s &"
                 % (_config_["display"], cmd))
 
+    def cmd(self,**kwargs) -> str:
+        """return bash command for running server"""
+        raise NotImplementedError
+
+    def run_local(self,service=False):
+        raise NotImplementedError
+
+    def run_server(self,service=False):
+        raise NotImplementedError
+
+    def commandLine(self,args):
+        """provide function for the command line interface"""
+        raise NotImplementedError
+
+
+class MongoDB(SwServer):
+
+    def __init__(self,*args,**kwargs):
+        super(MongoDB,self).__init__(*args,**kwargs)
+
+        self.client = None
+        self.database = None
+        self.dbpath = _config_["db_path"]
+        self.is_local = _config_["db_host"]=="localhost"
+
+    def cmd(self,dbpath) -> str:
+        """provide the mongod bash command"""
+        return f'mongod --dbpath="{dbpath}"'
+
+    def run_local(self,service=False):
+        #FIXME: skip when needed
+        if not self.is_local: return
+
+        cmd = self.cmd(dbpath=self.dbpath)
+        if service: self.service(cmd)
+        else: self.subproc(cmd,shell=True)
+        echo("the MongoDB server is running at 'localhost'")       
+        
+    def set_client(self,select:str):
+        from pymongo import MongoClient
+        
+        echo("try for getting mongodb client...")
+        self.client = MongoClient(host=self.host,port=self.port)
+
+        echo("available databases given by mongoclient:",
+            self.client.list_database_names() )
+
+        self.database = self.client[select]
+        
+        echo("connected to the default database:",
+            "'%s'"% _config_["db_select"] )
+        echo("existing mongodb collections:",
+            self.database.list_collection_names() )
+    
+    def commandLine(self,args):
+        self.run_local(service=False)
+
+# set default mongo client and database
+_mongo_ = MongoDB(host=_config_["db_host"],port=_config_["db_port"])
+mongoclient = _mongo_.client
+database = _mongo_.database
+
+
+class JupyterLab(SwServer):
+
+    locker = 0
+    def __init__(self,*args,**kwargs):
+        super(JupyterLab,self).__init__(*args,**kwargs)
+
+        from urllib.parse import urljoin
+        self.lab_host = urljoin(self.url,"lab")
+        self.nbk_host = urljoin(self.url,"tree")
+
+    def cmd(self,directory):
+        """provide the jupyterlab bash command"""
+        return f"{_py3_} -m jupyterlab --no-browser --notebook-dir={directory}"
+
+    def run_local(self,directory=None,service=False):
+        # ensure that only one jupyter server is running
+        if self.locker: return
+        else: self.locker = 1
+        # set working/notebook root directories
+        os.chdir(os.environ["HOME"])
+        if not directory: directory=_config_["notebook_dir"]
+        # start jupyterlab server
+        echo("start the enhanced jupyterlab server")
+        cmd = self.cmd(directory=directory)
+        if service: self.service(cmd)
+        else: self.subproc(cmd,shell=True)
+    
+    def set_ipykernel(self):
+        """set sweetenv ipython kernel for running jupyter"""
+        os.chdir(f"/opt/{_project_}/programs")
+        echo("set sweetenv.py kernel for running jupyter")
+        self.subproc(
+            f"{_py3_} -m ipykernel install --user --name=sweetenv.py",
+            shell=True )
+
+    def set_password(self):
+        #NOTE: this method exists to be used into ini.__init__
+        # _py3_ must be re-evaluted within the init process
+        self.subproc(
+            f"{_py3_} -m jupyter notebook password -y",
+            shell=True )
+
+    def commandLine(self,args):
+        if args.password:
+            self.set_password()
+        if args.set_kernel:
+            self.set_ipykernel()
+        if args.lab:
+            subproc.webbrowser(self.lab_host)
+        elif args.notebook:
+            subproc.webbrowser(self.nbk_host)
+
+        if args.home: dir= os.environ["HOME"]
+        else: dir= _config_["notebook_dir"]
+        self.run_local(directory=dir,service=False)
+        sys.exit()
+
+# set default jupyterlab config:
+jupyter = JupyterLab(url=jupyter_host)
+
+
+class Uvicorn(SwServer):
+
+    def __init__(self,*args,**kwargs):
+        super(Uvicorn,self).__init__(*args,**kwargs)
+
+        # app must be set following the "sweet:app" pattern
+        self.app = None
+
+        # uvicorn arguments dict:
+        self.uargs = {
+            "host": self.host,
+            "port": self.port,
+            "log_level": "info" }
+
+    def cmd(self) -> str:
+        """provide the uvicorn bash command"""
+        #FIXME: not running
+        return f"uvicorn sweet:webapp.star"
+
+    def run_local(self,app:str=None,service=False):
+        if service:
+            self.service(self.cmd())
+        else:
+            import uvicorn
+            uvicorn.run(webapp.star,**self.uargs)
+
+    def bin(self) -> str:
+        """provide bash script for running uvicorn"""
+
+        return f"""
+#!{_py3_}
+from os import chdir
+from sys import argv
+from uvicorn import run
+chdir("{_config_['working_dir']}")
+run(argv[1],host='{self.host}',port={self.port})
+"""
+
+# set default jupyterlab config:
+uvicorn = Uvicorn(url=async_host)
+
+
+class subproc:
+    """tools for executing linux shell commands"""
+    bash = lambda *args,**kwargs: subprocess.run(*args,shell=True,**kwargs)
+    run = subprocess.run
+
     @classmethod
-    def execCommandLine(cls,args):
+    def service(cls,*args,**kwargs):
+        #FIXME: transitionnal classmethod
+        SwServer.service(*args,**kwargs)
+
+    @classmethod
+    def commandLine(cls,args):
         """
         execute a given script provided by _config_["scripts"]
         it should be called from the command line interface
@@ -381,7 +568,6 @@ class subproc:
                 cls.bash(cmd)
         else:
             echo("sweet.py shell: Error, invalid script name given")
-
 
     @staticmethod
     def wslpath(path):
@@ -409,99 +595,16 @@ class subproc:
         if not url[0] in ["'",'"']: url= f"'{url}'"
         cls.bash( cmd + url + " &" )
 
-
-    # facilities for using MongoDB
-    @classmethod
-    def mongod(cls,service):
-        """
-        run locally the server for mongoDB
-        can be run as main process or external service when True
-        """
-        if _config_["db_host"]!="localhost": return
-        cmd = 'mongod --dbpath="%s"'% _config_["db_path"]
-        if service: cls.service(cmd)
-        else: cls.bash(cmd)
-        echo("the MongoDB server is running at 'localhost'")
-
-    @classmethod
-    def set_mongoclient(cls):
-        """abstract mongoDB settings"""
-        global mongoclient, database
-        from pymongo import MongoClient
-        
-        echo("try for getting mongodb client...")
-        mongoclient = MongoClient(
-            host=_config_["db_host"],
-            port=_config_["db_port"] )
-
-        echo("available databases given by mongoclient:",
-            mongoclient.list_database_names() )
-
-        database = mongoclient[_config_["db_select"]]
-        
-        echo("connected to the default database:",
-            "'%s'"% _config_["db_select"] )
-        echo("existing mongodb collections:",
-            database.list_collection_names() )
-
-
-    # facilities for using JupyterLab
-    @classmethod
-    def set_ipykernel(cls):
-        """set sweetenv ipython kernel for running jupyter"""
-        os.chdir(f"/opt/{_project_}/programs")
-        echo("set sweetenv.py kernel for running jupyter")
-        cls.bash(f"{_py3_} -m ipykernel install --user --name=sweetenv.py")
-
-    @classmethod
-    def set_jupyter_password(cls):
-        #NOTE: this method exists to be used into ini.__init__
-        # _py3_ must be re-evaluted within the init process
-        cls.bash(f"{_py3_} -m jupyter notebook password -y")
-
-    jupyter_locker = 0
-    @classmethod
-    def jupyter(cls,directory=None,service=False):
-        """start jupyter server"""
-
-        # ensure that only one jupyter server is running
-        if cls.jupyter_locker: 
-            verbose("ask for running jupyterlab, but already started")
-            return
-        else: cls.jupyter_locker = 1
-
-        # set working/notebook root directories
-        os.chdir(os.environ["HOME"])
-        if not directory:
-            directory= _config_["notebook_dir"]
-
-        # start server
-        echo("start the enhanced jupyterlab server")
-        cmd=f"{_py3_} -m jupyterlab --no-browser --notebook-dir={directory}"
-        if service: cls.service(cmd)
-        else: cls.bash(cmd)
-            
-
-    @classmethod
-    def jupyterCommandLine(cls,args):
-        
-        global mongo_disabled, multi_threading
-        mongo_disabled = True
-        multi_threading = True
-        
-        if args.password:
-            cls.set_jupyter_password()
-        if args.set_kernel:
-            cls.set_ipykernel()
-        if args.lab:
-            cls.webbrowser(jupyter_host)
-        elif args.notebook:
-            cls.webbrowser("http://localhost:8888/tree")
-
-        if args.home: dir= os.environ["HOME"]
-        else: dir= _config_["notebook_dir"]
-        cls.jupyter(dir,service=False)
-        sys.exit()
+    @staticmethod
+    def sweet(): return f"""
+#!/bin/bash
+{_py3_} -m sweet $*
+"""
+    @staticmethod
+    def sws(): return f"""
+#!/bin/bash
+{_py3_} -m sweet shell $*
+"""
 
 
 class cloud:
@@ -666,12 +769,12 @@ class ini:
             except: pass
 
         # set sweetenv.py ipykernel for running jupyter
-        subproc.set_ipykernel()
+        jupyter.set_ipykernel()
 
         # set now a password for running jupyter server
         print("\nWARNING: This is required to set a password for the Jupyter server")
         print("press [RETURN] directly for setting no password (but not recommended)")
-        subproc.set_jupyter_password()
+        jupyter.set_password()
 
         # *change current working directory
         os.chdir(f"/opt/{_project_}/webpages")
@@ -735,23 +838,9 @@ build incredible documentation writing files in the *markdown_files* directory\n
 
         print("\nSWEET_INIT all done!\n")
 
-
-    _sweet_ = lambda: f"""
-#!/bin/bash
-{_py3_} -m sweet $*
-"""
-    _sws_ = lambda: f"""
-#!/bin/bash
-{_py3_} -m sweet shell $*
-"""
-    _uvicorn_ = lambda: f"""
-#!{_py3_}
-from os import chdir
-from sys import argv
-from uvicorn import run
-chdir("{_config_['working_dir']}")
-run(argv[1],host='{_["uargs.host"]}',port={_["uargs.port"]})
-"""
+    _sweet_ = subproc.sweet
+    _sws_ = subproc.sws
+    _uvicorn_ = uvicorn.bin
 
     @classmethod
     def label(cls,text):
@@ -905,7 +994,7 @@ if __name__ == "__main__":
 
     # create the subparser for the "shell" command:
     cli.sub("shell",help="execute a script given by the current config")
-    cli.set(subproc.execCommandLine)
+    cli.set(subproc.commandLine)
 
     cli.add("script",nargs='+',
         help=f'{ "|".join(_config_["scripts"].keys()) }')
@@ -961,7 +1050,7 @@ if __name__ == "__main__":
 
     # create the subparser for the "run-jupyter" command:
     cli.sub("run-jupyter",help="run JupyterLab notebook server")
-    cli.set(subproc.jupyterCommandLine)
+    cli.set(jupyter.commandLine)
 
     cli.add("-p","--password",action="store_true",
         help="ask for setting server password (can be empty)")
@@ -981,7 +1070,7 @@ if __name__ == "__main__":
 
     # create the subparser for the "run-mongod" command:
     cli.sub("run-mongod",help="run MongoDB server daemon")
-    cli.set(lambda args: subproc.mongod(service=False))
+    cli.set(_mongo_.commandLine)
 
     # create the subparser for the "run-cherrypy" command:
     cli.sub("run-cherrypy",help="run CherryPy webserver for serving statics")
@@ -1568,7 +1657,6 @@ except:
 
 from bottle import template
 
-import uvicorn
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
 from starlette.routing import Route, Mount, WebSocketRoute
@@ -1585,10 +1673,8 @@ for module in _config_["py_imports"].keys():
     else: exec(f"import {module}")
     del objectToImport
 
-###############################################################################
-###############################################################################
 
-# convenient function for rendering html content:
+# convenient function for rendering html content
 def html(source:str="WELCOME",**kwargs):
 
     if source == "WELCOME":
@@ -1643,17 +1729,17 @@ def quickstart(routes=None, endpoint=None):
 
     # at first set and start mongo database service:
     if not mongo_disabled:
-        subproc.mongod(service=True)
-        subproc.set_mongoclient()
-    else: echo("the MongoDB server/client are disabled")
+        _mongo_.run_local(service=True)
+        _mongo_.set_client(select=_config_["db_select"])
+    else: echo("MongoDB server/client DISABLED")
 
     # set mdbook service:
     if _.mdbook: mdbook.serve(_config_["working_dir"])
-    else: echo("the mdBook server is locally disabled")
+    else: verbose("the mdBook local server is disabled")
 
     # set mdbook service:
-    if _.jupyter: subproc.jupyter(service=True)
-    else: echo("the JupyterLab server is locally disabled")
+    if _.jupyter: jupyter.run_local(service=True)
+    else: verbose("the JupyterLab local server is disabled")
 
     # set the current working directory:
     os.chdir(_config_["working_dir"])
@@ -1698,11 +1784,7 @@ def quickstart(routes=None, endpoint=None):
     if _.webapp: subproc.webbrowser(async_host)
     
     # at last start the uvicorn webserver:
-    if multi_threading:
-        subproc.service("uvicorn sweet:webapp.star")
-    else:
-        echo("quickstart: uvicorn multi-threading is not available here")
-        uvicorn.run(webapp.star, **_["uargs"])
+    uvicorn.run_local("sweet:webapp.star",multi_threading)
 
 
 class WebApp(UserList):
@@ -1714,7 +1796,7 @@ class WebApp(UserList):
         return html("login.txt")
 
     def jupyter(self, request):
-        subproc.jupyter(service=True)
+        jupyter.run_local(service=True)
         return RedirectResponse(jupyter_host)
 
     # webapp settings:
