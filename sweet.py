@@ -197,7 +197,7 @@ class ConfigAccess(UserDict):
     verbose = False
     webapp = False
     jupyter= False
-    # other settings
+    # other main settings
     cherrypy = False
     mdbook = _config_["templates_settings"].get("_book_")
     winapp = _config_["webbrowser"].endswith(".exe")
@@ -321,13 +321,46 @@ elif _.winapp and os.environ["WSL_DISTRO_NAME"] != "Ubuntu":
     _.verbose = True
 
 
+class windows:
+    #FIXME: to implement
+
+    is_os = "/mnt/c/Windows" in os.getenv("PATH")
+    wsl = os.getenv("WSL_DISTRO_NAME")
+
+    @staticmethod
+    def path(path:str):
+        """switch a linux path to wsl path"""
+        distro = os.environ['WSL_DISTRO_NAME']
+        if path[0] == os.sep:
+            return "\\".join(["\\","wsl$",distro,*path.split(os.sep)[1:]])
+        elif path.startswith("http"): return path
+        else: raise NotImplementedError
+
+
   #############################################################################
  ########## EXTERNAL SERVICES FACILITIES #####################################
 #############################################################################
 
+def webbrowser(url,select=None):
+        """
+        open the given url in selected webbrowser within
+        '_config_["webbrowser"]' or defined with 'run' if given
+        """
+
+        # build bash command:
+        if not select: select= _config_["webbrowser"]
+        cmd= _deepconfig_["run"]["webbrowser"][select]
+        if not cmd.endswith("=") and not cmd.endswith(" "): cmd+=" "
+
+        # open the given url:
+        if _.winapp: url = windows.path(url)
+        if not url[0] in ["'",'"']: url= f"'{url}'"
+        subprocess.run(cmd+url+" &",shell=True)
+
+
 class SwServer:
 
-    def __init__(self,url:str="",host:str="",port:int=""):
+    def __init__(self,host:str="",port:int="",url:str=""):
         
         if url:
             assert url.startswith("http")
@@ -476,9 +509,9 @@ class JupyterLab(SwServer):
         if args.set_kernel:
             self.set_ipykernel()
         if args.lab:
-            subproc.webbrowser(self.lab_host)
+            webbrowser(self.lab_host)
         elif args.notebook:
-            subproc.webbrowser(self.nbk_host)
+            webbrowser(self.nbk_host)
 
         if args.home: dir= os.environ["HOME"]
         else: dir= _config_["notebook_dir"]
@@ -505,7 +538,7 @@ class Uvicorn(SwServer):
 
     def cmd(self) -> str:
         """provide the uvicorn bash command"""
-        #FIXME: to implement better
+        #FIXME: doesn't work
         return f"uvicorn {self.app}"
 
     def run_local(self,app:str=None,service=None):
@@ -530,19 +563,88 @@ chdir("{_config_['working_dir']}")
 run(argv[1],host='{self.host}',port={self.port})
 """
 
-# set default jupyterlab config:
+# set default uvicorn config:
 uvicorn = Uvicorn(url=async_host)
 
 
-class subproc:
-    """tools for executing linux shell commands"""
-    bash = lambda *args,**kwargs: subprocess.run(*args,shell=True,**kwargs)
-    run = subprocess.run
+class MdBook(SwServer):
+    """for using mdBook command line tool
+    a Rust crate to create books using Markdown"""
 
-    @classmethod
-    def service(cls,*args,**kwargs):
-        #FIXME: transitionnal classmethod
-        SwServer.service(*args,**kwargs)
+    path = "~/.cargo/bin"
+
+    def __init__(self,*args,**kwargs):
+        super(MdBook,self).__init__(*args,**kwargs)
+
+    def commandLine(self,args):
+        """provide mdBook tools via the 'sweet' command line interface"""
+
+        if not args.name:
+            echo("no book name given, default settings applied")
+
+        if args.anywhere: directory= os.path.join(os.getcwd(),args.name)
+        else: directory= f"/opt/{_project_}/documentation/{args.name}"
+        isbook= os.path.isfile(os.path.join(directory,"book.toml"))
+
+        if args.build:
+            # init/build book within current directory:
+            self.init(directory)
+            self.build(directory)
+
+        elif args.newbook:
+            # init book within directory without building it:
+            self.init(directory)
+
+        elif not args.open and not args.name:
+            # open the default book of the project:
+            self.open()
+
+        elif not isbook:
+            if args.name: msg= f"Error, book '{args.name}' not existing"
+            else: msg= f"WARNING: root book not existing within documentation"
+            echo(msg, mode="exit")
+        
+        elif args.name: args.open=True
+        
+        if args.open:
+            #FIXME: provide default settings:
+            if directory==_config_["working_dir"]: bkdir="markdown_book"
+            else: bkdir="book"
+            # open book for given directory:
+            path = os.path.join(directory,bkdir,"index.html")
+            self.open(path)
+
+
+    def init(self,directory:str):
+        """init a new mdbbok within given directory"""
+
+        # check if a doc is existing and create it if not:
+        if not os.path.isfile(os.path.join(directory,"book.toml")):
+            echo("init new mdBook within directory:",directory)
+            self.subproc(["mdbook","init","--force",directory],
+                capture_output=True, text=True, input=_config_["gitignore"])
+
+    def build(self,directory:str=""):
+        echo("build mdBook within directory:",directory)
+        self.subproc(["mdbook","build",directory])
+
+    def open(self,path:str=""):
+        if not path: path= _config_["webbook"]
+        echo("open built mdBook:",path)
+        webbrowser(path)
+
+    def run_local(self,directory:str=""):
+        if not directory: directory= _config_["working_dir"]
+        echo("start the rust mdbook server")
+        self.service(
+            f"~/.cargo/bin/mdbook serve -n {self.host} -p {self.port} {directory}")
+
+# set default MdBook config:
+mdbook = MdBook(url=book_host)
+
+
+class subproc:
+    """tools for running bash commands"""
 
     @classmethod
     def commandLine(cls,args):
@@ -564,35 +666,9 @@ class subproc:
             script = script.replace("$*"," ".join(args.script))
             for cmd in script.split(";"):
                 echo("shell$",cmd.strip())
-                cls.bash(cmd)
+                subprocess.run(cmd,shell=True)
         else:
             echo("sweet.py shell: Error, invalid script name given")
-
-    @staticmethod
-    def wslpath(path):
-        """switch a linux path to wsl path"""
-        distro = os.environ['WSL_DISTRO_NAME']
-        if path[0] == os.sep:
-            return "\\".join(["\\","wsl$",distro,*path.split(os.sep)[1:]])
-        elif path.startswith("http"): return path
-        else: raise NotImplementedError
-
-    @classmethod
-    def webbrowser(cls,url,select=None):
-        """
-        open the given url in selected webbrowser within
-        '_config_["webbrowser"]' or defined with 'run' if given
-        """
-
-        # build bash command:
-        if not select: select= _config_["webbrowser"]
-        cmd= _deepconfig_["run"]["webbrowser"][select]
-        if not cmd.endswith("=") and not cmd.endswith(" "): cmd+=" "
-
-        # open the given url:
-        if _.winapp: url = cls.wslpath(url)
-        if not url[0] in ["'",'"']: url= f"'{url}'"
-        cls.bash( cmd + url + " &" )
 
     @staticmethod
     def sweet(): return f"""
@@ -617,14 +693,15 @@ class cloud:
     @staticmethod
     def update_files():
         #FIXME: dev tool not for users
-        if not os.path.isdir(cloud.local): subproc.bash(cloud.pmount)
+        if not os.path.isdir(cloud.local):
+            subprocess.run(cloud.pmount,shell=True)
         for filename, path in _.copyfiles.items():
             source = os.path.join(path, filename)
             dest = cloud.local
             verbose("copy:",source," -> ", dest)
-            subproc.run(["cp","-u",source,dest])
+            subprocess.run(["cp","-u",source,dest])
 
-        subproc.run(["cp","-R","-u",cloud.swBookSrc,cloud.local])
+        subprocess.run(["cp","-R","-u",cloud.swBookSrc,cloud.local])
         echo("copy or update files in the cloud done")
 
     @staticmethod
@@ -639,83 +716,9 @@ class cloud:
         for file, path in files.items():
             verbose("download file:", src(file))
             os.chdir(path)
-            subproc.run(["wget","-q","--no-check-certificate",src(file)])
+            subprocess.run(["wget","-q","--no-check-certificate",src(file)])
         
         os.chdir(curdir)
-
-
-class mdbook:
-    """for using mdBook command line tool
-    a Rust crate to create books using Markdown"""
-
-    @staticmethod
-    def commandLine(args):
-        """provide mdBook tools via the 'sweet' command line interface"""
-
-        if not args.name:
-            echo("no book name given, default settings applied")
-
-        if args.anywhere: directory= os.path.join(os.getcwd(),args.name)
-        else: directory= f"/opt/{_project_}/documentation/{args.name}"
-        isbook= os.path.isfile(os.path.join(directory,"book.toml"))
-
-        if args.build:
-            # init/build book within current directory:
-            mdbook.init(directory)
-            mdbook.build(directory)
-
-        elif args.newbook:
-            # init book within directory without building it:
-            mdbook.init(directory)
-
-        elif not args.open and not args.name:
-            # open the default book of the project:
-            mdbook.open()
-
-        elif not isbook:
-            if args.name: msg= f"Error, book '{args.name}' not existing"
-            else: msg= f"WARNING: root book not existing within documentation"
-            echo(msg, mode="exit")
-        
-        elif args.name: args.open=True
-        
-        if args.open:
-            #FIXME: provide default settings:
-            if directory==_config_["working_dir"]: bkdir="markdown_book"
-            else: bkdir="book"
-            # open book for given directory:
-            path = os.path.join(directory,bkdir,"index.html")
-            mdbook.open(path)
-
-
-    @staticmethod
-    def init(directory:str):
-        """init a new mdbbok within given directory"""
-
-        # check if a doc is existing and create it if not:
-        if not os.path.isfile(os.path.join(directory,"book.toml")):
-            echo("init new mdBook within directory:",directory)
-            subproc.run(["mdbook","init","--force",directory],
-                capture_output=True, text=True, input=_config_["gitignore"])
-
-    @staticmethod
-    def build(directory:str=""):
-        echo("build mdBook within directory:",directory)
-        subproc.run(["mdbook","build",directory])
-
-    @staticmethod
-    def open(path:str=""):
-        if not path: path= _config_["webbook"]
-        echo("open built mdBook:",path)
-        subproc.webbrowser(path)
-
-    @staticmethod
-    def serve(directory:str=""):
-        if not directory: directory= _config_["working_dir"]
-        host, port = _.get_host("book"), _.get_port("book")
-        echo("start the rust mdbook server")
-        subproc.service(
-            f"~/.cargo/bin/mdbook serve -n {host} -p {port} {directory}")
 
 
 class ini:
@@ -1733,7 +1736,7 @@ def quickstart(routes=None, endpoint=None):
     else: echo("MongoDB server/client DISABLED")
 
     # set mdbook service:
-    if _.mdbook: mdbook.serve(_config_["working_dir"])
+    if _.mdbook: mdbook.run_local(_config_["working_dir"])
     else: verbose("the mdBook local server is disabled")
 
     # set mdbook service:
@@ -1770,7 +1773,7 @@ def quickstart(routes=None, endpoint=None):
         # start cherrypy as external service:
         # this will happen with bash command 'sweet -c start'
         echo("try running cherrypy webserver as external service")
-        subproc.service(_deepconfig_["run"]["cherrypy"])
+        SwServer.service(_deepconfig_["run"]["cherrypy"])
 
     # set routing and create Starlette object:
     webapp.mount(route_options=True)
@@ -1780,7 +1783,7 @@ def quickstart(routes=None, endpoint=None):
         assert isinstance(route,Route) or isinstance(route,Mount)
     
     # auto start the webapp within webbrowser:
-    if _.webapp: subproc.webbrowser(async_host)
+    if _.webapp: webbrowser(async_host)
     
     # at last start the uvicorn webserver:
     uvicorn.run_local("sweet:webapp.star",multi_threading)
@@ -1872,7 +1875,7 @@ if __name__ == "__main__":
         if _.verbose and _.winapp:
             # give the current wsl statement:
             verbose("current WSL statement:")
-            subproc.bash("cmd.exe /c 'wsl -l -v'")
+            subprocess.run("cmd.exe /c 'wsl -l -v'",shell=True)
             print("")
 
         # force config and settings:
