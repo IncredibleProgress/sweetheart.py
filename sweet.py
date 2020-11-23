@@ -19,14 +19,13 @@ book_host = "http://127.0.0.1:3000"# serve mdbook (rust crate)
 jupyter_host = "http://localhost:8888" # jupyterlab server
 
 
-from argparse import ArgumentError
 import os, sys, subprocess, json
-from re import sub
 from collections import UserList, UserDict
 
 # - main modules import are within the WEBAPP FACILITIES section
 # - cherrypy import is within the CHERRYPY FACILITIES section
-# - pymongo import is within the subroc.mongod method
+# - pymongo import is within the MongoDB.set_client method
+# - uvicorn import is within the Uvicorn.run_local method
 # - imports from standard libs are included within relevant objects
 
 # allow dedicated configs for custom projects:
@@ -191,29 +190,26 @@ def verbose(*args):
 
 
 class ConfigAccess(UserDict):
-    """provide a convenient _config_ accessor tool"""
+    """provide a convenient _config_ accessor tool
+    allow json configuration file selection"""
 
-    # general settings:
+    # command line settings
     verbose = False
-    cherrypy = False
     webapp = False
     jupyter= False
+    # other settings
+    cherrypy = False
     mdbook = _config_["templates_settings"].get("_book_")
     winapp = _config_["webbrowser"].endswith(".exe")
 
-    get_host= lambda self,name:eval(f'{name}_host.split(":")[1].strip("/")')
-    get_port= lambda self,name:eval(f'int({name}_host.split(":")[2])')
-
     locker = 0
     def __init__(self, conffile:str=None):
-        """final configuration completion
-        allowing json configuration file selection"""
-
-        # deep config settings:
+        
+        # deep config settings
         ConfigAccess.conffile=\
              conffile if os.path.isfile(conffile) else None
-        self.data = {
 
+        self.data = {
         "force-apt-install": [
             "python3-venv",
         ],
@@ -344,7 +340,7 @@ class SwServer:
             self.host = host
             self.port = port
 
-        else: raise ArgumentError
+        else: raise AttributeError
 
     def subproc(self,*args,**kwargs):
         subprocess.run(*args,**kwargs)
@@ -498,10 +494,10 @@ class Uvicorn(SwServer):
     def __init__(self,*args,**kwargs):
         super(Uvicorn,self).__init__(*args,**kwargs)
 
-        # app must be set following the "sweet:app" pattern
-        self.app = None
+        # app: ust be set following the "sweet:app" pattern
+        self.app:str = "sweet:webapp.star"
 
-        # uvicorn arguments dict:
+        # set uvicorn arguments dict
         self.uargs = {
             "host": self.host,
             "port": self.port,
@@ -509,19 +505,22 @@ class Uvicorn(SwServer):
 
     def cmd(self) -> str:
         """provide the uvicorn bash command"""
-        #FIXME: not running
-        return f"uvicorn sweet:webapp.star"
+        #FIXME: to implement better
+        return f"uvicorn {self.app}"
 
-    def run_local(self,app:str=None,service=False):
+    def run_local(self,app:str=None,service=None):
+        if service is None:
+            service = multi_threading
         if service:
             self.service(self.cmd())
         else:
             import uvicorn
-            uvicorn.run(webapp.star,**self.uargs)
+            app = eval(self.app.split(":")[1])
+            assert isinstance(app,Starlette)
+            uvicorn.run(app,**self.uargs)
 
     def bin(self) -> str:
-        """provide bash script for running uvicorn"""
-
+        """provide a bash script for running uvicorn"""
         return f"""
 #!{_py3_}
 from os import chdir
