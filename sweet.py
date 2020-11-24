@@ -1113,8 +1113,9 @@ try:
         def cmd(self) -> str:
             return f"{_py3_} -m sweet run-cherrypy"
 
-        def run_local(self):
-            self.subproc(self.cmd(),shell=True)
+        def run_local(self,service):
+            if service: self.service(self.cmd())
+            else: self.subproc(self.cmd(),shell=True)
 
 
         # re-implement some usual cherrypy objects:
@@ -1774,7 +1775,7 @@ def quickstart(routes=None, endpoint=None):
         # start cherrypy as external service:
         # this will happen with bash command 'sweet -c start'
         echo("try running cherrypy webserver as service")
-        staticserver.run_local()
+        staticserver.run_local(service=True)
 
     # set routing and create Starlette object:
     webapp.mount(route_options=True)
