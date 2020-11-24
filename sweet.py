@@ -145,7 +145,8 @@ _config_ = {
     "py_imports": {
         #FIXME: install error msg with module from standard libs 
         # "module": "", will import the module itself
-        "mistune": "markdown",
+        "mistune": "markdown",# jupyterlab dependency
+        "datetime": "datetime",# used with pandas
     },
     ## custom bash commands called by sws
     "scripts": {
@@ -228,8 +229,6 @@ class ConfigAccess(UserDict):
                 "brave.exe": "cmd.exe /c start brave",
                 "app:msedge.exe": "cmd.exe /c start msedge --app=",
                 "app:brave.exe": "cmd.exe /c start brave --app=" },
-            
-            "cherrypy": f"{_py3_} -m sweet run-cherrypy",
         },
         # data for building new project dir:
         "__basedirs__": lambda: [
@@ -309,6 +308,7 @@ class ConfigAccess(UserDict):
 _ = ConfigAccess(_config_["__conffile__"])
 _deepconfig_ = _.data
 
+
 # set wsl/linux services
 if _.winapp and not os.getenv("WSL_DISTRO_NAME"):
     echo("NO WSL: set native services for linux")
@@ -321,25 +321,84 @@ elif _.winapp and os.environ["WSL_DISTRO_NAME"] != "Ubuntu":
     _.verbose = True
 
 
-class windows:
-    #FIXME: to implement
+  #############################################################################
+ ########## SCRIPTS ##########################################################
+#############################################################################
 
-    is_os = "/mnt/c/Windows" in os.getenv("PATH")
-    wsl = os.getenv("WSL_DISTRO_NAME")
+_sh_sweet = lambda: f"""
+#!/bin/bash
+{_py3_} -m sweet $*
+"""
 
-    @staticmethod
-    def path(path:str):
-        """switch a linux path to wsl path"""
-        distro = os.environ['WSL_DISTRO_NAME']
-        if path[0] == os.sep:
-            return "\\".join(["\\","wsl$",distro,*path.split(os.sep)[1:]])
-        elif path.startswith("http"): return path
-        else: raise NotImplementedError
+_sh_sws = lambda: f"""
+#!/bin/bash
+{_py3_} -m sweet shell $*
+"""
 
+_sh_uvicorn = lambda: f"""
+#!{_py3_}
+from os import chdir
+from sys import argv
+from uvicorn import run
+chdir("{_config_['working_dir']}")
+run(argv[1],host='{uvicorn.host}',port={uvicorn.port})
+"""
+
+_bk_toml = """
+[book]
+multilingual = false
+src = "markdown_files"
+[build]
+build-dir = "markdown_book"
+[preprocessor.toc]
+command = "mdbook-toc"
+renderer = ["html"]
+"""
+
+_bk_SUMMARY = """
+# Summary
+[Welcome](./welcome.md)
+"""
+
+_bk_welcome = """
+# Welcome !
+build incredible documentation writing files in the *markdown_files* directory\n
+`sweet book --build` or `sweet book -b` for building it\n
+`sweet book --open` or `sweet book -o` for open it
+"""
 
   #############################################################################
  ########## EXTERNAL SERVICES FACILITIES #####################################
 #############################################################################
+
+def sws(args):
+    """execute a given script provided by _config_["scripts"]
+    it should be called from the command line interface
+     - accepts multilines-commands separated by ;
+     - arguments can be passed-through using the $* pattern
+     - sudo bash commands are forbidden here
+    """
+    script:str = _config_["scripts"].get(f"{args.script[0]}","")
+    if script:
+        # stop any 'sudo' cmd given here:
+        assert not "sudo" in script
+        assert not "su " in script
+
+        del args.script[0]
+        script = script.replace("$*"," ".join(args.script))
+        for cmd in script.split(";"):
+            echo("shell$",cmd.strip())
+            subprocess.run(cmd,shell=True)
+    else:
+        echo("sweet.py shell: Error, invalid script name given")
+
+def winpath(path:str):
+    """switch a linux path to a windows path"""
+    distro = os.environ['WSL_DISTRO_NAME']
+    if path[0] == os.sep:
+        return "\\".join(["\\","wsl$",distro,*path.split(os.sep)[1:]])
+    elif path.startswith("http"): return path
+    else: raise NotImplementedError
 
 def webbrowser(url,select=None):
         """
@@ -353,12 +412,19 @@ def webbrowser(url,select=None):
         if not cmd.endswith("=") and not cmd.endswith(" "): cmd+=" "
 
         # open the given url:
-        if _.winapp: url = windows.path(url)
+        if _.winapp: url = winpath(url)
         if not url[0] in ["'",'"']: url= f"'{url}'"
         subprocess.run(cmd+url+" &",shell=True)
 
 
 class SwServer:
+    """
+    provides common basis and signature for servers facilities 
+     - attr.:
+        url host port
+     - methodes:
+        service() subproc() cmd() run_local() commandLine()
+    """
 
     def __init__(self,host:str="",port:int="",url:str=""):
         
@@ -455,11 +521,6 @@ class MongoDB(SwServer):
     def commandLine(self,args):
         self.run_local(service=False)
 
-# set default mongo client and database
-_mongo_ = MongoDB(host=_config_["db_host"],port=_config_["db_port"])
-mongoclient = _mongo_.client
-database = _mongo_.database
-
 
 class JupyterLab(SwServer):
 
@@ -518,17 +579,12 @@ class JupyterLab(SwServer):
         self.run_local(directory=dir,service=False)
         sys.exit()
 
-# set default jupyterlab config:
-jupyter = JupyterLab(url=jupyter_host)
-
 
 class Uvicorn(SwServer):
 
     def __init__(self,*args,**kwargs):
         super(Uvicorn,self).__init__(*args,**kwargs)
-
-        # app: ust be set following the "sweet:app" pattern
-        self.app:str = "sweet:webapp.star"
+        self.app = "sweet:webapp.star"
 
         # set uvicorn arguments dict
         self.uargs = {
@@ -536,42 +592,25 @@ class Uvicorn(SwServer):
             "port": self.port,
             "log_level": "info" }
 
-    def cmd(self) -> str:
-        """provide the uvicorn bash command"""
-        #FIXME: doesn't work
-        return f"uvicorn {self.app}"
-
-    def run_local(self,app:str=None,service=None):
+    def run_local(self,app,service=None):
+        """run the uvicorn webserver
+        app argument can be 'str' or 'Starlette' object"""
+        
         if service is None:
             service = multi_threading
         if service:
-            self.service(self.cmd())
+            self.service(f"uvicorn {self.app}")
         else:
             import uvicorn
-            app = eval(self.app.split(":")[1])
-            assert isinstance(app,Starlette)
             uvicorn.run(app,**self.uargs)
-
-    def bin(self) -> str:
-        """provide a bash script for running uvicorn"""
-        return f"""
-#!{_py3_}
-from os import chdir
-from sys import argv
-from uvicorn import run
-chdir("{_config_['working_dir']}")
-run(argv[1],host='{self.host}',port={self.port})
-"""
-
-# set default uvicorn config:
-uvicorn = Uvicorn(url=async_host)
 
 
 class MdBook(SwServer):
     """for using mdBook command line tool
     a Rust crate to create books using Markdown"""
 
-    path = "~/.cargo/bin"
+    #FIXME: manage path issues using mdbook
+    #path = "~/.cargo/bin"
 
     def __init__(self,*args,**kwargs):
         super(MdBook,self).__init__(*args,**kwargs)
@@ -638,48 +677,6 @@ class MdBook(SwServer):
         echo("start the rust mdbook server")
         self.service(
             f"~/.cargo/bin/mdbook serve -n {self.host} -p {self.port} {directory}")
-
-# set default MdBook config:
-mdbook = MdBook(url=book_host)
-
-
-class subproc:
-    """tools for running bash commands"""
-
-    @classmethod
-    def commandLine(cls,args):
-        """
-        execute a given script provided by _config_["scripts"]
-        it should be called from the command line interface
-
-        - accepts multilines-commands separated by ;
-        - arguments can be passed-through using the $* pattern
-        - sudo bash commands are forbidden here
-        """
-        script:str = _config_["scripts"].get(f"{args.script[0]}","")
-        if script:
-            # stop any 'sudo' cmd given here:
-            assert not "sudo" in script
-            assert not "su " in script
-
-            del args.script[0]
-            script = script.replace("$*"," ".join(args.script))
-            for cmd in script.split(";"):
-                echo("shell$",cmd.strip())
-                subprocess.run(cmd,shell=True)
-        else:
-            echo("sweet.py shell: Error, invalid script name given")
-
-    @staticmethod
-    def sweet(): return f"""
-#!/bin/bash
-{_py3_} -m sweet $*
-"""
-    @staticmethod
-    def sws(): return f"""
-#!/bin/bash
-{_py3_} -m sweet shell $*
-"""
 
 
 class cloud:
@@ -781,35 +778,15 @@ class ini:
         # *change current working directory
         os.chdir(f"/opt/{_project_}/webpages")
 
-        toml = """
-[book]
-multilingual = false
-src = "markdown_files"
-[build]
-build-dir = "markdown_book"
-[preprocessor.toc]
-command = "mdbook-toc"
-renderer = ["html"]
-"""
-        SUMMARY = """
-# Summary
-[Welcome](./welcome.md)
-"""
-        welcome = """
-# Welcome !
-build incredible documentation writing files in the *markdown_files* directory\n
-`sweet book --build` or `sweet book -b` for building it\n
-`sweet book --open` or `sweet book -o` for open it
-"""
         # build documentation setting files
         ini.label("init project documentation")
 
         with open("book.toml","w") as fo:
-            fo.write(toml.strip())
+            fo.write(_bk_toml.strip())
         with open("markdown_files/SUMMARY.md","w") as fo:
-            fo.write(SUMMARY.strip())
+            fo.write(_bk_SUMMARY.strip())
         with open("markdown_files/welcome.md","w") as fo:
-            fo.write(welcome.strip())
+            fo.write(_bk_welcome.strip())
 
         try: 
             mdbook.build()
@@ -839,10 +816,6 @@ build incredible documentation writing files in the *markdown_files* directory\n
         ini.locbin("sweet","uvicorn","sws")
 
         print("\nSWEET_INIT all done!\n")
-
-    _sweet_ = subproc.sweet
-    _sws_ = subproc.sws
-    _uvicorn_ = uvicorn.bin
 
     @classmethod
     def label(cls,text):
@@ -890,12 +863,12 @@ build incredible documentation writing files in the *markdown_files* directory\n
     def locbin(cls,*args:str):
 
         for scriptname in args:
-            assert hasattr(ini,f"_{scriptname}_")
+            assert f"_sh_{scriptname}" in globals()
 
             # create 'scriptname' in the current working dir:
             with open(scriptname,"w") as fo:
                 verbose(f"write new script: {scriptname}")
-                fo.write(eval(f"ini._{scriptname}_()").strip())
+                fo.write(eval(f"_sh_{scriptname}()").strip())
 
             cls.ln([
                 f"/opt/{_project_}/programs/scripts/{scriptname}",
@@ -934,6 +907,22 @@ build incredible documentation writing files in the *markdown_files* directory\n
   #############################################################################
  ########## COMMAND LINE INTERFACE ###########################################
 #############################################################################
+
+# set default mongo client and database
+_mongo_ = MongoDB(
+    host= _config_["db_host"],
+    port= _config_["db_port"])
+
+mongoclient = _mongo_.client
+database = _mongo_.database
+
+# set default jupyterlab config
+jupyter = JupyterLab(url=jupyter_host)
+# set default uvicorn config
+uvicorn = Uvicorn(url=async_host)
+# set default mdbook config
+mdbook = MdBook(url=book_host)
+
 
 class CommandLine:
     """build Command Line Interface with ease"""
@@ -996,7 +985,7 @@ if __name__ == "__main__":
 
     # create the subparser for the "shell" command:
     cli.sub("shell",help="execute a script given by the current config")
-    cli.set(subproc.commandLine)
+    cli.set(sws)
 
     cli.add("script",nargs='+',
         help=f'{ "|".join(_config_["scripts"].keys()) }')
@@ -1085,8 +1074,8 @@ if __name__ == "__main__":
     if argv.conffile: ConfigAccess.update()
         
     # update current settings when required:
-    ConfigAccess.verbose = getattr(argv,"verbose", _.verbose)
-    ConfigAccess.webapp = getattr(argv,"webapp", _.webapp)
+    ConfigAccess.verbose = getattr(argv,"verbose",_.verbose)
+    ConfigAccess.webapp = getattr(argv,"webapp",_.webapp)
     ConfigAccess.jupyter = getattr(argv,"jupyter",_.jupyter)
 
     mongo_disabled = getattr(argv, "mongo_disabled", mongo_disabled)
@@ -1110,12 +1099,23 @@ try:
     import cherrypy
     ConfigAccess.cherrypy = True
 
-    class CherryPy:
-        """provide a namespace for cherrypy facilities
+    class CherryPy(SwServer):
+        """provide cherrypy server facilities
 
-        cherrypy seems to be very used for serving static content
-        this server is very stable and keeps performances at high level
+        cherrypy can be used optionnaly for serving static contents
+        such server is very stable and keeps performances at high level
         """
+        # re-implement base class methods
+        #FIXME: not fully implemented
+        def __init__(self,*args,**kwargs):
+            super(CherryPy,self).__init__(*args,**kwargs)
+
+        def cmd(self) -> str:
+            return f"{_py3_} -m sweet run-cherrypy"
+
+        def run_local(self):
+            self.subproc(self.cmd(),shell=True)
+
 
         # re-implement some usual cherrypy objects:
         serve_file = cherrypy.lib.static.serve_file
@@ -1229,7 +1229,6 @@ try:
         def stop(cls):
             cherrypy.engine.stop()
 
-
     # abstract the cherrypy dispatch recipe:
     @cherrypy.expose
     class CherryHttpDispatcher:
@@ -1257,6 +1256,9 @@ try:
         def DELETE(self, *args, **kwargs):
             self.methods["DELETE"](*args, **kwargs)
 
+    # set a default CherryPy instance:
+    #FIXME: only for test
+    staticserver = CherryPy(url=static_host)
 
 except:
     class cherrypy:
@@ -1658,7 +1660,6 @@ except:
 #############################################################################
 
 from bottle import template
-
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
 from starlette.routing import Route, Mount, WebSocketRoute
@@ -1772,8 +1773,8 @@ def quickstart(routes=None, endpoint=None):
     if cherrypy_enabled:
         # start cherrypy as external service:
         # this will happen with bash command 'sweet -c start'
-        echo("try running cherrypy webserver as external service")
-        SwServer.service(_deepconfig_["run"]["cherrypy"])
+        echo("try running cherrypy webserver as service")
+        staticserver.run_local()
 
     # set routing and create Starlette object:
     webapp.mount(route_options=True)
@@ -1786,7 +1787,7 @@ def quickstart(routes=None, endpoint=None):
     if _.webapp: webbrowser(async_host)
     
     # at last start the uvicorn webserver:
-    uvicorn.run_local("sweet:webapp.star",multi_threading)
+    uvicorn.run_local(webapp.star)
 
 
 class WebApp(UserList):
