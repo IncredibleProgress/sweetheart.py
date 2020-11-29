@@ -20,7 +20,6 @@ jupyter_host = "http://localhost:8888" # jupyterlab server
 
 
 import os, sys, subprocess, json
-from os import pathconf
 from collections import UserList, UserDict
 
 # - main modules import are within the WEBAPP FACILITIES section
@@ -31,7 +30,8 @@ from collections import UserList, UserDict
 
 # allow dedicated configs for custom projects:
 _dir_ = os.environ["PWD"].split(os.sep)
-if _dir_[1] == "opt" and _dir_[2:]: _project_ = _dir_[2]
+if "-p" in sys.argv: _project_ = sys.argv[sys.argv.index("-p")+1]
+elif _dir_[1] == "opt" and _dir_[2:]: _project_ = _dir_[2]
 else: _project_ = "sweetheart"
 _py3_ = f"/opt/{_project_}/programs/sweetenv.py/bin/python3"
 
@@ -203,9 +203,6 @@ class ConfigAccess(UserDict):
     cherrypy = False
     mdbook = _config_["templates_settings"].get("_book_")
     winapp = _config_["webbrowser"].endswith(".exe")
-    # windows statement
-    wsl = os.getenv("WSL_DISTRO_NAME")
-    win = os.getenv("WINDIR")
 
     locker = 0
     def __init__(self, conffile:str=None):
@@ -315,15 +312,16 @@ _ = ConfigAccess(_config_["__conffile__"])
 _deepconfig_ = _.data
 
 
-# pure windows usage forbidden
-assert _.win is None
+# adjust parameters for wsl/linux
+if os.getenv("WINDIR"):
+    raise NotImplementedError
 
-# set wsl/linux services
-if _.winapp and not os.getenv("WSL_DISTRO_NAME"):
+if os.getenv("WSL_DISTRO_NAME") is None:
     echo("NO WSL: set native services for linux")
-    _.winapp = False
-    _config_["webbrowser"] = "*"
     _config_["terminal"] = "xterm"
+    if _.winapp:
+        _.winapp = False
+        _config_["webbrowser"] = "*"
 
 elif _.winapp and os.environ["WSL_DISTRO_NAME"] != "Ubuntu":
     echo("WARNING: WSL is not running with Ubuntu")
@@ -337,10 +335,11 @@ _deepconfig_.update({
 
 "$sweet": lambda: f"""
 #!/bin/bash
+#cd /opt/{_project_}
 {_py3_} -m sweet $*
 """,
 
-"$sws": lambda: f"""
+" sws": lambda: f"""
 #!/bin/bash
 {_py3_} -m sweet shell $*
 """,
@@ -366,23 +365,22 @@ renderer = ["html"]
 """,
 
 "SUMMARY.md": """
-# Summary
+# Summary\n
 [Welcome](./welcome.md)
 """,
 
 "welcome.md": """
-# Welcome !
+# Welcome !\n
 build incredible documentation writing files in the *markdown_files* directory\n\n
 `sweet book --build` for building it\n\n
 `sweet book --open` for open it
 """
 })
-
   #############################################################################
  ########## EXTERNAL SERVICES FACILITIES #####################################
 #############################################################################
 
-def sws(args):
+def shell(args):
     """execute a given script provided by _config_["scripts"]
     it should be called from the command line interface
      - accepts multilines-commands separated by ;
@@ -455,22 +453,22 @@ class SwServer:
         subprocess.run(*args,**kwargs)
     
     @classmethod
-    def service(cls,cmd:str):
-        """select the way for starting external service:
-        used for starting mongod, cherrypy, uvicorn within external terminal"""
-        
+    def service(cls,cmd:str,terminal:str=None):
+        """select the way for starting an external service"""
+
+        if terminal is None: terminal=_config_["terminal"]
         assert _config_["terminal"] in "xterm|winterm|wsl"
 
-        if _config_["terminal"] == "winterm":
+        if terminal == "winterm":
             # start an external service within Windows Terminal
             os.system(f'cmd.exe /c start wt wsl {cmd} &')
         
-        elif _config_["terminal"] == "wsl":
-            # start an external service within Windows Terminal
+        elif terminal == "wsl":
+            # start an external service using wsl command
             os.system(f'cmd.exe /c start wsl {cmd} &')
 
-        elif _config_["terminal"] == "xterm":
-            # start an external service within xterm"""
+        elif terminal == "xterm":
+            # start an external service within xterm
             os.system("%s xterm -C -geometry 190x19 -e %s &"
                 % (_config_["display"], cmd))
 
@@ -750,7 +748,7 @@ class ini:
             _project_ = args.project
             _py3_ = f"/opt/{_project_}/programs/sweetenv.py/bin/python3"
         
-        # any 'incredible' project is forbidden here
+        #FIXME: any 'incredible' project is forbidden here
         assert _project_ != "incredible"
 
         echo(f"start init process for new project: {_project_}")
@@ -1017,7 +1015,7 @@ if __name__ == "__main__":
 
     # create the subparser for the "shell" command:
     cli.sub("shell",help="execute a script given by the current config")
-    cli.set(sws)
+    cli.set(shell)
 
     cli.add("script",nargs='+',
         help=f'{ "|".join(_config_["scripts"].keys()) }')
@@ -1115,7 +1113,9 @@ if __name__ == "__main__":
     multi_threading = getattr(argv, "multi_thread", multi_threading)
 
     if argv.project is not None:
+        #FIXME: possible unexpected behaviors
         echo("custom project name given:",argv.project)
+        _project_ = argv.project
     
     # start early processes when required:
     if argv.update_cloud: cloud.update_files()
@@ -1137,15 +1137,15 @@ try:
         cherrypy can be used optionnaly for serving static contents
         such server is very stable and keeps performances at high level
         """
-    
+
         def __init__(self,*args,**kwargs):
             super(CherryPy,self).__init__(*args,**kwargs)
 
         def cmd(self) -> str:
-            return f"{_py3_} -m sweet run-cherrypy"
+            #FIXME: to test
+            return f"{_py3_} -m sweet -p {_project_} run-cherrypy"
 
         def run_local(self,service=False):
-            #FIXME: not settings allowed
             if service: self.service(self.cmd())
             else: self.start(webapp)
 
