@@ -339,7 +339,7 @@ _deepconfig_.update({
 {_py3_} -m sweet $*
 """,
 
-" sws": lambda: f"""
+"$sws": lambda: f"""
 #!/bin/bash
 {_py3_} -m sweet shell $*
 """,
@@ -743,12 +743,11 @@ class ini:
         global _project_, _py3_
         assert ini.token == 0
 
-        # set custom project name if given
-        if args.project:
-            _project_ = args.project
+        #FIXME: written for transitional purpose
+        if hasattr("args","project") and args.project:
+            assert _project_ == args.project
             _py3_ = f"/opt/{_project_}/programs/sweetenv.py/bin/python3"
-        
-        #FIXME: any 'incredible' project is forbidden here
+        # any 'incredible' project is forbidden here
         assert _project_ != "incredible"
 
         echo(f"start init process for new project: {_project_}")
@@ -1503,6 +1502,12 @@ if __name__ == "__main__":
         verbose("written by ", __author__)
         verbose(f"shared under {__license__}\n")
 
+        if _.verbose and _.winapp:
+            # give the current wsl statement:
+            verbose("current WSL statement:")
+            subprocess.run("cmd.exe /c 'wsl -l -v'",shell=True)
+            print("")
+
         if _.verbose == 2:
             # provide the available public objects list:
             objects = dict( (k,v) for k,v in globals().items() \
@@ -1510,12 +1515,6 @@ if __name__ == "__main__":
             print("** available objects provided by sweet.py: **\n")
             import pprint
             pprint.pprint(objects); print()
-
-        if _.verbose and _.winapp:
-            # give the current wsl statement:
-            verbose("current WSL statement:")
-            subprocess.run("cmd.exe /c 'wsl -l -v'",shell=True)
-            print("")
 
         # force config and settings:
         if not _.cherrypy: cherrypy_enabled = False
