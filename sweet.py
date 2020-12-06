@@ -2,7 +2,7 @@
 provide simple use of highest quality components
 for building full-stacked webapps including AI
 """
-__version__ = "0.1.0-beta10"
+__version__ = "0.1.0-beta11"
 __license__ = "CeCILL-C FREE SOFTWARE LICENSE AGREEMENT"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
@@ -28,12 +28,51 @@ from collections import UserList, UserDict
 # - uvicorn import is within the Uvicorn.run_local method
 # - imports from standard libs are included within relevant objects
 
+
+# provide convenient functions for givin messages
+_msg_ = []
+def echo(*args, mode="default"):
+    """convenient function for printing messages
+    mode = 0|default|stack|release"""
+
+    if "_config_" in globals(): label = _config_["echolabel"]
+    else: label = _project_
+
+    if mode.lower() == "stack" or mode == 0:
+        global _msg_
+        _msg_.append(" ".join(args))
+
+    elif mode.lower() == "release":
+        for msg in _msg_:
+            print("[%s]"% label.upper(),msg)
+        _msg_ = []
+
+    elif mode.lower() == "exit":
+        print("[%s]"% label.upper(),*args)
+        sys.exit()
+
+    else:
+        print("[%s]"% label.upper(),*args)
+
+def verbose(*args):
+    """convenient function for verbose messages"""
+    if _.verbose: print("..",*args)
+
+
 # allow dedicated configs for custom projects:
-_dir_ = os.environ["PWD"].split(os.sep)
+_dir_ :list = os.environ["PWD"].split(os.sep)
+_swt_ :str = os.path.join(os.getenv("HOME",""),".sweet")
+
 if "-p" in sys.argv: _project_ = sys.argv[sys.argv.index("-p")+1]
 elif _dir_[1] == "opt" and _dir_[2:]: _project_ = _dir_[2]
+#FIXME: disabled option
+#elif os.getenv("SWEET_PROJECT"): _project_ = os.getenv("SWEET_PROJECT")
+
+elif os.path.isfile(_swt_):
+    with open(_swt_) as fi: _project_ = fi.readline().strip()
+    echo("'.sweet' file read within /home directory")
+
 else: _project_ = "sweetheart"
-_py3_ = f"/opt/{_project_}/programs/sweetenv.py/bin/python3"
 
 
   #############################################################################
@@ -42,7 +81,15 @@ _py3_ = f"/opt/{_project_}/programs/sweetenv.py/bin/python3"
 
 # provide the default configuration:
 # should be updated using _config_.update({ "key": value })
-_config_ = {
+def init_config(values:dict={},project:str=None,):
+    """allow you to reset the configuration
+    can be usefull importing sweet within Jupyter notebook"""
+    global _config_, _py3_, _project_
+
+    if project: _project_ = project
+    elif values.get("_project_"): _project_ = values["_project_"]
+    _py3_ = f"/opt/{_project_}/programs/sweetenv.py/bin/python3"
+    _config_ = {
 
     ## default json configuration file (hardcoded here):
     "__conffile__": f"/opt/{_project_}/configuration/sweet.json",
@@ -153,42 +200,27 @@ _config_ = {
         #bash -> sws <command>
         #cmd -> wsl sws <command>
         "python": f"/opt/{_project_}/programs/sweetenv.py/bin/ipython3",
+        "setup": f"{_py3_} setup.py install",
         "upload": f"rm -rf dist;{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
         "commit": 'git add * && git commit -m "$*" && git push origin master',
         "notebook": "sweet run-jupyter --notebook",
-        "jupyter":  "sweet run-jupyter --lab",
+        "jupyter":  f"sweet run-jupyter --set-kernel --lab",
         "rmkern": "jupyter kernelspec list && jupyter kernelspec uninstall $*",
-        "set-wsl1": "cmd.exe /c 'wsl --set-default-version 1'",
+        "wsl1": "cmd.exe /c 'wsl --set-default-version 1'",
         "start": "sweet start --mongo-disabled --jupyter --webapp",
         "help": "sweet book sweetbook",
     },
-}
+    }; _config_.update(values)
 
-_msg_ = []
-def echo(*args, mode="default"):
-    """convenient function for printing messages
-    mode = 0|default|stack|release"""
-
-    if mode.lower() == "stack" or mode == 0:
-        global _msg_
-        _msg_.append(" ".join(args))
-
-    elif mode.lower() == "release":
-        for msg in _msg_:
-            print("[%s]"% _config_["echolabel"].upper(),msg)
-        _msg_ = []
-
-    elif mode.lower() == "exit":
-        print("[%s]"% _config_["echolabel"].upper(),*args)
-        sys.exit()
-
-    else:
-        print("[%s]"% _config_["echolabel"].upper(),*args)
-
-def verbose(*args):
-    """convenient function for verbose messages"""
-    if _.verbose: print("..",*args)
+    if ConfigAccess.locker == 1: 
+        # autoset config parameters
+        global multi_threading, mongo_disabled
+        mongo_disabled = True
+        multi_threading = True
+        # reset the existing backend facilities
+        set_backend()
+        echo(f"backend objects re-loaded")
 
 
 class ConfigAccess(UserDict):
@@ -199,18 +231,26 @@ class ConfigAccess(UserDict):
     verbose = False
     webapp = False
     jupyter = False
-    # app settings
+    # set trackers
     cherrypy = False
-    mdbook = _config_["templates_settings"].get("_book_")
-    winapp = _config_["webbrowser"].endswith(".exe")
-
     locker = 0
-    def __init__(self, conffile:str=None):
-        
-        # deep config settings
-        ConfigAccess.conffile=\
-             conffile if os.path.isfile(conffile) else None
 
+    def __init__(self,values:dict={}):
+
+        # top-level settings
+        init_config(values)
+        file = _config_.get("__conffile__","")
+        self.conffile= file if os.path.isfile(file) else None
+
+        # allow only one instance of ConfigAccess
+        assert ConfigAccess.locker == 0
+        ConfigAccess.locker = 1
+
+        # app settings
+        self.mdbook = _config_["templates_settings"].get("_book_")
+        self.winapp = _config_["webbrowser"].endswith(".exe")
+
+        # deep config settings
         self.data = {
         "force-apt-install": [
             "python3-venv",
@@ -263,9 +303,6 @@ class ConfigAccess(UserDict):
             "sweetheart-logo.png": f"/opt/{_project_}/webpages/usual_resources",
         },
         }
-        # allow only one instance of ConfigAccess
-        assert ConfigAccess.locker == 0
-        ConfigAccess.locker = 1
 
     @property
     def copyfiles(self) -> dict:
@@ -291,24 +328,22 @@ class ConfigAccess(UserDict):
     def __setitem__(self,key,val):
         raise NotImplementedError
     
-    @classmethod
-    def edit(cls):
+    def edit(self):
         """edit _config_ as json configuration file"""
         echo("edit config as json file: %s"%_config_["__conffile__"])
         with open(_config_["__conffile__"],"w") as fo:
             fo.write(json.dumps(_config_, indent=2))
     
-    @classmethod
-    def update(cls):
+    def update(self):
         """update _config_ from setted json conffile"""
-        assert cls.conffile is not None
-        with open(cls.conffile) as fi:
+        assert self.conffile is not None
+        with open(self.conffile) as fi:
             _config_.update(json.load(fi))
 
 
 # set the json configuration filename here
 #NOTE: loaded only with '-c' option given within CLI
-_ = ConfigAccess(_config_["__conffile__"])
+_ = ConfigAccess()
 _deepconfig_ = _.data
 
 
@@ -326,6 +361,26 @@ if os.getenv("WSL_DISTRO_NAME") is None:
 elif _.winapp and os.environ["WSL_DISTRO_NAME"] != "Ubuntu":
     echo("WARNING: WSL is not running with Ubuntu")
     _.verbose = True
+
+
+def set_backend():
+    """load or reload provided backend features"""
+    global _mongo_,mongoclient,database,jupyter,uvicorn,mdbook
+
+    # set default mongo client and database
+    _mongo_ = MongoDB(
+        host= _config_["db_host"],
+        port= _config_["db_port"])
+
+    mongoclient = _mongo_.client
+    database = _mongo_.database
+
+    # set default jupyterlab config
+    jupyter = JupyterLab(url=jupyter_host)
+    # set default uvicorn config
+    uvicorn = Uvicorn(url=async_host)
+    # set default mdbook config
+    mdbook = MdBook(url=book_host)
 
 
   #############################################################################
@@ -374,8 +429,9 @@ renderer = ["html"]
 build incredible documentation writing files in the *markdown_files* directory\n\n
 `sweet book --build` for building it\n\n
 `sweet book --open` for open it
-"""
+""",
 })
+
   #############################################################################
  ########## EXTERNAL SERVICES FACILITIES #####################################
 #############################################################################
@@ -606,14 +662,15 @@ class Uvicorn(SwServer):
     def run_local(self,app,service=None):
         """run the uvicorn webserver
         app argument can be 'str' or 'Starlette' object"""
-        
         if service is None:
             service = multi_threading
-        if service:
+        if service is True:
+            #FIXME: not fully implemented
             self.service(f"uvicorn {self.app}")
-        else:
+        elif service is False:
             import uvicorn
             uvicorn.run(app,**self.uargs)
+        else: raise TypeError
 
 
 class MdBook(SwServer):
@@ -937,21 +994,9 @@ class ini:
  ########## COMMAND LINE INTERFACE ###########################################
 #############################################################################
 
-# set default mongo client and database
-_mongo_ = MongoDB(
-    host= _config_["db_host"],
-    port= _config_["db_port"])
-
-mongoclient = _mongo_.client
-database = _mongo_.database
-
-# set default jupyterlab config
-jupyter = JupyterLab(url=jupyter_host)
-# set default uvicorn config
-uvicorn = Uvicorn(url=async_host)
-# set default mdbook config
-mdbook = MdBook(url=book_host)
-
+# initial loading of default backend features
+# can be started from cli, py import, or within jupyter notebook
+set_backend()
 
 class CommandLine:
     """build Command Line Interface with ease"""
@@ -993,6 +1038,7 @@ if __name__ == "__main__":
     # will launch here early processes before modules import
     cli = CommandLine()
 
+    #FIXME: don't use -p within any subcommands
     cli.add("-p",dest="project",action="store",#const=_project_,
         help="set a project name different of sweetheart")
 
@@ -1072,7 +1118,7 @@ if __name__ == "__main__":
     cli.sub("run-jupyter",help="run JupyterLab notebook server")
     cli.set(jupyter.commandLine)
 
-    cli.add("-p","--password",action="store_true",
+    cli.add("-P","--password",action="store_true",
         help="ask for setting server password (can be empty)")
     
     cli.add("-n","--notebook",action="store_true",
@@ -1419,50 +1465,66 @@ def quickstart(routes=None, endpoint=None):
 
     # set routing and create Starlette object:
     webapp.mount(route_options=True)
-
-    for i, route in enumerate(webapp):
-        if _.verbose == 2: verbose(i+1,"  type:", type(route))
-        assert isinstance(route,Route) or isinstance(route,Mount)
     
     # auto start the webapp within webbrowser:
     if _.webapp: webbrowser(async_host)
+
     # at last start the uvicorn webserver:
+    ConfigAccess.quickstart = True
     uvicorn.run_local(webapp.star)
 
 
 class WebApp(UserList):
 
+    # provide a mounting tracker
+    is_mounted = False
+
     # default urls endpoints:
     #NOTE: 'request' argument required for rendering methods
-        
-    def index(self, request):
-        return html("login.txt")
 
     def jupyter(self, request):
         jupyter.run_local(service=True)
         return RedirectResponse(jupyter_host)
 
     # webapp settings:
-    # methodes for main settings: mount() star()
+    # methodes for main settings: mount() star
 
-    def mount(self, route_options=True):
+    def mount(self,routes=[],route_options=True):
         """set optionnal routing and mount static dirs"""
+
+        # set given routes
+        self.extend(routes)
 
         # route options if required
         if route_options:
             self.extend([
                 Route("/favicon.ico",FileResponse(_["static_files.favicon"])),
-                Route("/jupyter",self.jupyter)
+                Route("/jupyter",self.jupyter),
+                Route("/welcome",html("WELCOME")),
+                Route("/login",html("login.txt")),
             ])      
         # mount static resources
         self.extend([ Mount(path,StaticFiles(directory=dir)) \
             for path,dir in _config_["static_dirs"].items() ])
+
+        # set tracker
+        self.is_mounted = True
         
     @property
     def star(self) -> Starlette:
         # typical use: uvicorn.run(webapp.star)
-        self.mount(route_options=True)
-        return Starlette(debug=True, routes=self)
+
+        # set a default webapp if not mounted
+        if self.is_mounted is False:
+            self.mount([
+                Route("/",RedirectResponse(f"{async_host}/welcome"))
+            ])
+        # check webapp settings
+        for i, route in enumerate(webapp):
+            if _.verbose == 2: verbose(i+1,"  type:", type(route))
+            assert isinstance(route,Route) or isinstance(route,Mount)
+
+        return Starlette(debug=True,routes=self)
 
     # allow serving statics with cherrypy:
     #NOTE: optional for getting better performances
@@ -1480,10 +1542,8 @@ class WebApp(UserList):
     def static(self):
         raise NotImplementedError
 
-
-# convenient features for building webapp:
+# set a default webapp object:
 webapp = WebApp()
-routing = lambda routes: webapp.extend(routes)
 
 
   #############################################################################
