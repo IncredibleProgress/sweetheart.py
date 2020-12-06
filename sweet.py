@@ -56,21 +56,19 @@ def echo(*args, mode="default"):
 
 def verbose(*args):
     """convenient function for verbose messages"""
-    if _.verbose: print("..",*args)
+    if ConfigAccess.verbose: print("..",*args)
 
 
-# allow dedicated configs for custom projects:
+# allow dedicated configs for custom projects
 _dir_ :list = os.environ["PWD"].split(os.sep)
 _swt_ :str = os.path.join(os.getenv("HOME",""),".sweet")
 
 if "-p" in sys.argv: _project_ = sys.argv[sys.argv.index("-p")+1]
 elif _dir_[1] == "opt" and _dir_[2:]: _project_ = _dir_[2]
-#FIXME: disabled option
-#elif os.getenv("SWEET_PROJECT"): _project_ = os.getenv("SWEET_PROJECT")
 
 elif os.path.isfile(_swt_):
     with open(_swt_) as fi: _project_ = fi.readline().strip()
-    echo("'.sweet' file read within /home directory")
+    echo("project setting from the '/home/.sweet' file",mode="stack")
 
 else: _project_ = "sweetheart"
 
@@ -79,7 +77,7 @@ else: _project_ = "sweetheart"
  ########## CONFIGURATION ####################################################
 #############################################################################
 
-# provide the default configuration:
+# provide the default configuration
 # should be updated using _config_.update({ "key": value })
 def init_config(values:dict={},project:str=None,):
     """allow you to reset the configuration
@@ -214,13 +212,17 @@ def init_config(values:dict={},project:str=None,):
     }; _config_.update(values)
 
     if ConfigAccess.locker == 1: 
-        # autoset config parameters
+        # reload and autoset parameters
+        #FIXME: settings for tests within jupyter notebook
         global multi_threading, mongo_disabled
         mongo_disabled = True
         multi_threading = True
+        ConfigAccess.verbose = False
+        ConfigAccess.jupyter = False
+        ConfigAccess.webapp = True
         # reset the existing backend facilities
         set_backend()
-        echo(f"backend objects re-loaded")
+        echo(f"backend objects re-loaded for new config")
 
 
 class ConfigAccess(UserDict):
@@ -399,15 +401,6 @@ _deepconfig_.update({
 {_py3_} -m sweet shell $*
 """,
 
-"$uvicorn": lambda: f"""
-#!{_py3_}
-from os import chdir
-from sys import argv
-from uvicorn import run
-chdir("{_config_['working_dir']}")
-run(argv[1],host='{uvicorn.host}',port={uvicorn.port})
-""",
-
 "book.toml": """
 [book]
 multilingual = false
@@ -457,6 +450,40 @@ def shell(args):
     else:
         echo("sweet.py shell: Error, invalid script name given")
 
+def install(args):
+    """install extra packages defined within _config_
+    it will accept two special values: all|options
+
+    normally called from the command line interface
+    but can be called from python idle too
+    in this case args must provide packages names within a string"""
+
+    # *change current working directory:
+    #NOTE: needed for using ini.npm
+    os.chdir(_config_["working_dir"])
+
+    if isinstance(args,str): packages = args.split()
+    else: packages = args.packages
+    assert isinstance(packages,list)
+
+    if "all" in packages:
+        # install all given packages listed
+        packages= _config_["pkg-install"].keys()
+    elif "options" in packages:
+        packages= [i for i in packages if i != "options"]
+        packages.extend(_config_["pkg-options"].split())
+    
+    for package in packages:
+        #FIXME: works only with CLI arguments
+        instrucs = _["pkg-install"][package].split(";")
+        for cmd in instrucs:
+            cmd = cmd.strip()
+            ini.label(f"install new packages using {cmd}")
+            if cmd.startswith("pip:"): ini.pip(cmd[4:].split())
+            elif cmd.startswith("apt:"): ini.apt(cmd[4:].split())
+            elif cmd.startswith("cargo:"): ini.cargo(cmd[6:].split())
+            elif cmd.startswith("npm:"): ini.npm(cmd[4:].split())
+
 def winpath(path:str):
     """switch a linux path to a windows path"""
     distro = os.environ['WSL_DISTRO_NAME']
@@ -465,11 +492,13 @@ def winpath(path:str):
     elif path.startswith("http"): return path
     else: raise NotImplementedError
 
-def webbrowser(url,select=None):
+def webbrowser(url=None,select=None):
         """
         open the given url in selected webbrowser within
         '_config_["webbrowser"]' or defined with 'run' if given
         """
+        if url is None: url = async_host
+
         # build bash command:
         if not select: select= _config_["webbrowser"]
         cmd= _deepconfig_["run-webbrowser"][select]
@@ -651,7 +680,6 @@ class Uvicorn(SwServer):
 
     def __init__(self,*args,**kwargs):
         super(Uvicorn,self).__init__(*args,**kwargs)
-        self.app = "sweet:webapp.star"
 
         # set uvicorn arguments dict
         self.uargs = {
@@ -659,18 +687,29 @@ class Uvicorn(SwServer):
             "port": self.port,
             "log_level": "info" }
 
-    def run_local(self,app,service=None):
-        """run the uvicorn webserver
-        app argument can be 'str' or 'Starlette' object"""
+    def cmd(self, app:str=""):
+        return f"sweet run-uvicorn {app}"
+
+    def run_local(self, app="", service=None):
+        """
+        run the uvicorn webserver
+        app argument can be 'str' or 'Starlette' object
+        """
         if service is None:
             service = multi_threading
         if service is True:
-            #FIXME: not fully implemented
-            self.service(f"uvicorn {self.app}")
+            self.service(self.cmd(app))
         elif service is False:
             import uvicorn
+            if app == "": app = webapp.star
             uvicorn.run(app,**self.uargs)
         else: raise TypeError
+
+    def commandLine(self, args):
+        import uvicorn
+        os.chdir(_config_['working_dir'])
+        if not args.app: args.app = webapp.star
+        uvicorn.run(args.app,**self.uargs)
 
 
 class MdBook(SwServer):
@@ -804,6 +843,7 @@ class ini:
         if hasattr("args","project") and args.project:
             assert _project_ == args.project
             _py3_ = f"/opt/{_project_}/programs/sweetenv.py/bin/python3"
+
         # any 'incredible' project is forbidden here
         assert _project_ != "incredible"
 
@@ -891,7 +931,7 @@ class ini:
         os.chdir(f"/opt/{_project_}/programs/scripts")
 
         ini.label("build local bash commands")
-        ini.locbin("sweet","uvicorn","sws")
+        ini.locbin("sweet","sws")
 
         print("\nSWEET_INIT all done!\n")
 
@@ -953,36 +993,11 @@ class ini:
                 "/usr/local/bin/" ])
 
             cls.sh(["sudo","chmod","777",f"/usr/local/bin/{scriptname}"])
-    
-    @classmethod
-    def install(cls,args):
-        """install extra packages defined within ConfigAccess
-        two accepted special values: all|options"""
-
-        # *change current working directory:
-        #NOTE: needed for using ini.npm
-        os.chdir(_config_["working_dir"])
-
-        if "all" in args.packages:
-            # install all given packages listed
-            args.packages= _config_["pkg-install"].keys()
-        elif "options" in args.packages:
-            args.packages= [i for i in args.packages if i != "options"]
-            args.packages.extend(_config_["pkg-options"].split())
-        
-        for package in args.packages:
-            #FIXME: works only with CLI arguments
-            instrucs = _["pkg-install"][package].split(";")
-            for cmd in instrucs:
-                cmd = cmd.strip()
-                ini.label(f"install new packages using {cmd}")
-                if cmd.startswith("pip:"): ini.pip(cmd[4:].split())
-                elif cmd.startswith("apt:"): ini.apt(cmd[4:].split())
-                elif cmd.startswith("cargo:"): ini.cargo(cmd[6:].split())
-                elif cmd.startswith("npm:"): ini.npm(cmd[4:].split())
 
     @classmethod
     def PATH(cls,path:str):
+        """add path into PATH environment if missing
+        """
         if path not in os.environ["PATH"]:
             echo(path,"missing and added to PATH")
             os.environ["PATH"] = f"{path}:{os.environ['PATH']}"
@@ -1108,7 +1123,7 @@ if __name__ == "__main__":
 
     # create the subparser for the "install" command:
     cli.sub("install",help="install given extra packages using apt,cargo,pip,npm")
-    cli.set(ini.install)
+    cli.set(install)
 
     cli.add("packages",nargs='+',
         help=f'{ "|".join(_config_["pkg-install"].keys()) }')
@@ -1142,6 +1157,13 @@ if __name__ == "__main__":
     cli.sub("run-cherrypy",help="run CherryPy webserver for serving statics")
     cli.set(lambda args: CherryPy.commandLine(args))
 
+    # create the subparser for the "run-uvicorn" command:
+    cli.sub("run-uvicorn",help="run Uvicorn webserver for a given app")
+    cli.set(lambda args: uvicorn.commandLine(args))
+
+    cli.add("app",nargs="?",default="",
+        help="given app to serve according to the 'module:app' pattern")
+
 
     argv = cli.parse()
 
@@ -1158,7 +1180,6 @@ if __name__ == "__main__":
     multi_threading = getattr(argv, "multi_thread", multi_threading)
 
     if argv.project is not None:
-        #FIXME: possible unexpected behaviors
         echo("custom project name given:",argv.project)
         _project_ = argv.project
     
@@ -1470,8 +1491,7 @@ def quickstart(routes=None, endpoint=None):
     if _.webapp: webbrowser(async_host)
 
     # at last start the uvicorn webserver:
-    ConfigAccess.quickstart = True
-    uvicorn.run_local(webapp.star)
+    uvicorn.run_local()
 
 
 class WebApp(UserList):
@@ -1527,7 +1547,7 @@ class WebApp(UserList):
         return Starlette(debug=True,routes=self)
 
     # allow serving statics with cherrypy:
-    #NOTE: optional for getting better performances
+    #NOTE: optional for allowing better performances
 
     @cherrypy.expose
     def default(self):
