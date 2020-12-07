@@ -179,7 +179,7 @@ def init_config(values:dict={},project:str=None,):
     "pkg-install": {
 
         "excel": "pip: xlrd xlwt pyxlsb openpyxl xlsxwriter",
-        "science": "apt: fish; pip:scipy tabulate pandas seaborn scikit-learn[alldeps]",
+        "science": "apt: fish; pip: scipy tabulate pandas seaborn scikit-learn[alldeps]",
         "pypack": "apt: git; pip: setuptools twine wheel pytest",
         "html": "pip: beautifulsoup4 html5lib lxml",
         "servers": "pip: cherrypy",
@@ -430,7 +430,8 @@ build incredible documentation writing files in the *markdown_files* directory\n
 #############################################################################
 
 def shell(args):
-    """execute a given script provided by _config_["scripts"]
+    """
+    execute a given script provided by _config_["scripts"]
     it should be called from the command line interface
      - accepts multilines-commands separated by ;
      - arguments can be passed-through using the $* pattern
@@ -451,13 +452,14 @@ def shell(args):
         echo("sweet.py shell: Error, invalid script name given")
 
 def install(args):
-    """install extra packages defined within _config_
+    """
+    install extra packages defined within _config_['pkg-install']
     it will accept two special values: all|options
 
     normally called from the command line interface
     but can be called from python idle too
-    in this case args must provide packages names within a string"""
-
+    in this case args must provide packages names within a string
+    """
     # *change current working directory:
     #NOTE: needed for using ini.npm
     os.chdir(_config_["working_dir"])
@@ -495,7 +497,7 @@ def winpath(path:str):
 def webbrowser(url=None,select=None):
         """
         open the given url in selected webbrowser within
-        '_config_["webbrowser"]' or defined with 'run' if given
+        '_config_["webbrowser"]' or defined with 'select' if given
         """
         if url is None: url = async_host
 
@@ -687,29 +689,26 @@ class Uvicorn(SwServer):
             "port": self.port,
             "log_level": "info" }
 
-    def cmd(self, app:str=""):
+    def cmd(self,app:str="") -> str:
         return f"sweet run-uvicorn {app}"
 
-    def run_local(self, app="", service=None):
-        """
-        run the uvicorn webserver
-        app argument can be 'str' or 'Starlette' object
-        """
-        if service is None:
-            service = multi_threading
-        if service is True:
-            self.service(self.cmd(app))
+    def run_local(self,app="",service=None):
+        """run the uvicorn webserver
+        app argument can be 'str' or 'Starlette' object"""
+
+        if service is None: service = multi_threading
+        if service is True: self.service(self.cmd(app))
+
         elif service is False:
-            import uvicorn
-            if app == "": app = webapp.star
-            uvicorn.run(app,**self.uargs)
+            os.chdir(_config_['working_dir'])
+            if not app: app = webapp.star
+            from uvicorn import run
+            run(app,**self.uargs)
+
         else: raise TypeError
 
-    def commandLine(self, args):
-        import uvicorn
-        os.chdir(_config_['working_dir'])
-        if not args.app: args.app = webapp.star
-        uvicorn.run(args.app,**self.uargs)
+    def commandLine(self,args):
+        self.run_local(args.app,service=False)
 
 
 class MdBook(SwServer):
@@ -938,7 +937,7 @@ class ini:
     @classmethod
     def label(cls,text):
         cls.token += 1
-        print(f"\nSWEET_INIT_step{ini.token}: {text}\n")
+        print(f"[SWEET*INIT*] #{ini.token} {text}")
 
     @classmethod
     def apt(cls,data:list):
@@ -1208,7 +1207,6 @@ try:
             super(CherryPy,self).__init__(*args,**kwargs)
 
         def cmd(self) -> str:
-            #FIXME: to test
             return f"{_py3_} -m sweet -p {_project_} run-cherrypy"
 
         def run_local(self,service=False):
