@@ -191,9 +191,9 @@ def init_config(values:dict={},project:str=None,):
     "py-imports": {
         # "module": "", will import the module itself
         "bottle": "template", # bottle|jinja2|mako
-        #"mistune": "markdown",# jupyterlab dependency
-        #"pandas": "DataFrame,read_excel",
-        #"datetime": "datetime",
+        "mistune": "markdown",# jupyterlab dependency
+        "pandas": "DataFrame,read_excel",
+        "datetime": "datetime",
         "sys": "exit",
     },
     ## custom bash commands called by sws
@@ -298,6 +298,7 @@ class ConfigAccess(UserDict):
             f"/opt/{_project_}/webpages/usual_resources"
         ],
         "__copyfiles__": lambda: {
+            "pkg.4industry.json": f"/opt/{_project_}/configuration",
             "cherrypy.conf": f"/opt/{_project_}/configuration",
             "config.xlaunch": f"/opt/{_project_}/configuration",
             "book.toml": f"/opt/{_project_}/documentation/sweetbook",
@@ -815,11 +816,20 @@ class cloud:
         #FIXME: dev tool not for users
         if not os.path.isdir(cloud.local):
             subprocess.run(cloud.pmount,shell=True)
+
         for filename, path in _.copyfiles.items():
             source = os.path.join(path, filename)
             dest = cloud.local
             verbose("copy:",source," -> ", dest)
             subprocess.run(["cp","-u",source,dest])
+
+        dirname = os.path.join(_['working_dir'],_['templates_dir'])
+        for entry in os.scandir(dirname):
+            if entry.name.startswith("4i."):
+                source = entry.path
+                dest = cloud.local
+                verbose("copy:",source," -> ",dest)
+                subprocess.run(["cp","-u",source,dest])
 
         subprocess.run(["cp","-R","-u",cloud.swBookSrc,cloud.local])
         echo("copy or update files in the cloud done")
