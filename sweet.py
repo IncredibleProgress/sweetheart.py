@@ -60,15 +60,15 @@ def verbose(*args):
 
 
 # allow dedicated configs for custom projects
-_dir_ :list = os.environ["PWD"].split(os.sep)
-_swt_ :str = os.path.join(os.getenv("HOME",""),".sweet")
+_dir_ = os.environ["PWD"].split(os.sep)
+_swt_ = f"{os.getenv('HOME','')}/.sweet/project"
 
 if "-p" in sys.argv: _project_ = sys.argv[sys.argv.index("-p")+1]
 elif _dir_[1] == "opt" and _dir_[2:]: _project_ = _dir_[2]
 
 elif os.path.isfile(_swt_):
     with open(_swt_) as fi: _project_ = fi.readline().strip()
-    echo("project setting from the '/home/.sweet' file",mode="stack")
+    echo("project setting from the '/home/.sweet/project' file",mode="stack")
 
 else: _project_ = "sweetheart"
 
@@ -183,6 +183,7 @@ def init_config(values:dict={},project:str=None,):
         "pypack": "apt: git; pip: setuptools twine wheel pytest",
         "html": "pip: beautifulsoup4 html5lib lxml",
         "servers": "pip: cherrypy",
+        "4industry": "sws: 4industry",
     },
     "pkg-options": "pypack science excel html",
 
@@ -190,7 +191,9 @@ def init_config(values:dict={},project:str=None,):
     "py-imports": {
         # "module": "", will import the module itself
         "bottle": "template", # bottle|jinja2|mako
-        "mistune": "markdown",# jupyterlab dependency
+        #"mistune": "markdown",# jupyterlab dependency
+        #"pandas": "DataFrame,read_excel",
+        #"datetime": "datetime",
         "sys": "exit",
     },
     ## custom bash commands called by sws
@@ -277,6 +280,7 @@ class ConfigAccess(UserDict):
         
         # data for building new project dir:
         "__basedirs__": lambda: [
+            f"{os.environ['HOME']}/.sweet",
             f"/opt/{_project_}",
             f"/opt/{_project_}/configuration",
             f"/opt/{_project_}/database",
@@ -476,7 +480,6 @@ def install(args):
         packages.extend(_config_["pkg-options"].split())
     
     for package in packages:
-        #FIXME: works only with CLI arguments
         instrucs = _["pkg-install"][package].split(";")
         for cmd in instrucs:
             cmd = cmd.strip()
@@ -485,6 +488,17 @@ def install(args):
             elif cmd.startswith("apt:"): ini.apt(cmd[4:].split())
             elif cmd.startswith("cargo:"): ini.cargo(cmd[6:].split())
             elif cmd.startswith("npm:"): ini.npm(cmd[4:].split())
+
+            elif cmd.startswith("sws:"):
+                #FIXME: not fully implemented
+                for pkg in cmd[4:].split():
+                    conffile = f"/opt/{_project_}/configuration/pkg.{pkg}.json"
+                    assert os.path.isfile(conffile)
+                    with open(conffile) as fi: pkg_data:dict = json.load(fi)
+                    proj = pkg_data.pop("_project_","*")
+                    conf = pkg_data.pop("_config_","*")
+                    os.chdir(f"/opt/{_project_}")
+                    cloud.download(pkg_data)
 
 def winpath(path:str):
     """switch a linux path to a windows path"""
@@ -821,8 +835,9 @@ class cloud:
 
         for file, path in files.items():
             verbose("download file:", src(file))
-            os.chdir(path)
-            subprocess.run(["wget","-q","--no-check-certificate",src(file)])
+            try: os.chdir(path)
+            except: os.chdir(f"/opt/{_project_}/{path}")
+            subprocess.run(["wget","-q","-N","--no-check-certificate",src(file)])
         
         os.chdir(curdir)
 
@@ -889,7 +904,7 @@ class ini:
 
         # set now a password for running jupyter server
         print("\nWARNING: This is required to set a password for the Jupyter server")
-        print("press [RETURN] directly for setting no password (but not recommended)")
+        print("press [RETURN] directly for setting no password")
         jupyter.set_password()
 
         # *change current working directory
@@ -937,7 +952,7 @@ class ini:
     @classmethod
     def label(cls,text):
         cls.token += 1
-        print(f"[SWEET*INIT*] #{ini.token} {text}")
+        print(f"[SWEET*INIT*]#{ini.token} {text}")
 
     @classmethod
     def apt(cls,data:list):
