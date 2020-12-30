@@ -73,9 +73,9 @@ elif os.path.isfile(_swt_):
 else: _project_ = "sweetheart"
 
 
-  #############################################################################
- ########## CONFIGURATION ####################################################
 #############################################################################
+ ########## CONFIGURATION ####################################################
+  #############################################################################
 
 # provide the default configuration
 # should be updated using _config_.update({ "key": value })
@@ -191,16 +191,16 @@ def init_config(values:dict={},project:str=None,):
     "py-imports": {
         # "module": "", will import the module itself
         "bottle": "template", # bottle|jinja2|mako
-        "mistune": "markdown",# jupyterlab dependency
-        "pandas": "DataFrame,read_excel",
-        "datetime": "datetime",
+        #"mistune": "markdown",# jupyterlab dependency
+        #"pandas": "DataFrame,read_excel",
+        #"datetime": "datetime",
         "sys": "exit",
     },
     ## custom bash commands called by sws
     "scripts": {
         #bash -> sws <command>
         #cmd -> wsl sws <command>
-        "python": f"/opt/{_project_}/programs/sweetenv.py/bin/ipython3",
+        "python": f"/opt/{_project_}/programs/sweetenv.py/bin/ipython3 $*",
         "setup": f"{_py3_} setup.py install",
         "upload": f"rm -rf dist;{_py3_} setup.py sdist bdist_wheel && {_py3_} -m twine upload dist/*",
         "remote": "git remote add origin $*",
@@ -390,9 +390,9 @@ def set_backend():
     mdbook = MdBook(url=book_host)
 
 
-  #############################################################################
- ########## SCRIPTS ##########################################################
 #############################################################################
+ ########## SCRIPTS ##########################################################
+  #############################################################################
 _deepconfig_.update({
 
 "$sweet": lambda: f"""
@@ -430,9 +430,9 @@ build incredible documentation writing files in the *markdown_files* directory\n
 """,
 })
 
-  #############################################################################
- ########## EXTERNAL SERVICES FACILITIES #####################################
 #############################################################################
+ ########## EXTERNAL SERVICES FACILITIES #####################################
+  #############################################################################
 
 def shell(args):
     """
@@ -524,7 +524,7 @@ def webbrowser(url=None,select=None):
         # open the given url:
         if _.winapp: url = winpath(url)
         if not url[0] in ["'",'"']: url= f"'{url}'"
-        subprocess.run(cmd+url+" &",shell=True)
+        subprocess.run(cmd+url+" &",stdout=subprocess.DEVNULL,shell=True)
 
 
 class SwServer:
@@ -567,7 +567,9 @@ class SwServer:
         
         elif terminal == "wsl":
             # start an external service using wsl command
-            os.system(f'cmd.exe /c start wsl {cmd} &')
+            subprocess.run(
+                f'cmd.exe /c start wsl {cmd} &',
+                stderr=subprocess.DEVNULL, shell=True)
 
         elif terminal == "xterm":
             # start an external service within xterm
@@ -817,12 +819,14 @@ class cloud:
         if not os.path.isdir(cloud.local):
             subprocess.run(cloud.pmount,shell=True)
 
+        # update resources given within __copyfiles__
         for filename, path in _.copyfiles.items():
             source = os.path.join(path, filename)
             dest = cloud.local
             verbose("copy:",source," -> ", dest)
             subprocess.run(["cp","-u",source,dest])
 
+        # update 4industry templates
         dirname = os.path.join(_['working_dir'],_['templates_dir'])
         for entry in os.scandir(dirname):
             if entry.name.startswith("4i."):
@@ -1028,10 +1032,9 @@ class ini:
         else:
             verbose(path,"already in PATH and not added")
 
-
-  #############################################################################
- ########## COMMAND LINE INTERFACE ###########################################
 #############################################################################
+ ########## COMMAND LINE INTERFACE ###########################################
+  #############################################################################
 
 # initial loading of default backend features
 # can be started from cli, py import, or within jupyter notebook
@@ -1213,9 +1216,9 @@ if __name__ == "__main__":
     if argv.init: ini(argv)
 
 
-  #############################################################################
- ########## CHERRYPY FACILITIES ##############################################
 #############################################################################
+ ########## CHERRYPY FACILITIES ##############################################
+  #############################################################################
 
 try:
     import cherrypy
@@ -1388,9 +1391,9 @@ except:
             pass
 
 
-  #############################################################################
- ##########  WEBAPP FACILITIES ###############################################
 #############################################################################
+ ##########  WEBAPP FACILITIES ###############################################
+  #############################################################################
 
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
@@ -1532,11 +1535,13 @@ class WebApp(UserList):
     # webapp settings:
     # methodes for main settings: mount() star
 
-    def mount(self,routes=[],route_options=True):
+    def mount(self,*args,route_options=True):
         """set optionnal routing and mount static dirs"""
 
         # set given routes
-        self.extend(routes)
+        if not args: pass
+        elif isinstance(args[0],list): self.extend(args[0])
+        else: self.extend(args)
 
         # route options if required
         if route_options:
@@ -1589,9 +1594,9 @@ class WebApp(UserList):
 webapp = WebApp()
 
 
-  #############################################################################
- ########## COMMAND LINE & MESSAGES SETUP ####################################
 #############################################################################
+ ########## COMMAND LINE & MESSAGES SETUP ####################################
+  #############################################################################
 
 if __name__ == "__main__":
     
