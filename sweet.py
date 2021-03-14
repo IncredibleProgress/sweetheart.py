@@ -79,7 +79,7 @@ else: _project_ = "sweetheart"
 
 # provide the default configuration
 # should be updated using _config_.update({ "key": value })
-def init_config(values:dict={},project:str=None,):
+def init_config(values:dict={},project:str=None):
     """allow you to reset the configuration
     can be usefull importing sweet within Jupyter notebook"""
     global _config_, _py3_, _project_
@@ -861,6 +861,7 @@ class ini:
 
     token = 0
     sh = subprocess.run
+    config = _
 
     def __init__(self,args):
 
@@ -991,14 +992,13 @@ class ini:
     @classmethod
     def mkdirs(cls,data:list):
         for pth in data: 
-            verbose(f"mkdir {pth}")
-            cls.sh(["sudo","mkdir",pth])
+            cls.sh(["sudo","mkdir","-v",pth])
     
     @classmethod
     def wget(cls,data:list):
         # download files using 'wget'
         for url in data:
-            verbose(f"download file: {url}")
+            #verbose(f"download file: {url}")
             cls.sh(["wget","-nv","-nc","--no-hsts","--no-check-certificate",url])
     
     @classmethod
@@ -1009,12 +1009,12 @@ class ini:
     def locbin(cls,*args:str):
 
         for scriptname in args:
-            assert _deepconfig_.get(f"${scriptname}")
+            assert cls.config.get(f"${scriptname}")
 
             # create 'scriptname' in the current working dir:
             with open(scriptname,"w") as fo:
-                verbose(f"write new script: {scriptname}")
-                fo.write(_deepconfig_[f"${scriptname}"]().strip())
+                #verbose(f"write new script: {scriptname}")
+                fo.write(cls.config[f"${scriptname}"]().strip())
 
             cls.ln([
                 f"/opt/{_project_}/programs/scripts/{scriptname}",
