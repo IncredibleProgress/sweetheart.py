@@ -1,4 +1,4 @@
-# Sweetheart **0.1.0-beta**
+# Sweetheart **0.1.1-alpha** - New edition
 
 build at the speedlight full-stacked webapps including AI and best coding practices
 
@@ -9,6 +9,10 @@ Since *Ubuntu 20.04* can be installed as usual softwares within *Windows 10*, it
 The *sweet.py* script provides a simple python/html/css centric approach leading you to the best components and best coding practices. Due to the current top-rated place of the python language regarding to data handling, calculations and AI, this makes sweetheart a fast and ideal toolkit for e-voluting towards **Industry4.0** precepts.
 
 Sweetheart is shared under the [CeCILL-C FREE SOFTWARE LICENSE AGREEMENT](https://github.com/IncredibleProgress/sweetheart.py/blob/master/LICENSE).
+
+## Get inspired with low-code capabilities
+
+
 
 ## A supercharged heart for the non-expert hands
 
@@ -91,9 +95,7 @@ Generally speaking sweetheart runs on *Ubuntu 20.04 LTS*. It will work on other 
 Opening an Ubuntu terminal, the 3 following lines will do for you all what is needed:
 
 ``` sh
-sudo apt install python3-pip
-pip3 install sweetheart
-python3 -m sweet --init
+# changes in progress now
 ```
 
 Main resources are now located within the `/opt/sweetheart` directory. Have a look on it could help you later for quicker understanding of what is doing sweetheart under the hood.
