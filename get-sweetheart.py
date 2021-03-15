@@ -5,36 +5,43 @@ allow installation without any python dependencies matter
 import os,stat
 from subprocess import run
 
-poetry_bin = f"{os.environ['HOME']}/.poetry/bin/poetry"
-sweet_path = f"{os.environ['HOME']}/.sweet/sweetheart/programs"
-sws_path = f"{os.environ['HOME']}/.sweet/sweetheart/programs/scripts/sws"
+# path settings
+POETRY_BIN = f"{os.environ['HOME']}/.poetry/bin/poetry"
+SWS_PATH = f"{os.environ['HOME']}/.sweet/sweetheart/programs/scripts"
 
-if not os.path.isfile(poetry_bin):
+# python-poetry is required
+if not os.path.isfile(POETRY_BIN):
 
     curl = "curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -"
     run(curl,shell=True)
 
-os.makedirs(sweet_path,exist_ok=True)
-os.makedirs(os.path.split(sws_path)[0],exist_ok=True)
+# create directories
+os.makedirs(SWS_PATH,exist_ok=True)
+os.chdir(f"{SWS_PATH}/..")
+run([POETRY_BIN,"-q","new","my_python"])
 
-os.chdir(sweet_path)
-run([poetry_bin,"new","my_python"])
-
+# install python dependencies
 os.chdir("my_python")
-run([poetry_bin,"add","sweetheart"])
+run([POETRY_BIN,"add","sweetheart"])
 
-venv = run([poetry_bin,"env","info","--path"],
+# set python env
+venv = run([POETRY_BIN,"env","info","--path"],
     text=True,capture_output=True).stdout.strip()
 
-assert venv
-with open(sws_path,"w") as file_out:
+if not venv:
+    raise Exception("Error: no python env found")
+
+# set SWeetheart Shell command
+with open(f"{SWS_PATH}/sws","w") as file_out:
     file_out.write(f"""
 
 #!/bin/bash
-#NOTE: much faster than poetry for starting
+#NOTE: this is faster than 'poetry run'
 {venv}/bin/python3 -m sweetheart.sweet $*
 
     """.strip())
 
-os.chmod(sws_path,stat.S_IRWXU|stat.S_IRWXG|stat.S_IRWXO)
+os.chmod(f"{SWS_PATH}/sws",stat.S_IRWXU|stat.S_IRGRP|stat.S_IROTH)
+
+# end
 print("\nall done\n")
