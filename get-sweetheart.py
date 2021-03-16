@@ -12,16 +12,16 @@ SWS_PATH = f"{os.environ['HOME']}/.sweet/sweetheart/programs/scripts"
 # python-poetry is required
 if not os.path.isfile(POETRY_BIN):
 
-    curl = "curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -"
-    run(curl,shell=True)
+    run("curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -",
+        shell=True)
 
 # create directories
 os.makedirs(SWS_PATH,exist_ok=True)
 os.chdir(f"{SWS_PATH}/..")
-run([POETRY_BIN,"-q","new","my_python"])
+run([POETRY_BIN,"new","my_python"])
 
 # install python dependencies
-os.chdir("my_python")
+os.chdir("./my_python")
 run([POETRY_BIN,"add","sweetheart"])
 
 # set python env
@@ -35,13 +35,12 @@ if not venv:
 with open(f"{SWS_PATH}/sws","w") as file_out:
     file_out.write(f"""
 
-#!/bin/bash
-#NOTE: this is faster than 'poetry run'
+#!/bin/sh
+#NOTE: faster than 'poetry run' to start
 {venv}/bin/python3 -m sweetheart.sweet $*
 
     """.strip())
 
 os.chmod(f"{SWS_PATH}/sws",stat.S_IRWXU|stat.S_IRGRP|stat.S_IROTH)
-
-# end
-print("\nall done\n")
+#run(['echo',f"export $PATH={SWS_PATH}:$PATH",">>","~/.bashrc"])
+print("\nall done! type 'sws -h' for getting help\n")
