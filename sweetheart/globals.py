@@ -43,6 +43,7 @@ class BaseConfig(UserDict):
         self.subproc = {
             'rustpath': f"{self.HOME}/.cargo/bin",
             'codepath': f"{self.root_path}/programs/my_python",# no / at the end
+            'mongodb': f"mongod --dbpath={self.root_path}/database"
         }
 
         # default editable settings
