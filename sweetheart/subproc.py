@@ -20,7 +20,7 @@ class sp:
     @classmethod
     def set_python_env(cls,path:str):
         """ get python venv path from poetry and set it within config
-            beware: path must exist and contain a poetry project """
+            beware that path must exist and contain a poetry project """
 
         os.chdir(path)
         venv = cls.poetry("env","info","--path",
@@ -42,15 +42,24 @@ def init(config:BaseConfig):
         f"{config.root_path}/database",
         f"{config.root_path}/documentation",
         f"{config.root_path}/programs/scripts",
+        f"{config.root_path}/webpages/resources",
+        f"{config.root_path}/webpages/markdown",
         f"{config.root_path}/webpages/{config['templates_dir']}",
     ]: os.makedirs(basedir,exist_ok=True)
 
     # provide default libs
     config.subproc.update({
+        'pylibs': [
+            "bottle",
+            "pymongo",
+            "uvicorn",
+            "aiofiles",
+            "starlette",
+            "jupyterlab",
+        ],
         'aptlibs': ["xterm","rustc","mongodb","npm"],
-        'pylibs': ["pymongo","uvicorn","aiofiles","starlette","jupyterlab"],
         'cargolibs': ["mdbook","mdbook-toc"],
-        'npmlibs': [],})
+        'npmlibs': ["brython"] })
 
     # require python-poetry
     if not os.path.isfile(config.poetry_bin):
@@ -72,7 +81,7 @@ def init(config:BaseConfig):
 
     # provide OS javascript libs (Ubuntu)
     os.symlink("/usr/share/javascript",
-        f"{config.root_path}/webpages/javascript_libs")
+        f"{config.root_path}/webpages/resources/javascript")
 
 
 class BaseInstall:
@@ -100,7 +109,7 @@ class BaseInstall:
     def npm(self,libs:list,init=False,**kwargs):
         """ install node modules using npm """
 
-        os.chdir(f"{self.config.root_path}/webpages")
+        os.chdir(f"{self.config.root_path}/webpages/resources")
         if init: sp.run("npm","init","--yes")
         return sp.run("npm","install",*libs,**kwargs)
 
@@ -147,7 +156,7 @@ class BaseService:
         self.host = url.split(":")[1].strip("/")
         self.port = int(url.split(":")[2])
 
-    def run_local(self,service=True):
+    def run_local(self,service:bool=True):
         """ start and run the command attribute locally
             self.command must be set previously """
 

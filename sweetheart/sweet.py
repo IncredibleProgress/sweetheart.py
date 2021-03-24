@@ -5,11 +5,7 @@ it provides cli, install process, sandbox and services
 import os,sys
 from sweetheart.globals import *
 
-# process control settings
-_ctrl_IMPORT = __name__ != "__main__"
 
-
-# provide function to set config
 def set_config(values:dict={},project:str="sweetheart"):
     """ set or reset sweetheart configuration """
 
@@ -18,19 +14,8 @@ def set_config(values:dict={},project:str="sweetheart"):
     config.update(values)
 
 
-if _ctrl_IMPORT:
-
-    # from sweetheart.heart import MongoDB
-
-    # # set default mongo client and database
-    # _mongo_ = MongoDB(
-    #     host= config["db_host"],
-    #     port= config["db_port"])
-
-    # mongoclient = _mongo_.client
-    # database = _mongo_.database
-
-    sys.exit()
+if __name__ == "__main__": set_config()
+else: sys.exit()
 
 
 #############################################################################
@@ -38,6 +23,8 @@ if _ctrl_IMPORT:
   #############################################################################
 
 import argparse
+from sweetheart.heart import Webapp
+
 
 class CommandLineInterface:
 
@@ -82,6 +69,11 @@ cli.opt("-p",dest="project",action="store",nargs="?",const="sweetheart",
 
 cli.opt("-i","--init",action="store_true",
     help="launch init process for building new sweetheart project")
+
+# create the subparser for the "run-webapp" command:
+cli.sub("run-webapp",help="run webapp with required services")
+cli.call(Webapp(config).cli_func)
+
 
 cli.set_parser()
 if cli.args.init is True:

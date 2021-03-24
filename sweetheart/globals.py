@@ -6,6 +6,7 @@ from collections import UserDict
 # set default configuration
 class BaseConfig(UserDict):
 
+    # set messages to stdout
     verbosity = 0
     label = "sweetheart"
 
@@ -42,37 +43,49 @@ class BaseConfig(UserDict):
         # subprocess settings
         self.subproc = {
             'rustpath': f"{self.HOME}/.cargo/bin",
-            'codepath': f"{self.root_path}/programs/my_python",# no / at the end
-            'mongodb': f"mongod --dbpath={self.root_path}/database"
+            'codepath': f"{self.root_path}/programs/my_python",# no / at end
+            'mongodb': f"mongod --dbpath={self.root_path}/database",
+            'msedge.exe': f"cmd.exe /c start msedge --app={self.async_host}",
+            'firefox': f"firefox {self.async_host}",
         }
 
         # default editable settings
         self.data = {
 
             "working_dir": f"{self.root_path}/webpages",
-            "webbook": f"{self.root_path}/webpages/markdown_book/index.html",
-            "webbrowser": "app:msedge.exe", # msedge.exe|brave.exe|firefox
-            "terminal": "wsl",# xterm|winterm|wsl
+            "db_select": "demo",
 
-            "templates_dir": "bottle_templates",
+            "templates_dir": "templates",
             "templates_settings": {
-
                 "_default_libs_": "knacss py",
                 "_async_": self.async_host,
                 "_static_": "",# ""=disabled
             },
-            "static_files": {"favicon": "usual_resources/favicon.ico"},
-            "static_dirs": {
-
-                "/resources": "usual_resources",
-                "/libs": "javascript_libs",
-                "/modules": "node_modules",
-                "/documentation": "sweet_documentation",
+            "static_files": {
+                "/favicon.ico": "resources/favicon.ico",
             },
-            "cherrypy": {"/":f"{self.root_path}/configuration/cherrypy.conf"},
-            "db_path": f"{self.root_path}/database",
-            "db_select": "demo",
+            "static_dirs": {
+                "/resources": "resources",
+            },
+            "cherrypy": {
+                "/": f"{self.root_path}/configuration/cherrypy.conf",
+            },
         }
+
+        # set a default html welcome message
+        self.welcome = f"""
+          <div style="text-align:center;">
+            <h1><br><br>Welcome {self.USER.capitalize()} !<br><br></h1>
+            <h3>sweetheart</h3>
+            <p>a supercharged heart for the non-expert hands</p>
+            <p>that will give you full power at the speedlight</p>
+            <p><a href="documentation/index.html"
+                class="btn" role="button">Get Started Now!</a></p>
+            <p><br>or code immediately using <a href="jupyter">JupyterLab</a></p>
+            <p><br><br><em>this message appears because there
+                was nothing else to render here</em></p>
+          </div>
+            """
 
 
 # provide convenient functions for givin messages
