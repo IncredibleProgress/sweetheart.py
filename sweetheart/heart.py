@@ -1,12 +1,8 @@
 """
 heart.py is ... the heart of sweetheart !
-it provides base usefulle servers and services
+it provides base classes for services and facilities
 """
-import os,sys
-from collections import UserList
-
 from sweetheart.globals import *
-from sweetheart.subproc import BaseService,sp
 
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
@@ -14,18 +10,40 @@ from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
 
-def webbrowser(url:str,config:BaseConfig=None):
+class BaseService:
 
-    try: select = config['webbrowser']
-    except: select = None
+    def __init__(self,url:str,config:BaseConfig) -> None:
+        """ set basic features of sweeheart service objects
+            given url should follow http://host:port pattern
+            the child class must set the command attribute """
 
-    if select and config.subproc.get(select):
-        sp.shell(config.subproc['select'])
+        self.config = config
+        self.command = "echo Error, no command attribute given"
 
-    elif os.environ.get('WSL_DISTRO_NAME'):
-        sp.shell(config.subproc['msedge.exe'])
+        if config.WSL_DISTRO_NAME: self.terminal = 'wsl'
+        else: self.terminal = 'xterm'
 
-    else: sp.shell(config.subproc['firefox'])
+        self.url = url
+        self.host = url.split(":")[1].strip("/")
+        self.port = int(url.split(":")[2])
+
+    def run_local(self,service:bool=True):
+        """ start and run the command attribute locally
+            self.command must be set previously """
+
+        if service:
+            # run service locally opening new shell
+            sp.terminal(self.command,self.terminal)
+        else:
+            # run service locally within current shell
+            sp.shell(self.command)
+            
+    def run_server(self):
+        raise NotImplementedError
+
+    def cli_func(self,args):
+        """ given function for command line interface """
+        raise NotImplementedError
 
 
 class Database(BaseService):
@@ -61,14 +79,15 @@ class Database(BaseService):
         self.run_local(service=False)
 
 
-class Webapp(BaseService,UserList):
+class Webapp(BaseService):
 
     def __init__(self,config:BaseConfig) -> None:
         """ set a Starlette webapp as a service """
 
-        #NOTE: auto set url from config
-        super(BaseService,self).__init__(config.async_host,config)
-        self.command = "sws run-webapp"
+        #NOTE: url is auto set here from config
+        super().__init__(config.async_host,config)
+        self.command = "sws start"
+        self.data = []
 
         # set default uvivorn server args
         self.uargs = {
@@ -78,13 +97,16 @@ class Webapp(BaseService,UserList):
 
     def mount(self,*args:Route):
 
+        os.chdir(self.config['working_dir'])
+        echo("set webapp wihin:",self.config['working_dir'])
+
         # mount() can be called only once
-        assert not hasattr(self,"app")
+        assert hasattr(self,"app") is False
 
         if not args:
             # set a welcome message
             self.data.append(
-                Route("/",HTMLResponse(self.config.welcome)) )
+                Route("/",HTMLResponse(WELCOME)))
         else:
             self.data.extend(args)
 
@@ -100,30 +122,12 @@ class Webapp(BaseService,UserList):
         self.app = Starlette(routes=self.data)
 
     def run_local(self,service:bool):
-        """ run webapp on a local async server """
+        """ run webapp on a local http server """
+
         if service == False:
             import uvicorn
-            uvicorn.run(self.app,*self.uargs)
-        else:
-            super(BaseService,self).run_local(service)
+            assert os.getcwd() == self.config['working_dir']
+            uvicorn.run(self.app,**self.uargs)
 
-    def cli_func(self,args):
-        """ set command ligne function """
-        self.run_local(service=False)
+        else: super().run_local(service)
 
-    def quickstart(self,*args:Route):
-
-        # connect mongo database local server
-        if self.config.is_mongodb_local:
-            mongod = Database(self.config,run_local=True)
-            self.mongoclient,self.database = mongod.set_client()
-
-        # connect mdbook local server
-        # connect cherrypy local server
-        # start webbrowser
-        webbrowser(self.url,self.config)
-
-        # start webapp
-        os.chdir(self.config['working_dir'])
-        self.mount(*args)
-        self.run_local(service=False)
