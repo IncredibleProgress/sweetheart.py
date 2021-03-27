@@ -29,7 +29,7 @@ venv = run([POETRY_BIN,"env","info","--path"],
     text=True,capture_output=True).stdout.strip()
 
 if venv == "":
-    raise Exception("Error: no python env found")
+    raise Exception("Error, no python env found")
 
 # set SWeetheart Shell command -> sws
 with open(f"{SWS_PATH}/sws","w") as file_out:
@@ -37,7 +37,7 @@ with open(f"{SWS_PATH}/sws","w") as file_out:
 
 #!/bin/sh
 #NOTE: faster than 'poetry run' to start
-{venv}/bin/python3 -m sweetheart.sweet $*
+{venv}/bin/python3 -m sweetheart.sweet shell '$*'
 
     """.strip())
 
@@ -50,4 +50,4 @@ if not SWS_PATH in os.environ['PATH']:
 
 # exit message
 print("all done installing sweetheart\n",
-    "type 'sws -h' for getting some help\n")
+    "type 'sws --help' for getting some help\n")

@@ -20,20 +20,20 @@ def webbrowser(url:str):
     except: select = None
 
     if select and config.subproc.get(select):
-        sp.shell(config.subproc['select'])
+        sp.shell(config.subproc['select']+url)
 
     elif BaseConfig.WSL_DISTRO_NAME:
-        sp.shell(config.subproc['msedge.exe'])
+        sp.shell(config.subproc['msedge.exe']+url)
 
-    else: sp.shell(config.subproc['firefox'])
+    else: sp.shell(config.subproc['firefox']+url)
 
 
 def quickstart(*args):
     """ build and run webapp for the existing config """
 
-    from sweetheart.heart import Database,Webapp
     try: 'config' in globals()
     except: raise Exception("Error, config is missing")
+    from sweetheart.heart import Database,Webapp
 
     # connect mongo database local server
     if config.is_mongodb_local:
@@ -50,20 +50,29 @@ def quickstart(*args):
     webapp.run_local(service=False)
 
 
-def sws(self,*args):
-    """ sweet shell command call """
-    print("args:",args)
-    print("type 'sws --help' or 'sws -h' for getting some help")
+def sws(args:str):
+    """ SWeet Shell command line interface """
+
+    try: 'config' in globals()
+    except: raise Exception("Error, config is missing")
+
+    # python_bin is set when needed only
+    if args.startswith('python'): config.ensure_python()
+
+    switch = {
+        'python': f"{config.python_bin}" }
+
+    argl = args.split()
+    argl[0] = switch.get(argl[0],argl[0])
+    echo("sws$"," ".join(argl))
+    sp.run(*argl)
 
 
-if __name__ == "__main__":
-
-    set_config()
-    sp.set_python_env(path=config.subproc['codepath'])
-
+if __name__ == "__main__": set_config()
 else: sp.exit()
 
 
+import argparse
 class CommandLineInterface:
 
     def __init__(self) -> None:
@@ -71,7 +80,6 @@ class CommandLineInterface:
             it uses argparse but provides better look and feel """
 
         # provide default parsers tools
-        import argparse
         self.parser= argparse.ArgumentParser()
         self.subparser= self.parser.add_subparsers()
         self.dict= { "_": self.parser }
@@ -92,32 +100,57 @@ class CommandLineInterface:
         self.args = self.parser.parse_args()
         return self.args
 
-    def quickstart(self,*args):
-        """ quickstart call from cli """
+    def sws(self,args):
+        """ set sws call from cli """
+        sws(args.command[0])
+
+    def quickstart(self,args):
+        """ set quickstart call from cli """
+
+        config.is_webapp = not args.server_only
+        config.is_mongodb_local = not args.mongo_disabled
         quickstart()
 
 
 # build sweetheart command iine interface
 cli = CommandLineInterface()
-cli.set_function(sws)
+cli.set_function(lambda args:
+    echo("type 'sws --help' for getting some help"))
 
-cli.opt("-v","--verbose",action="count",
+cli.opt("-v","--verbose",action="count",default=0,
     help="get additional messages about on-going process")
 
-cli.opt("-p",dest="project",action="store",nargs="?",const="sweetheart",
+cli.opt("-p",dest="project",nargs="?",const="sweetheart",
     help="set a project name different of sweetheart")
 
 cli.opt("-i","--init",action="store_true",
     help="launch init process for building new sweetheart project")
 
-# create the subparser for the "run-webapp" command:
+
+# create subparser for the 'shell' command:
+cli.sub("shell",help="the SWeet Shell command line interface")
+cli.opt("command",nargs=1,help="set shell command line as a string")
+cli.set_function(cli.sws)
+
+# create subparser for the 'start' command:
 cli.sub("start",help="start webapp with required services")
 cli.set_function(cli.quickstart)
 
+cli.opt("-x","--mongo-disabled",action="store_true",
+    help="start without local Mongo Database server")
 
+cli.opt("-s","--server-only",action="store_true",
+    help="start http server without opening webbrowser")
+
+
+# execute command line arguments
 argv = cli.set_parser()
-if argv.init is True:
+BaseConfig.verbosity = argv.verbose
 
+if argv.project:
+    set_config(project=argv.project)
+
+if argv.init is True:
     from sweetheart.install import init
     init(config)
 

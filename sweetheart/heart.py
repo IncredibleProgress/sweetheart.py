@@ -1,6 +1,6 @@
 """
 heart.py is ... the heart of sweetheart !
-it provides base classes for services and facilities
+it provides classes for included services and facilities
 """
 from sweetheart.globals import *
 
@@ -98,7 +98,7 @@ class Webapp(BaseService):
     def mount(self,*args:Route):
 
         os.chdir(self.config['working_dir'])
-        echo("set webapp wihin:",self.config['working_dir'])
+        echo("mount webapp:",self.config['working_dir'])
 
         # mount() can be called only once
         assert hasattr(self,"app") is False

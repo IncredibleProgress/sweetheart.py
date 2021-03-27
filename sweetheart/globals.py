@@ -38,16 +38,12 @@ class sp:
         venv = cls.poetry("env","info","--path",
             text=True,capture_output=True).stdout.strip()
 
-        if venv == "":
-            raise Exception("Error, no python env found")
-
-        echo("set python env:",venv)
+        if venv == "": raise Exception("Error, no python env found")
         BaseConfig.python_bin = f"{venv}/bin/python"
+        verbose("set python env:",BaseConfig.python_bin)
 
     @classmethod
-    def exit(cls):
-        """ stop and exit in good way """
-        sys.exit()
+    def exit(cls): sys.exit()
 
 
 # set default configuration
@@ -65,7 +61,14 @@ class BaseConfig(UserDict):
 
     # default paths settings
     poetry_bin = f"{HOME}/.poetry/bin/poetry"
-    python_bin = "sws python"# unknown venv
+    python_bin = None# unknown venv
+
+    def ensure_python(self):
+        """ this allows setting python_bin only when needed 
+            it avoids waiting time due to poetry loading """
+
+        if self.python_bin is None:
+            sp.set_python_env(path=self.subproc['codepath'])
 
     def __init__(self,project) -> None:
 
@@ -91,13 +94,12 @@ class BaseConfig(UserDict):
             'rustpath': f"{self.HOME}/.cargo/bin",
             'codepath': f"{self.root_path}/programs/my_python",# no / at end
             'mongodb': f"mongod --dbpath={self.root_path}/database",
-            'msedge.exe': f"cmd.exe /c start msedge --app={self.async_host}",
-            'firefox': f"firefox {self.async_host}",
+            'msedge.exe': f"cmd.exe /c start msedge --app=",
+            'firefox': f"firefox ",# space is needed
         }
 
         # default editable settings
         self.data = {
-
             "working_dir": f"{self.root_path}/webpages",
             "db_select": "demo",
 
@@ -115,8 +117,7 @@ class BaseConfig(UserDict):
             },
             "cherrypy": {
                 "/": f"{self.root_path}/configuration/cherrypy.conf",
-            },
-        }
+            },}
 
 
 # set a default html welcome message
