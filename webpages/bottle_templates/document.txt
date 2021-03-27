@@ -1,0 +1,64 @@
+% rebase("sweet.HTML", load="highlight")
+
+<style>
+@media (min-width: 540px) {
+    .webpage {
+        display: grid;
+        grid-template-columns: 24% 1fr;
+    }
+}  
+.nav-list {
+    padding-inline-start: 0.2em;
+    list-style-type: none;
+    display: grid;
+    gap: .5rem;
+    margin-right: 1em;
+}
+.webpage {
+    font-family: Georgia, serif;
+    color: #3E4349;
+    line-height: 1.4em;
+    max-width: 940px; 
+    margin: 0 auto;
+    min-height: 100vh;
+}
+.webpage a {
+    color: #444;
+    text-decoration: none;
+    border-bottom: 1px dotted #999;
+}
+h1,h2,h3,h4,h5,h6 {
+    font-weight: normal;
+    margin: 30px 0px 10px 0px;
+    padding: 0;
+    line-height: 1.1em;
+}
+</style>
+
+<div class="webpage">
+    <aside>
+        <p></p><em style="font-size: 0.9em;">powered with</em><br>
+        <img src="/resources/sweetheart-logo.png" alt="" style="height: 1em;">
+        <strong><em>sweetheart</em></strong></p>
+        <nav>
+            <ul id="nav-list" class="nav-list"></ul>
+        </nav>
+    </aside>
+    <main>
+        {{ !text }}
+    </main>
+</div>
+
+<script>
+// generate headings nav-list at the left
+var headings = document.querySelectorAll("h1,h2,h3")
+for (var i=0; i < headings.length; i++) {
+    headings[i].id = "heading"+i.toString();
+    var node = document.createElement("li");    
+    var link = document.createElement("a");
+    link.setAttribute("href", "#"+headings[i].id);
+    var text = document.createTextNode(headings[i].innerText);
+    link.appendChild(text); node.appendChild(link);
+    document.getElementById("nav-list").appendChild(node);
+}
+</script>

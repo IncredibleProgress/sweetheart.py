@@ -1,0 +1,36 @@
+% rebase("sweet.HTML")
+
+<div class="center" style="max-width: 720px;padding: 20px;">
+  <form>
+    <h1>Quelle est votre problématique ?</h1>
+    <hr>
+    <section class="grid-4">
+      <style>
+        .spacer { margin-top: 5px;
+        }
+        option:selected {
+          color:lightgray;
+        }
+      </style>
+      <label class="col-all">description de la demande d'intervention</label>
+      <input class="col-all" placeholder="description">
+      <select class="col-2 spacer" style="margin-right: 5px;">
+        <option disabled selected hidden>gestionnaire</option>
+        <option>maintenance mécanique</option>
+        <option>mainenance élec. instrum.</option>
+        <option>servive informatique</option>
+      </select>
+      <select class="spacer" style="margin-right: 5px;"></select>
+      <select class="spacer">
+        <option disabled selected hidden>priorité</option>
+        <option>immédiate</option>
+        <option>dans les 24hr</option>
+        <option>dans les 48hr</option>
+        <option>à planifier</option>
+      </select>
+      <label class ="col-all spacer"><br></label>
+      <textarea class ="col-all" placeholder="précisions et détail de la demande"></textarea>
+      <input type="submit" value="OK" class="spacer">
+    </section>
+  </form>
+</div>

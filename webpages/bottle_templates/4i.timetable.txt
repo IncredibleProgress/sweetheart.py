@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/knacss.css">
+<script src="/script.js"></script>
+<%
+# PYTHON required data: timetable, year,  months_len, datetime, user
+# datetime(year,month,day).weekday() provides the weekday number within 0-6 for Monday-Sunday
+# timetable["d-m-y"] provides the recorded statement for related day
+
+days_labels = ('Lu','Ma','Me','Je','Ve','Sa','Di')
+months_labels = ('Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre')
+%>
+<script>
+  //* post select data for MongoDB insert or update:
+  function update(date_id) {
+    // open async thread:
+    var xhr = new XMLHttpRequest();
+    xhr.open("PUT", "http://localhost:8000/timetable/exchange", true);
+    // send FormData type for use with request.forms and bottle:
+    var data = new FormData();
+    data.append("date_id", date_id);
+    data.append("status", document.getElementById(date_id).value);
+    xhr.send(data) }
+
+  //* push data selected by id to the server:
+    function push(date_id) {
+      async_GET_(
+        [ date_id, value(date_id) ], 
+        "http://localhost:8000/timetable/test" )
+    }
+</script>
+
+<style>
+  /* .table .flex-container are provided by knacss */
+  .table th {
+  	text-align: center;
+  }
+  .table label {
+  	width: 45%;
+  	float: left;
+  }
+  .table select {
+    width: 55%;
+    float: right;
+    background-color: inherit;
+  }
+  .flex-container select,
+  .flex-container a,
+  .flex-container span {
+    width: 200px;
+    margin-bottom: 5px;
+    margin-left: 5px;
+  }
+  </style>
+
+<body>
+
+<div class="flex-container" style="padding-top: 5px;"><!-- knaccs class -->
+  <select id="year" onchange="exchange(['user','year'])">
+    <option>Calendrier {{ year-1 }}</option>
+    <option selected>Calendrier {{ year }}</option>
+    <option>Calendrier {{ year+1 }}</option>
+  </select>
+  <select id="user" onchange="exchange(['user','year'])">
+    <option>{{ user }}</option>
+    <optgroup label="Mon équipe">
+      <option>Julie Latour</option>
+      <option>Marcel Dupont</option>
+    </optgroup>
+  </select>
+  <a href="http://localhost:8000/timetable/excel" class="btn--success" role="button">
+    Planning d'équipe Excel</a>
+
+  <!-- hided button for test with typescript: -->
+  <style>.btn--ghost:hover { color: darkgray; }</style>
+  <span onclick="push('1-1-2020')" class="btn--ghost" role="button">TEST</span>
+</div>
+
+<section class="grid-12-small-3 has-gutter"><!-- knaccs class -->
+% for month in range(12):
+<div>
+<table class="table"><!-- knaccs class -->
+  <tr>
+    <th>{{ months_labels[month] }}</th>
+  </tr>
+
+  % for day in range(31):
+    <tr>
+    % if day < months_len[month]:
+
+    %# DON'T MODIFY date_id : used as timetable keys and insert/update within MongoDB
+    % date_id = '-'.join(( str(day+1), str(month+1), str(year) ))
+    % weekday = datetime(year, month+1, day+1).weekday()
+    % bkg_color = 'lightgray' if weekday in (5,6) else 'inherit'
+    % day_string=days_labels[weekday];day_string+=' 0'+str(day+1) if day < 9 else ' '+str(day+1)
+
+      <td style="background: {{ bkg_color }}">
+        <label>{{ day_string }}</label>
+
+        <select id="{{ date_id }}" class="cell" onchange='update("{{ date_id }}")' >
+          <option>{{ timetable[date_id] }}</option>
+
+          <option>M</option>
+          <option>AM</option>
+          <option>N</option>
+          <option>J</option>
+          <option>CP</option>
+          <option>RTT</option>
+          <option>abs</option>
+        </select>
+      </td>
+    %end
+    </tr>
+  % end
+</table>
+</div>
+% end
+</section>
+</body>
+
+
+<!-- ONLY FOR MEMORY :
+``````````````````````
+%# update select data on change with jquery :
+<script src="jquery.min.js"></script>
+<select id="{{ date_id }}" onchange='$.post("http://localhost:8080/timetable", $("#{{ date_id }}").serialize())'>
+
+-->
