@@ -100,7 +100,7 @@ class Webapp(BaseService):
         os.chdir(self.config['working_dir'])
         echo("mount webapp:",self.config['working_dir'])
 
-        # mount() can be called only once
+        # mount() should be called only once
         assert hasattr(self,"app") is False
 
         if not args:
@@ -144,16 +144,11 @@ class Notebook(BaseService):
         self.command = f"{config.python_bin} -m jupyterlab \
             --no-browser --notebook-dir={config['notebooks_dir']}"
 
-        from urllib.parse import urljoin
-        self.lab = urljoin(self.url,"lab")
-        self.url = urljoin(self.url,"tree")
-
     def set_ipykernel(self):
-        """ set the ipython kernel for running JupyterLab """
+        """ set ipython kernel for running JupyterLab """
 
-        # get path and name of python env
-        path,name = os.path.split(sp.poetry("env","info","--path",
-            text=True,capture_output=True).stdout.strip())
+        # get path,name of python env
+        path,name = os.path.split(sp.venv)
 
         os.chdir(path)
         print("\n[WARNING] Set a password for JupyterLab server is required")

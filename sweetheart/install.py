@@ -3,10 +3,10 @@ from sweetheart.globals import *
 
 
 PKG_INIT = { 
-    'pylibs': ["bottle","pymongo","uvicorn","aiofiles","starlette","jupyterlab"],
-    'aptlibs': ["xterm","rustc","mongodb","npm"],
     'cargolibs': ["mdbook","mdbook-toc"],
-    'npmlibs': ["brython","d3"] }
+    'aptlibs': ["xterm","rustc","mongodb","node-typescript","npm"],
+    'npmlibs': ["brython","d3","assemblyscript","bootstrap","vue"],
+    'pylibs': ["bottle","pymongo","uvicorn","aiofiles","fastapi","jupyterlab"]}
 
 
 def init(config:BaseConfig):
@@ -103,4 +103,3 @@ class BaseInstall:
 
         npmlibs = libs.get('npmlibs')
         if npmlibs: self.npm(npmlibs,init)
-

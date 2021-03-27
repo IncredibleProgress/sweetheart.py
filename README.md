@@ -31,15 +31,14 @@ Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. I
 
 Sweetheart delivers a stock of ready-to-use features:
 
-- backend language: [**Python3**](https://www.python.org/)
+- backend language: [**Python**](https://www.python.org/)
 - provided database server: [**MongoDB**](https://www.mongodb.com/)
 - provided asynchronous webserver: [Uvicorn](https://www.uvicorn.org/)
 - optionnal webserver for static contents: [CherryPy](https://cherrypy.org/)
-- provided asgi framework that shines: [Starlette](https://www.starlette.io/)
-- optionnal asgi framework (built on Starlette): [FastApi](https://fastapi.tiangolo.com/)
-- provided documentation builder: [mdBook](https://rust-lang.github.io/mdBook/index.html)
+- provided asgi framework: [FastApi](https://fastapi.tiangolo.com/), [Starlette](https://www.starlette.io/)
+- provided fast documentation builder: [mdBook](https://rust-lang.github.io/mdBook/index.html)
 - responsive user interfaces: [Html](https://www.w3schools.com/), [Jupyter](https://jupyter.org/)
-- provided web libs for going fast: [Bootstrap5](https://getbootstrap.com/)
+- provided web libs for going fast: [Bootstrap](https://getbootstrap.com/)
 - provided web libs for high-level featuring: [Vue.js](https://vuejs.org/)
 - optionnal frontend language: [Typescript](https://www.typescriptlang.org/), [WebAssembly](https://www.assemblyscript.org/)
 - optionnal low-level language: [Rust](https://www.rust-lang.org/)

@@ -36,15 +36,12 @@ class sp:
             beware that path must exist and contain a poetry project """
 
         os.chdir(path)
-        venv = cls.poetry("env","info","--path",
+        cls.venv = cls.poetry("env","info","--path",
             text=True,capture_output=True).stdout.strip()
 
-        if venv == "": raise Exception("Error, no python env found")
-        BaseConfig.python_bin = f"{venv}/bin/python"
+        if cls.venv == "": raise Exception("Error, no python env found")
+        BaseConfig.python_bin = f"{cls.venv}/bin/python"
         verbose("set python env:",BaseConfig.python_bin)
-
-    @staticmethod
-    def exit(): pass
 
 
 # set default configuration
@@ -60,7 +57,7 @@ class BaseConfig(UserDict):
     USER = os.environ['USER'].capitalize()
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
 
-    # default paths settings
+    # default python settings
     poetry_bin = f"{HOME}/.poetry/bin/poetry"
     python_bin = None# means unknown python env
 

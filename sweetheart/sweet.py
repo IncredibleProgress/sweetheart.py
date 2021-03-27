@@ -137,7 +137,7 @@ if __name__ == "__main__":
 
     # create subparser for the 'shell' command:
     cli.sub("shell",help="the SWeet Shell command line interface")
-    cli.opt("subargs",nargs=cli.REMAINDER)
+    cli.opt("subargs",nargs=cli.REMAINDER,help="remaining args processed by SWeet Shell")
     cli.set_function(lambda args: sws(*args.subargs))
 
     # create subparser for the 'start' command:
@@ -162,7 +162,6 @@ if __name__ == "__main__":
         set_config(project=argv.project)
 
     if argv.init is True:
-
         from sweetheart.install import init
         from sweetheart.heart import Notebook
         init(config)
