@@ -27,6 +27,7 @@ class sp:
 
     @classmethod
     def python(cls,*args,**kwargs):
+        assert BaseConfig.python_bin is not None
         return cls.run(BaseConfig.python_bin,*args,**kwargs)
 
     @classmethod
@@ -42,8 +43,8 @@ class sp:
         BaseConfig.python_bin = f"{venv}/bin/python"
         verbose("set python env:",BaseConfig.python_bin)
 
-    @classmethod
-    def exit(cls): sys.exit()
+    @staticmethod
+    def exit(): pass
 
 
 # set default configuration
@@ -61,7 +62,7 @@ class BaseConfig(UserDict):
 
     # default paths settings
     poetry_bin = f"{HOME}/.poetry/bin/poetry"
-    python_bin = None# unknown venv
+    python_bin = None# means unknown python env
 
     def ensure_python(self):
         """ this allows setting python_bin only when needed 
@@ -101,6 +102,7 @@ class BaseConfig(UserDict):
         # default editable settings
         self.data = {
             "working_dir": f"{self.root_path}/webpages",
+            "notebooks_dir": f"{self.root_path}/documentation/notebooks",
             "db_select": "demo",
 
             "templates_dir": "templates",
@@ -128,7 +130,8 @@ WELCOME = f"""
     <p>a supercharged heart for the non-expert hands</p>
     <p>that will give you full power at the speedlight</p>
     <p><a href="documentation/index.html">Get Started Now!</a></p>
-    <p><br>or code immediately using <a href="jupyter">JupyterLab</a></p>
+    <p><br>or code immediately using 
+        <a href="http://localhost:8888">JupyterLab</a></p>
     <p><br><br><em>this message appears because there
       was nothing else to render here</em></p>
   </div>"""

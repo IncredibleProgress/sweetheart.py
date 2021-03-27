@@ -1,0 +1,6 @@
+[book]
+authors = ["Nicolas Champion"]
+language = "en"
+multilingual = false
+src = "src"
+title = "SweetBook"

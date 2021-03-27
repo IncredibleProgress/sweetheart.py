@@ -17,7 +17,7 @@ def init(config:BaseConfig):
     for basedir in [
         f"{config.root_path}/configuration",
         f"{config.root_path}/database",
-        f"{config.root_path}/documentation",
+        f"{config.root_path}/documentation/notebooks",
         f"{config.root_path}/programs/scripts",
         f"{config.root_path}/webpages/resources",
         f"{config.root_path}/webpages/markdown",

@@ -75,18 +75,18 @@ class Database(BaseService):
         return self.client,self.database
     
     def cli_func(self,args):
-        """ set command ligne function """
+        """ database command ligne function """
         self.run_local(service=False)
 
 
 class Webapp(BaseService):
 
     def __init__(self,config:BaseConfig) -> None:
-        """ set a Starlette webapp as a service """
+        """ set Starlette web-app as a service """
 
         #NOTE: url is auto set here from config
         super().__init__(config.async_host,config)
-        self.command = "sws start"
+        self.command = None# not yet implemented
         self.data = []
 
         # set default uvivorn server args
@@ -131,3 +131,39 @@ class Webapp(BaseService):
 
         else: super().run_local(service)
 
+
+class Notebook(BaseService):
+
+    def __init__(self,config:BaseConfig) -> None:
+        """ set JupyterLab as a service """
+
+        #NOTE: auto set url from config
+        super().__init__(config.jupyter_host,config)
+
+        self.config.ensure_python()
+        self.command = f"{config.python_bin} -m jupyterlab \
+            --no-browser --notebook-dir={config['notebooks_dir']}"
+
+        from urllib.parse import urljoin
+        self.lab = urljoin(self.url,"lab")
+        self.url = urljoin(self.url,"tree")
+
+    def set_ipykernel(self):
+        """ set the ipython kernel for running JupyterLab """
+
+        # get path and name of python env
+        path,name = os.path.split(sp.poetry("env","info","--path",
+            text=True,capture_output=True).stdout.strip())
+
+        os.chdir(path)
+        print("\n[WARNING] Set a password for JupyterLab server is required")
+        sp.python("-m","ipykernel","install","--user",f"--name={name}")
+
+    def set_password(self):
+        """ require for JupyterLab initialization """
+        sp.python("-m","jupyter","notebook","password","-y")
+    
+    def cli_func(self, args):
+        """ JupyterLab command line function """
+        self.run_local(service=True)
+    
