@@ -1,6 +1,6 @@
 """
 heart.py is ... the heart of sweetheart !
-it provides classes for included services and facilities
+it provides services and facilities classes 
 """
 from sweetheart.globals import *
 
@@ -14,8 +14,8 @@ class BaseService:
 
     def __init__(self,url:str,config:BaseConfig) -> None:
         """ set basic features of sweeheart service objects
-            given url should follow http://host:port pattern
-            the child class must set the command attribute """
+            the given url should follow http://host:port pattern
+            the child class must set self.command attribute """
 
         self.config = config
         self.command = "echo Error, no command attribute given"
@@ -37,12 +37,9 @@ class BaseService:
         else:
             # run service locally within current shell
             sp.shell(self.command)
-            
-    def run_server(self):
-        raise NotImplementedError
 
     def cli_func(self,args):
-        """ given function for command line interface """
+        """ provided function for command line interface """
         raise NotImplementedError
 
 
@@ -59,7 +56,8 @@ class Database(BaseService):
         
     def set_client(self):
         """ set MongoDB client and select database given by config 
-            it provides default messages related to the database """
+            it provides default messages related to the database 
+            return pymongo.MongoClient, MongoClient.Database tuple """
 
         from pymongo import MongoClient
 
@@ -75,7 +73,7 @@ class Database(BaseService):
         return self.client,self.database
     
     def cli_func(self,args):
-        """ database command ligne function """
+        """ provided function for command line interface """
         self.run_local(service=False)
 
 
@@ -83,10 +81,10 @@ class Webapp(BaseService):
 
     def __init__(self,config:BaseConfig) -> None:
         """ set Starlette web-app as a service """
-
+        
+        #NOTE: self.command not set here
         #NOTE: url is auto set here from config
         super().__init__(config.async_host,config)
-        self.command = None# not yet implemented
         self.data = []
 
         # set default uvivorn server args
@@ -106,7 +104,7 @@ class Webapp(BaseService):
         if not args:
             # set a welcome message
             self.data.append(
-                Route("/",HTMLResponse(WELCOME)))
+                Route("/",HTMLResponse(self.config.welcome)))
         else:
             self.data.extend(args)
 
@@ -120,12 +118,14 @@ class Webapp(BaseService):
 
         # set the webapp Starlette object
         self.app = Starlette(routes=self.data)
+        del self.data
 
     def run_local(self,service:bool):
-        """ run webapp on a local http server """
+        """ run web-app within local Http server """
 
         if service == False:
             import uvicorn
+            #NOTE: current working dir should not be changed
             assert os.getcwd() == self.config['working_dir']
             uvicorn.run(self.app,**self.uargs)
 
@@ -141,6 +141,8 @@ class Notebook(BaseService):
         super().__init__(config.jupyter_host,config)
 
         self.config.ensure_python()
+        self.python_env = config.python_bin[:-7]
+
         self.command = f"{config.python_bin} -m jupyterlab \
             --no-browser --notebook-dir={config['notebooks_dir']}"
 
@@ -148,14 +150,14 @@ class Notebook(BaseService):
         """ set ipython kernel for running JupyterLab """
 
         # get path,name of python env
-        path,name = os.path.split(sp.venv)
+        path,name = os.path.split(self.python_env)
 
         os.chdir(path)
         print("\n[WARNING] Set a password for JupyterLab server is required")
         sp.python("-m","ipykernel","install","--user",f"--name={name}")
 
     def set_password(self):
-        """ require for JupyterLab initialization """
+        """ required for JupyterLab initialization """
         sp.python("-m","jupyter","notebook","password","-y")
     
     def cli_func(self, args):

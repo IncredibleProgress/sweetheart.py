@@ -1,6 +1,5 @@
 # Sweetheart **0.1.1-beta**
-*do more and better with low-code&low-costs python programs*
-
+*do better with low-code and low-costs python programs*
 
 ## A supercharged heart for the non-expert hands
 
@@ -16,12 +15,12 @@ Sweetheart supports you getting coding full power from scratch:
 
 - easy to learn, easy to use
 - full documentation provided
-- built-in reponsive user interfaces
+- built-in responsive user interfaces
 - quick and clean prototyping
-- quick and clean deployement
+- quick and clean deployment
 - ready for maintenable great code quality
 - ready for datacenters, big-data and AI
-- ready for high performances, inovation and creativity
+- ready for high performances, innovation and creativity
 
 ## Stick to good standards without thinking about it
 
@@ -44,7 +43,6 @@ Sweetheart delivers a stock of ready-to-use features:
 - optionnal low-level language: [Rust](https://www.rust-lang.org/)
 
 **And all other nice things you wish** using [apt](https://en.wikipedia.org/wiki/APT_(software)), [cargo](https://doc.rust-lang.org/cargo/), [pip](https://pip.pypa.io/en/stable/) and [npm](https://docs.npmjs.com/about-npm/): sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting any new project. In a first approach consider these provide to you **an incredible full-stacked sandbox**.
-
 
 ## Keep permanently innovative capabilities
 
@@ -90,4 +88,3 @@ curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/mas
 ## Epilogue: a new life starts now
 
 Even at this early step, Sweetheart allows you to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using amazing raw materials widely used by GAFAM and others!
-

@@ -1,10 +1,11 @@
 
-import os,sys,subprocess
+import os,subprocess,json
 from collections import UserDict
 
 
 class sp:
-    """ namespace providing basic subprocess features """
+    """ namespace providing basic subprocess features 
+        beware that it uses BaseConfig and not config """
 
     run = lambda *args,**kwargs: subprocess.run(args,**kwargs)
     shell = lambda str,**kwargs: subprocess.run(str,**kwargs,shell=True)
@@ -27,7 +28,6 @@ class sp:
 
     @classmethod
     def python(cls,*args,**kwargs):
-        assert BaseConfig.python_bin is not None
         return cls.run(BaseConfig.python_bin,*args,**kwargs)
 
     @classmethod
@@ -36,11 +36,11 @@ class sp:
             beware that path must exist and contain a poetry project """
 
         os.chdir(path)
-        cls.venv = cls.poetry("env","info","--path",
+        env = cls.poetry("env","info","--path",
             text=True,capture_output=True).stdout.strip()
+        if env == "": raise Exception("Error, no python env found")
 
-        if cls.venv == "": raise Exception("Error, no python env found")
-        BaseConfig.python_bin = f"{cls.venv}/bin/python"
+        BaseConfig.python_bin = f"{env}/bin/python"
         verbose("set python env:",BaseConfig.python_bin)
 
 
@@ -57,15 +57,15 @@ class BaseConfig(UserDict):
     USER = os.environ['USER'].capitalize()
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
 
-    # default python settings
+    # default path settings
     poetry_bin = f"{HOME}/.poetry/bin/poetry"
-    python_bin = None# means unknown python env
+    python_bin = None# unknown python env
 
     def ensure_python(self):
         """ this allows setting python_bin only when needed 
             it avoids waiting time due to poetry loading """
 
-        if self.python_bin is None:
+        if BaseConfig.python_bin is None:
             sp.set_python_env(path=self.subproc['codepath'])
 
     def __init__(self,project) -> None:
@@ -73,7 +73,8 @@ class BaseConfig(UserDict):
         # general settings
         self.project = self.label = project
         self.root_path = f"{self.HOME}/.sweet/{project}"
-        self.config_file = f"{self.root_path}/configuration/sweet.json"
+        self.config_file = f"{self.root_path}/configuration/config.json"
+        self.subproc_file = f"{self.root_path}/configuration/subproc.json"
 
         # default sandbox settings
         self.is_webapp = True
@@ -100,7 +101,8 @@ class BaseConfig(UserDict):
         self.data = {
             "working_dir": f"{self.root_path}/webpages",
             "notebooks_dir": f"{self.root_path}/documentation/notebooks",
-            "db_select": "demo",
+            "docs_url": "https://github.com/IncredibleProgress/sweetheart.py",
+            "db_select": "test",
 
             "templates_dir": "templates",
             "templates_settings": {
@@ -118,20 +120,23 @@ class BaseConfig(UserDict):
                 "/": f"{self.root_path}/configuration/cherrypy.conf",
             },}
 
+    @property
+    def welcome(self) -> str:
+        """ return default Html welcome message """
 
-# set a default html welcome message
-WELCOME = f"""
-  <div style="text-align:center;font-size:1.2em;">
-    <h1><br><br>Welcome {BaseConfig.USER} !<br><br></h1>
-    <h3>sweetheart</h3>
-    <p>a supercharged heart for the non-expert hands</p>
-    <p>that will give you full power at the speedlight</p>
-    <p><a href="documentation/index.html">Get Started Now!</a></p>
-    <p><br>or code immediately using 
-        <a href="http://localhost:8888">JupyterLab</a></p>
-    <p><br><br><em>this message appears because there
-      was nothing else to render here</em></p>
-  </div>"""
+        return f"""
+          <div style="text-align:center;font-size:1.2em;">
+            <h1><br><br>Welcome {self.USER} !<br><br></h1>
+            <h2>sweetheart</h2>
+            <p>a supercharged heart for the non-expert hands</p>
+            <p>that will give you full power at the speedlight</p>
+            <p><a href="{self['docs_url']}">
+                Get Started Now!</a></p>
+            <p><br>or code immediately using 
+                <a href="{self.jupyter_host}">JupyterLab</a></p>
+            <p><br><br><em>this message appears because there
+            was nothing else to render here</em></p>
+          </div>"""
 
 
 # provide convenient functions for givin messages
@@ -151,7 +156,7 @@ def echo(*args,mode="default"):
 
     elif mode.lower() == "exit":
         print("[%s]"% BaseConfig.label.upper(),*args)
-        sys.exit()
+        exit()
 
     else:
         print("[%s]"% BaseConfig.label.upper(),*args)

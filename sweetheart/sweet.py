@@ -12,6 +12,18 @@ def set_config(values:dict={},project:str="sweetheart"):
     config = BaseConfig(project)
     config.update(values)
 
+    # select settings from subproc.json file
+    with open(config.subproc_file) as infile:
+        subproc_settings = json.load(infile)
+    
+    for key in ('python_env',):
+        value = subproc_settings.get(key)
+        if value: config.subproc[key] = value
+
+    if config.subproc.get('python_env'):
+        BaseConfig.python_bin =\
+            f"{config.subproc['python_env']}/bin/python"
+
 
 def webbrowser(url:str):
     """ start url within webbrowser set in config """
@@ -31,20 +43,17 @@ def webbrowser(url:str):
 def quickstart(*args):
     """ build and run webapp for the existing config """
 
+    from sweetheart.heart import Database,Webapp,Notebook
+
     try: 'config' in globals()
-    except: raise Exception("Error, config is missing")
-    from sweetheart.heart import Database,Webapp
+    except: set_config()
 
     # connect mongo database local server
     if config.is_mongodb_local:
         sp.mongo = Database(config,run_local=True)
 
-    # connect mdbook local server
-    # connect cherrypy local server
-
     # start jupyter lab server
     if config.is_jupyter_local:
-        from sweetheart.heart import Notebook
         jupyter = Notebook(config)
         jupyter.run_local(service=True)
 
@@ -62,18 +71,19 @@ def sws(*args):
     try: 'config' in globals()
     except: raise Exception("Error, config is missing")
 
-    # python_bin is set when needed only
-    if args[0] in ['python','start']:
+    # python_bin set only when needed
+    if args[0] in ['python','sweet','start']:
         config.ensure_python()
 
     switch = {
-        'python': [f"{config.python_bin}"],
+        'python': [f"{config.python_bin[:-7]}/ipython"],
         'mdbook': [f"{config.subproc['rustpath']}/mdbook"],
-        'start': [f"{config.python_bin}","-m","sweetheart.sweet","start"] } 
+        'sweet': [f"{config.python_bin}","-m","sweetheart.sweet"],
+        'start': [f"{config.python_bin}","-m","sweetheart.sweet","start"],
+        } 
     
-    if args: args = list(args)
+    args = list(args)
     arg0 = switch.get(args[0],[args[0]])
-    verbose("shell$",arg0+args[1:])
     try: sp.run(*arg0+args[1:])
     except: pass
 

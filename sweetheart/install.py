@@ -8,10 +8,16 @@ PKG_INIT = {
     'npmlibs': ["brython","d3","assemblyscript","bootstrap","vue"],
     'pylibs': ["bottle","pymongo","uvicorn","aiofiles","fastapi","jupyterlab"]}
 
+GITHUB = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master"
+DOWNLOADS = [ "webpages/HTML" ]
+
 
 def init(config:BaseConfig):
     """ set require configuration before sweetheart installation
         and intends to provide minimalistic sweetheart features """
+
+    from urllib.parse import urljoin
+    from urllib.request import urlretrieve
 
     # require directories
     for basedir in [
@@ -49,6 +55,11 @@ def init(config:BaseConfig):
     os.symlink("/usr/share/javascript",
         f"{config.root_path}/webpages/resources/javascript")
 
+    # dowload files from github
+    for relpath in DOWNLOADS:
+        urlretrieve(urljoin(GITHUB,relpath),
+            os.path.join(config.root_path,relpath))
+
 
 class BaseInstall:
 
@@ -85,8 +96,7 @@ class BaseInstall:
 
     def install_libs(self,libs:dict=None,init=False):
         """ install given libs using apt,cargo,poetry,npm 
-            no given libs will set init process for new project 
-            and install libs provided within config.subproc """
+            no libs will set init process for new project """
 
         if libs is None:
             init = True
