@@ -1,5 +1,5 @@
 # Sweetheart **0.1.1-beta**
-#### *make better with low-code and low-costs python programs*
+*do more and better with low-code&low-costs python programs*
 
 
 ## A supercharged heart for the non-expert hands
@@ -63,23 +63,31 @@ The following *sweetheart development chart* allows to evaluate coding and costs
 
 ## Code examples
 
-### your first standalone webpage controller written in Python
+### your first webpage controller written in Python
 
 ``` python
-# changes in progress
+from sweetheart.sweet import quickstart()
+from sweetheart.heart import Route, HTMLResponse()
+
+quickstart( Route("/", HTMLResponse("<h1>Welcome!<h1>")) )
 ```
 
 ### your first *sweet* Html webpage
 
 ``` html
-<!-- changes in progress -->
+%rebase("HTML")
+
+<h1>Welcome!<h1>
+<p>get coding full power at the speedlight</p>
 ```
 
 ## Install and run sweetheart
 
-*changes in progress*
+``` bash
+curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -
+```
 
-## Epilogue: a new incredible life starts now
+## Epilogue: a new life starts now
 
 Even at this early step, Sweetheart allows you to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using amazing raw materials widely used by GAFAM and others!
 
