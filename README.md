@@ -4,7 +4,7 @@
 
 ## A supercharged heart for the non-expert hands
 
-Since Ubuntu 20.04 can be installed as usual softwares within Windows 10, it provides an incredible way for any organization to develop, administrate and deploy **powerful responsive web-apps including AI** on its own local network keeping high capabilities of integration with the already existing tools like databases, MS-Excel, and SAP.
+Since Ubuntu 20.04 can be installed as usual softwares within Windows 10, it provides an incredible way for any organization to develop, deploy, and administrate **powerful responsive web-apps including AI** on its own local network keeping high capabilities of integration with the already existing tools like databases, MS-Excel, and SAP.
 
 Sweetheart provides a simple Python/Html centric approach leading you implementing best components and best coding practices. Due to the current top-rated place of the Python language regarding to data processing, calculations and AI, this makes sweetheart a fast and ideal toolkit to e-volute towards **Industry4.0** precepts and innovative ideas.
 
@@ -69,7 +69,7 @@ The following *sweetheart development chart* allows to evaluate coding and costs
 from sweetheart.sweet import quickstart()
 from sweetheart.heart import Route, HTMLResponse()
 
-quickstart( Route("/", HTMLResponse("<h1>Welcome!<h1>")) )
+quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 ```
 
 ### your first *sweet* Html webpage
@@ -77,7 +77,7 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!<h1>")) )
 ``` html
 %rebase("HTML")
 
-<h1>Welcome!<h1>
+<h1>Welcome!</h1>
 <p>get coding full power at the speedlight</p>
 ```
 
