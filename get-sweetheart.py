@@ -18,7 +18,7 @@ if not os.path.isfile(POETRY_BIN):
 # create directories
 os.makedirs(SWS_PATH,exist_ok=True)
 os.chdir(f"{SWS_PATH}/..")
-run([POETRY_BIN,"-q","new","my_python"])
+run([POETRY_BIN,"new","my_python"])
 
 # install python dependencies
 os.chdir("./my_python")
@@ -36,8 +36,8 @@ with open(f"{SWS_PATH}/sws","w") as file_out:
     file_out.write(f"""
 
 #!/bin/sh
-#NOTE: faster than 'poetry run' to start
-{venv}/bin/python3 -m sweetheart.sweet shell '$*'
+#NOTE: faster than 'poetry run'
+{venv}/bin/python3 -m sweetheart.sweet shell $*
 
     """.strip())
 
@@ -50,4 +50,4 @@ if not SWS_PATH in os.environ['PATH']:
 
 # exit message
 print("all done installing sweetheart\n",
-    "type 'sws --help' for getting some help\n")
+    "type 'sws sweet --help' for getting some help\n")

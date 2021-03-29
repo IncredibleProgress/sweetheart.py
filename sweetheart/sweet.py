@@ -16,13 +16,14 @@ def set_config(values:dict={},project:str="sweetheart"):
     with open(config.subproc_file) as infile:
         subproc_settings = json.load(infile)
     
-    for key in ('python_env',):
+    for key in ('pyenv','rustpath','codepath'):
         value = subproc_settings.get(key)
         if value: config.subproc[key] = value
 
-    if config.subproc.get('python_env'):
+    # set python env if given
+    if config.subproc.get('pyenv'):
         BaseConfig.python_bin =\
-            f"{config.subproc['python_env']}/bin/python"
+            f"{config.subproc['pyenv']}/bin/python"
 
 
 def webbrowser(url:str):
@@ -42,26 +43,22 @@ def webbrowser(url:str):
 
 def quickstart(*args):
     """ build and run webapp for the existing config """
-
-    from sweetheart.heart import Database,Webapp,Notebook
+    from sweetheart.heart import HttpServer,Database,Notebook
 
     try: 'config' in globals()
     except: set_config()
+
+    # start jupyter lab server
+    if config.is_jupyter_local:
+        Notebook(config,run_local=True)
 
     # connect mongo database local server
     if config.is_mongodb_local:
         sp.mongo = Database(config,run_local=True)
 
-    # start jupyter lab server
-    if config.is_jupyter_local:
-        jupyter = Notebook(config)
-        jupyter.run_local(service=True)
-
-    # set webapp
-    webapp = Webapp(config)
-    webapp.mount(*args)
-    # start webapp
-    if config.is_webapp: webbrowser(webapp.url)
+    # build and start webapp
+    webapp = HttpServer(config)
+    webapp.mount(*args,open_with=webbrowser)
     webapp.run_local(service=False)
 
 
@@ -72,7 +69,7 @@ def sws(*args):
     except: raise Exception("Error, config is missing")
 
     # python_bin set only when needed
-    if args[0] in ['python','sweet','start']:
+    if args[0].lower() in ['python','sweet','start']:
         config.ensure_python()
 
     switch = {
@@ -161,7 +158,7 @@ if __name__ == "__main__":
         help="start JupyterLab http server for enabling notebooks")
 
     cli.opt("-s","--server-only",action="store_true",
-        help="start http server without opening webbrowser")
+        help="start Http server without opening webbrowser")
 
 
     # execute command line arguments

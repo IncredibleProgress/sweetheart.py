@@ -1,4 +1,4 @@
-# Sweetheart **0.1.1-beta**
+# Sweetheart **0.1.1**
 *do better with low-code and low-costs python programs*
 
 ## A supercharged heart for the non-expert hands
@@ -75,8 +75,10 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 ``` html
 %rebase("HTML")
 
-<h1>Welcome!</h1>
-<p>get coding full power at the speedlight</p>
+<div style="text-align:center;">
+  <h1>Welcome!</h1>
+  <p>get coding full power at the speedlight</p>
+</div>
 ```
 
 ## Install and run sweetheart
@@ -87,4 +89,4 @@ curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/mas
 
 ## Epilogue: a new life starts now
 
-Even at this early step, Sweetheart allows you to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using amazing raw materials widely used by GAFAM and others!
+Even at this Beta step, Sweetheart allows you to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using amazing raw materials widely used by GAFAM and others!

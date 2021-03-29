@@ -77,7 +77,7 @@ class BaseConfig(UserDict):
         self.subproc_file = f"{self.root_path}/configuration/subproc.json"
 
         # default sandbox settings
-        self.is_webapp = True
+        self.is_webapp_open = True
         self.is_mongodb_local = True
         self.is_jupyter_local = False
         self.is_cherrypy_local = False

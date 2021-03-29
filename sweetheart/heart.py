@@ -77,7 +77,7 @@ class Database(BaseService):
         self.run_local(service=False)
 
 
-class Webapp(BaseService):
+class HttpServer(BaseService):
 
     def __init__(self,config:BaseConfig) -> None:
         """ set Starlette web-app as a service """
@@ -93,13 +93,13 @@ class Webapp(BaseService):
             "port": self.port,
             "log_level": "info" }
 
-    def mount(self,*args:Route):
+    def mount(self,*args:Route,open_with:callable=None):
+        """ mount given Route(s) and set facilities from config
+            open_with allows setting a function for opening self.url """
 
+        assert hasattr(self,'data')
         os.chdir(self.config['working_dir'])
         echo("mount webapp:",self.config['working_dir'])
-
-        # mount() should be called only once
-        assert hasattr(self,"app") is False
 
         if not args:
             # set a welcome message
@@ -118,7 +118,11 @@ class Webapp(BaseService):
 
         # set the webapp Starlette object
         self.app = Starlette(routes=self.data)
-        del self.data
+        del self.data# new setting forbidden
+
+        # open url when relevant
+        if self.config.is_webapp_open and open_with:
+            open_with(self.url)
 
     def run_local(self,service:bool):
         """ run web-app within local Http server """
@@ -128,13 +132,14 @@ class Webapp(BaseService):
             #NOTE: current working dir should not be changed
             assert os.getcwd() == self.config['working_dir']
             uvicorn.run(self.app,**self.uargs)
-
-        else: super().run_local(service)
+        else:
+            # run self.command if given
+            super().run_local(service)
 
 
 class Notebook(BaseService):
 
-    def __init__(self,config:BaseConfig) -> None:
+    def __init__(self,config:BaseConfig,run_local:bool=False) -> None:
         """ set JupyterLab as a service """
 
         #NOTE: auto set url from config
@@ -145,6 +150,8 @@ class Notebook(BaseService):
 
         self.command = f"{config.python_bin} -m jupyterlab \
             --no-browser --notebook-dir={config['notebooks_dir']}"
+
+        if run_local: self.run_local(service=True)
 
     def set_ipykernel(self):
         """ set ipython kernel for running JupyterLab """
