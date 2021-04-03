@@ -8,28 +8,26 @@ def init(config:BaseConfig):
 
     # require directories
     for basedir in [
-        f"{config.root_path}/configuration",
+        #f"{config.root_path}/configuration",
         f"{config.root_path}/database",
         f"{config.root_path}/documentation/notebooks",
-        f"{config.root_path}/programs/scripts",
+        #f"{config.root_path}/programs/scripts",
         f"{config.root_path}/webpages/resources",
         f"{config.root_path}/webpages/markdown",
         f"{config.root_path}/webpages/{config['templates_dir']}",
     ]: os.makedirs(basedir,exist_ok=True)
 
-    # require python-poetry
-    if not os.path.isfile(config.poetry_bin):
-        sp.shell(BaseInstall.get_poetry)
-    
-    # set path and name for new poetry python package
-    path,name = os.path.split(config.subproc['codepath'])
-    assert name != ""
-
-    # provide default python package and venv
-    os.makedirs(path,exist_ok=True)
-    os.chdir(path)
-    sp.poetry("new",name)
-    sp.set_python_env(path=config.subproc['codepath'])
+    # # require python-poetry
+    # if not os.path.isfile(config.poetry_bin):
+    #     sp.shell(BaseInstall.get_poetry)
+    # # set path and name for new poetry python package
+    # path,name = os.path.split(config.subproc['codepath'])
+    # assert name != ""
+    # # provide default python package and venv
+    # os.makedirs(path,exist_ok=True)
+    # os.chdir(path)
+    # sp.poetry("new",name)
+    # sp.set_python_env(path=config.subproc['codepath'])
 
     # install default libs
     installer = BaseInstall(config)
@@ -42,7 +40,7 @@ def init(config:BaseConfig):
 
 class BaseInstall:
 
-    raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master"
+    raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"# / is needed
     get_poetry = "curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -"
 
     PKG_INIT = { 
@@ -50,35 +48,36 @@ class BaseInstall:
         'aptlibs': ["xterm","rustc","mongodb","node-typescript","npm"],
         'npmlibs': ["brython","d3","assemblyscript","bootstrap","vue"],
         'pylibs': ["bottle","pymongo","uvicorn","aiofiles","fastapi","jupyterlab"],
-        'files': ["webpages/HTML"] }
+        'files': ["webpages/SWEET.HTML"] }
 
     def __init__(self,config:BaseConfig) -> None:
+        echo("init process is starting ...",blank=True)
         self.config = config
 
     def apt(self,libs:list,**kwargs):
         """ install distro packages using apt """
 
-        echo("apt install",*libs,"...")
+        echo("apt install:",*libs,blank=True)
         return sp.run("sudo","apt","install",*libs,**kwargs)
 
     def cargo(self,libs:list,**kwargs):
         """ install rust crates using cargo """
 
-        echo("cargo install",*libs,"...")
+        echo("cargo install:",*libs,blank=True)
         path = self.config.subproc['rustpath']
         return sp.run(f"{path}/cargo","install",*libs,**kwargs)
     
     def poetry(self,libs:list,**kwargs):
         """ install python packages using poetry """
 
-        echo("poetry add python modules",*libs,"...")
+        echo("poetry add python modules:",*libs,blank=True)
         os.chdir(self.config.subproc['codepath'])
         return sp.poetry("add",*libs,**kwargs)
 
     def npm(self,libs:list,init=False,**kwargs):
         """ install node modules using npm """
 
-        echo("npm install",*libs,"...")
+        echo("npm install:",*libs,blank=True)
         os.chdir(f"{self.config.root_path}/webpages/resources")
         if init: sp.run("npm","init","--yes")
         return sp.run("npm","install",*libs,**kwargs)
@@ -113,7 +112,7 @@ class BaseInstall:
         from urllib.parse import urljoin
         from urllib.request import urlretrieve
 
-        for relpath in self.files_list:
-            verbose("download file:",relpath)
+        for relpath in files_list:
+            echo("download file:",relpath)
             urlretrieve(urljoin(self.raw_github,relpath),
                 os.path.join(self.config.root_path,relpath))

@@ -34,15 +34,15 @@ Sweetheart delivers a stock of ready-to-use features:
 - provided database server: [**MongoDB**](https://www.mongodb.com/)
 - provided asynchronous webserver: [Uvicorn](https://www.uvicorn.org/)
 - optionnal webserver for static contents: [CherryPy](https://cherrypy.org/)
-- provided asgi framework: [FastApi](https://fastapi.tiangolo.com/), [Starlette](https://www.starlette.io/)
+- provided asgi framework: [Starlette](https://www.starlette.io/), [FastApi](https://fastapi.tiangolo.com/)
 - provided fast documentation builder: [mdBook](https://rust-lang.github.io/mdBook/index.html)
-- responsive user interfaces: [Html](https://www.w3schools.com/), [Jupyter](https://jupyter.org/)
+- responsive user interfaces: [Html](https://www.w3schools.com/), [JupyterLab](https://jupyter.org/)
 - provided web libs for going fast: [Bootstrap](https://getbootstrap.com/)
-- provided web libs for high-level featuring: [Vue.js](https://vuejs.org/)
+- provided web libs for high-level featuring: [Vue](https://vuejs.org/)
 - optionnal frontend language: [Typescript](https://www.typescriptlang.org/), [WebAssembly](https://www.assemblyscript.org/)
 - optionnal low-level language: [Rust](https://www.rust-lang.org/)
 
-**And all other nice things you wish** using [apt](https://en.wikipedia.org/wiki/APT_(software)), [cargo](https://doc.rust-lang.org/cargo/), [pip](https://pip.pypa.io/en/stable/) and [npm](https://docs.npmjs.com/about-npm/): sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting any new project. In a first approach consider these provide to you **an incredible full-stacked sandbox**.
+**And all other nice things you wish** using [apt](https://en.wikipedia.org/wiki/APT_(software)), [cargo](https://doc.rust-lang.org/cargo/), [pip](https://pip.pypa.io/en/stable/) and [npm](https://docs.npmjs.com/about-npm/): Sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting any new project. In a first approach consider these provide to you **an incredible full-stacked sandbox**.
 
 ## Keep permanently innovative capabilities
 
@@ -64,8 +64,8 @@ The following *sweetheart development chart* allows to evaluate coding and costs
 ### your first webpage controller written in Python
 
 ``` python
-from sweetheart.sweet import quickstart()
-from sweetheart.heart import Route, HTMLResponse()
+from sweetheart.sweet import quickstart
+from sweetheart.heart import Route, HTMLResponse
 
 quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 ```
@@ -73,7 +73,7 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 ### your first *sweet* Html webpage
 
 ``` html
-%rebase("HTML")
+%rebase("SWEET.HTML")
 
 <div style="text-align:center;">
   <h1>Welcome!</h1>
@@ -84,7 +84,14 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 ## Install and run sweetheart
 
 ``` bash
+# get prerequisites
 curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -
+
+# get sweetheart components
+sws sweet --init
+
+# run sweetheart enabling JupyterLab 
+sws start --jupyter-lab
 ```
 
 ## Epilogue: a new life starts now

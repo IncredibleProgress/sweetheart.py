@@ -10,20 +10,36 @@ def set_config(values:dict={},project:str="sweetheart"):
 
     global config
     config = BaseConfig(project)
+
+    try: 
+        # update config from given json file
+        with open(config.config_file) as infile:
+            config.update(json.load(infile))
+            verbose("config file:",config.config_file)
+    except: pass
+
+    try: 
+        # get settings from given json file
+        with open(config.subproc_file) as infile:
+            subproc_settings = json.load(infile)
+            verbose("subproc file:",config.subproc_file)
+
+        # fix updatable subproc settings here
+        for key in ('pyenv','rustpath','codepath'):
+
+            value = subproc_settings.get(key)
+            if key == 'pyenv': 
+                BaseConfig.python_env = value
+                BaseConfig.python_bin = f"{value}/bin/python"
+            elif value:
+                config.subproc[key] = value
+    except: pass
+
+    # allow altered config
     config.update(values)
-
-    # select settings from subproc.json file
-    with open(config.subproc_file) as infile:
-        subproc_settings = json.load(infile)
-    
-    for key in ('pyenv','rustpath','codepath'):
-        value = subproc_settings.get(key)
-        if value: config.subproc[key] = value
-
-    # set python env if given
-    if config.subproc.get('pyenv'):
-        BaseConfig.python_bin =\
-            f"{config.subproc['pyenv']}/bin/python"
+    # ensure python bin
+    if BaseConfig.python_bin is None:
+        sp.set_python_env(path=config.subproc['codepath'])
 
 
 def webbrowser(url:str):
@@ -67,22 +83,16 @@ def sws(*args):
 
     try: 'config' in globals()
     except: raise Exception("Error, config is missing")
-
-    # python_bin set only when needed
-    if args[0].lower() in ['python','sweet','start']:
-        config.ensure_python()
+    _,cf,py,sb = args,config,config.python_bin,config.subproc
 
     switch = {
-        'python': [f"{config.python_bin[:-7]}/ipython"],
-        'mdbook': [f"{config.subproc['rustpath']}/mdbook"],
-        'sweet': [f"{config.python_bin}","-m","sweetheart.sweet"],
-        'start': [f"{config.python_bin}","-m","sweetheart.sweet","start"],
-        } 
+        'python': [f"{py[:-7]}/ipython",*_[1:]],
+        'mdbook': [f"{sb['rustpath']}/mdbook",*_[1:]],
+        'sweet': [py,"-m","sweetheart.sweet",*_[1:]],
+        'start': [py,"-m","sweetheart.sweet","start",*_[1:]],
+        }
     
-    args = list(args)
-    arg0 = switch.get(args[0],[args[0]])
-    try: sp.run(*arg0+args[1:])
-    except: pass
+    sp.run(*switch.get(args[0],args))
 
 
 class CommandLineInterface:
@@ -130,7 +140,7 @@ if __name__ == "__main__":
     # build sweetheart command iine interface
     cli = CommandLineInterface()
     cli.set_function(lambda args:
-        echo("type 'sws --help' for getting some help"))
+        echo("type 'sws help' for getting some help"))
 
     cli.opt("-v","--verbose",action="count",default=0,
         help="get additional messages about on-going process")
@@ -169,10 +179,11 @@ if __name__ == "__main__":
         set_config(project=argv.project)
 
     if argv.init is True:
+        
         from sweetheart.install import init
-        from sweetheart.heart import Notebook
         init(config)
 
+        from sweetheart.heart import Notebook
         jupyter = Notebook(config)
         jupyter.set_ipykernel()
         jupyter.set_password()

@@ -104,7 +104,7 @@ class HttpServer(BaseService):
         if not args:
             # set a welcome message
             self.data.append(
-                Route("/",HTMLResponse(self.config.welcome)))
+                Route("/",HTMLResponse(self.config.welcome())) )
         else:
             self.data.extend(args)
 
@@ -144,10 +144,7 @@ class Notebook(BaseService):
 
         #NOTE: auto set url from config
         super().__init__(config.jupyter_host,config)
-
-        self.config.ensure_python()
-        self.python_env = config.python_bin[:-7]
-
+        
         self.command = f"{config.python_bin} -m jupyterlab \
             --no-browser --notebook-dir={config['notebooks_dir']}"
 
@@ -157,11 +154,10 @@ class Notebook(BaseService):
         """ set ipython kernel for running JupyterLab """
 
         # get path,name of python env
-        path,name = os.path.split(self.python_env)
+        path,name = os.path.split(BaseConfig.python_env)
 
-        os.chdir(path)
-        print("\n[WARNING] Set a password for JupyterLab server is required")
-        sp.python("-m","ipykernel","install","--user",f"--name={name}")
+        print("\nWARNING: set password for JupyterLab server is required")
+        sp.python("-m","ipykernel","install","--user",f"--name={name}",cwd=path)
 
     def set_password(self):
         """ required for JupyterLab initialization """

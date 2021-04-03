@@ -40,6 +40,7 @@ class sp:
             text=True,capture_output=True).stdout.strip()
         if env == "": raise Exception("Error, no python env found")
 
+        BaseConfig.python_env = env
         BaseConfig.python_bin = f"{env}/bin/python"
         verbose("set python env:",BaseConfig.python_bin)
 
@@ -59,14 +60,7 @@ class BaseConfig(UserDict):
 
     # default path settings
     poetry_bin = f"{HOME}/.poetry/bin/poetry"
-    python_bin = None# unknown python env
-
-    def ensure_python(self):
-        """ this allows setting python_bin only when needed 
-            it avoids waiting time due to poetry loading """
-
-        if BaseConfig.python_bin is None:
-            sp.set_python_env(path=self.subproc['codepath'])
+    python_bin = None# still unknown python env
 
     def __init__(self,project) -> None:
 
@@ -120,7 +114,6 @@ class BaseConfig(UserDict):
                 "/": f"{self.root_path}/configuration/cherrypy.conf",
             },}
 
-    @property
     def welcome(self) -> str:
         """ return default Html welcome message """
 
@@ -141,10 +134,12 @@ class BaseConfig(UserDict):
 
 # provide convenient functions for givin messages
 _msg_ = []
-def echo(*args,mode="default"):
+def echo(*args,mode="default",blank=False):
     """convenient function for printing messages
     mode = 0|default|stack|release"""
 
+    if blank: print()
+    
     if mode.lower() == "stack" or mode == 0:
         global _msg_
         _msg_.append(" ".join(args))
@@ -163,4 +158,4 @@ def echo(*args,mode="default"):
 
 def verbose(*args,level:int=1):
     """convenient function for verbose messages"""
-    if BaseConfig.verbosity >= level: print(*args)
+    if BaseConfig.verbosity >= level: print(" ",*args)
