@@ -48,7 +48,7 @@ class Database(BaseService):
     def __init__(self,config:BaseConfig,run_local:bool=False):
         """ set Mongo Database as a service """
 
-        #NOTE: auto set url from config
+        #NOTE: url auto set from config
         super().__init__(config.database_host,config)
         self.command = config.subproc['mongodb']
 
@@ -83,7 +83,7 @@ class HttpServer(BaseService):
         """ set Starlette web-app as a service """
         
         #NOTE: self.command not set here
-        #NOTE: url is auto set here from config
+        #NOTE: url auto set here from config
         super().__init__(config.async_host,config)
         self.data = []
 
@@ -155,8 +155,6 @@ class Notebook(BaseService):
 
         # get path,name of python env
         path,name = os.path.split(BaseConfig.python_env)
-
-        print("\nWARNING: set password for JupyterLab server is required")
         sp.python("-m","ipykernel","install","--user",f"--name={name}",cwd=path)
 
     def set_password(self):

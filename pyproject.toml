@@ -3,8 +3,9 @@ name = "sweetheart"
 version = "0.1.1-alpha"
 description = "less code, more power, AI included"
 authors = ["Nicolas Champion <champion.nicolas@gmail.com>"]
-license = "CeCILL-C FREE SOFTWARE LICENSE AGREEMENT"
+license = "CECILL-C"
 readme = "README.md"
+repository = "https://github.com/IncredibleProgress/sweetheart.py"
 
 [tool.poetry.dependencies]
 python = "^3.8"

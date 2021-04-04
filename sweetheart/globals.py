@@ -24,20 +24,22 @@ class sp:
         
     @classmethod
     def poetry(cls,*args,**kwargs):
+        if hasattr(BaseConfig,'cwd'): kwargs['cwd'] = BaseConfig.cwd
         return cls.run(BaseConfig.poetry_bin,*args,**kwargs)
 
     @classmethod
     def python(cls,*args,**kwargs):
+        #NOTE: no python env forbidden here
+        assert hasattr(BaseConfig,'python_env')
         return cls.run(BaseConfig.python_bin,*args,**kwargs)
 
     @classmethod
-    def set_python_env(cls,path:str):
+    def set_python_env(cls,**kwargs):
         """ get python venv path from poetry and set it within config
             beware that path must exist and contain a poetry project """
 
-        os.chdir(path)
         env = cls.poetry("env","info","--path",
-            text=True,capture_output=True).stdout.strip()
+            text=True,capture_output=True,**kwargs).stdout.strip()
         if env == "": raise Exception("Error, no python env found")
 
         BaseConfig.python_env = env
@@ -60,7 +62,7 @@ class BaseConfig(UserDict):
 
     # default path settings
     poetry_bin = f"{HOME}/.poetry/bin/poetry"
-    python_bin = None# still unknown python env
+    python_bin = "python3"# unknown python env
 
     def __init__(self,project) -> None:
 
@@ -100,9 +102,9 @@ class BaseConfig(UserDict):
 
             "templates_dir": "templates",
             "templates_settings": {
-                "_default_libs_": "py",
-                "_async_": self.async_host,
-                "_static_": "",# ""=disabled
+                "__load __": "py",
+                "__async__": self.async_host,
+                "__static__": "",# ""=disabled
             },
             "static_files": {
                 #"/favicon.ico": "resources/favicon.ico",
@@ -122,7 +124,7 @@ class BaseConfig(UserDict):
             <h1><br><br>Welcome {self.USER} !<br><br></h1>
             <h2>sweetheart</h2>
             <p>a supercharged heart for the non-expert hands</p>
-            <p>that will give you full power at the speedlight</p>
+            <p>which will give you coding full power at the speedlight</p>
             <p><a href="{self['docs_url']}">
                 Get Started Now!</a></p>
             <p><br>or code immediately using 

@@ -42,7 +42,9 @@ Sweetheart delivers a stock of ready-to-use features:
 - optionnal frontend language: [Typescript](https://www.typescriptlang.org/), [WebAssembly](https://www.assemblyscript.org/)
 - optionnal low-level language: [Rust](https://www.rust-lang.org/)
 
-**And all other nice things you wish** using [apt](https://en.wikipedia.org/wiki/APT_(software)), [cargo](https://doc.rust-lang.org/cargo/), [pip](https://pip.pypa.io/en/stable/) and [npm](https://docs.npmjs.com/about-npm/): Sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting any new project. In a first approach consider these provide to you **an incredible full-stacked sandbox**.
+**And all other nice things you wish** using [apt](https://en.wikipedia.org/wiki/APT_(software)), [cargo](https://doc.rust-lang.org/cargo/), [pip](https://pip.pypa.io/en/stable/) and [npm](https://docs.npmjs.com/about-npm/): Sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting any new project.
+
+In a first approach just consider these provide to you **an incredible full-stacked sandbox**. In a second time you will take benefits of Sweetheart as a low-costs and convenient super-orchestrator.
 
 ## Keep permanently innovative capabilities
 
@@ -81,17 +83,26 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 </div>
 ```
 
-## Install and run sweetheart
+## Install and run Sweetheart
+
+### first steps with Bash
 
 ``` bash
-# get prerequisites
+#1: set prerequisites
 curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -
-
-# get sweetheart components
+#2: get sweetheart components
 sws sweet --init
-
-# run sweetheart enabling JupyterLab 
+#3: run sweetheart enabling JupyterLab 
 sws start --jupyter-lab
+```
+
+Be quite, there are no heavy installation process which could badly interact with the operating system. Everything goes and runs safely within dedicated */home* directories. [Click-here]() for detailed informations.
+
+### go one with many additionnal resources
+
+``` bash
+# get calculation, machine-learning and ms-excel components
+sws install science
 ```
 
 ## Epilogue: a new life starts now

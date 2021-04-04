@@ -5,11 +5,13 @@ it provides cli, install process, sandbox and services
 from sweetheart.globals import *
 
 
-def set_config(values:dict={},project:str="sweetheart"):
-    """ set or reset sweetheart configuration """
+def set_config(values:dict={},project:str="sweetheart",file:str=None):
+    """ set or reset sweetheart configuration 
+        allow working with differents projects and configs """
 
     global config
     config = BaseConfig(project)
+    if file: config.config_file = file
 
     try: 
         # update config from given json file
@@ -18,8 +20,11 @@ def set_config(values:dict={},project:str="sweetheart"):
             verbose("config file:",config.config_file)
     except: pass
 
+    # allow altered config
+    config.update(values)
+
     try: 
-        # get settings from given json file
+        # get subproc settings from given json file
         with open(config.subproc_file) as infile:
             subproc_settings = json.load(infile)
             verbose("subproc file:",config.subproc_file)
@@ -35,11 +40,10 @@ def set_config(values:dict={},project:str="sweetheart"):
                 config.subproc[key] = value
     except: pass
 
-    # allow altered config
-    config.update(values)
-    # ensure python bin
-    if BaseConfig.python_bin is None:
-        sp.set_python_env(path=config.subproc['codepath'])
+    # ensure python/poetry subprocess
+    BaseConfig.cwd = config.subproc['codepath']
+    if hasattr(BaseConfig,'python_env') is False:
+        sp.set_python_env()
 
 
 def webbrowser(url:str):
@@ -61,8 +65,8 @@ def quickstart(*args):
     """ build and run webapp for the existing config """
     from sweetheart.heart import HttpServer,Database,Notebook
 
-    try: 'config' in globals()
-    except: set_config()
+    try: assert 'config' in globals()
+    except: set_config(project="sweetheart")
 
     # start jupyter lab server
     if config.is_jupyter_local:
@@ -81,18 +85,24 @@ def quickstart(*args):
 def sws(*args):
     """ SWeet Shell command line interface """
 
-    try: 'config' in globals()
+    try: assert 'config' in globals()
     except: raise Exception("Error, config is missing")
-    _,cf,py,sb = args,config,config.python_bin,config.subproc
+
+    cf,sb = config, config.subproc
+    sw = [config.python_bin,"-m","sweetheart.sweet"]
+    vv,py,po = config.python_env,config.python_bin,config.poetry_bin
 
     switch = {
-        'python': [f"{py[:-7]}/ipython",*_[1:]],
-        'mdbook': [f"{sb['rustpath']}/mdbook",*_[1:]],
-        'sweet': [py,"-m","sweetheart.sweet",*_[1:]],
-        'start': [py,"-m","sweetheart.sweet","start",*_[1:]],
+        'python': [f"{vv}/bin/ipython",*args[1:]],
+        'poetry': [config.poetry_bin,*args[1:]],
+        'mdbook': [f"{sb['rustpath']}/mdbook",*args[1:]],
+        'sweet': [py,"-m","sweetheart.sweet",*args[1:]],
+        'start': [py,"-m","sweetheart.sweet","start",*args[1:]],
+        'jupyter': [py,"-m","jupyter",*args[1:]],
         }
     
-    sp.run(*switch.get(args[0],args))
+    try: sp.run(*switch.get(args[0],args),cwd=BaseConfig.cwd)
+    except: echo("sws has been interrupted")
 
 
 class CommandLineInterface:
@@ -134,13 +144,11 @@ class CommandLineInterface:
 
 
 if __name__ == "__main__":
-    
-    set_config()
 
     # build sweetheart command iine interface
     cli = CommandLineInterface()
     cli.set_function(lambda args:
-        echo("type 'sws help' for getting some help"))
+        echo("type 'sws help' for getting some help",blank=True))
 
     cli.opt("-v","--verbose",action="count",default=0,
         help="get additional messages about on-going process")
@@ -177,6 +185,8 @@ if __name__ == "__main__":
 
     if argv.project:
         set_config(project=argv.project)
+    else:
+        set_config(project="sweetheart")
 
     if argv.init is True:
         
@@ -184,6 +194,7 @@ if __name__ == "__main__":
         init(config)
 
         from sweetheart.heart import Notebook
+        echo("set JupyerLab ipkernel and required password",blank=True)
         jupyter = Notebook(config)
         jupyter.set_ipykernel()
         jupyter.set_password()

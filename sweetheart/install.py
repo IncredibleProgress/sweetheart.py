@@ -17,18 +17,6 @@ def init(config:BaseConfig):
         f"{config.root_path}/webpages/{config['templates_dir']}",
     ]: os.makedirs(basedir,exist_ok=True)
 
-    # # require python-poetry
-    # if not os.path.isfile(config.poetry_bin):
-    #     sp.shell(BaseInstall.get_poetry)
-    # # set path and name for new poetry python package
-    # path,name = os.path.split(config.subproc['codepath'])
-    # assert name != ""
-    # # provide default python package and venv
-    # os.makedirs(path,exist_ok=True)
-    # os.chdir(path)
-    # sp.poetry("new",name)
-    # sp.set_python_env(path=config.subproc['codepath'])
-
     # install default libs
     installer = BaseInstall(config)
     installer.install_libs()
@@ -46,12 +34,11 @@ class BaseInstall:
     PKG_INIT = { 
         'cargolibs': ["mdbook","mdbook-toc"],
         'aptlibs': ["xterm","rustc","mongodb","node-typescript","npm"],
-        'npmlibs': ["brython","d3","assemblyscript","bootstrap","vue"],
+        'npmlibs': ["brython","assemblyscript","bootstrap","vue"],
         'pylibs': ["bottle","pymongo","uvicorn","aiofiles","fastapi","jupyterlab"],
         'files': ["webpages/SWEET.HTML"] }
 
     def __init__(self,config:BaseConfig) -> None:
-        echo("init process is starting ...",blank=True)
         self.config = config
 
     def apt(self,libs:list,**kwargs):
@@ -71,7 +58,7 @@ class BaseInstall:
         """ install python packages using poetry """
 
         echo("poetry add python modules:",*libs,blank=True)
-        os.chdir(self.config.subproc['codepath'])
+        #s.chdir(self.config.subproc['codepath'])
         return sp.poetry("add",*libs,**kwargs)
 
     def npm(self,libs:list,init=False,**kwargs):
