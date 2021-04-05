@@ -111,7 +111,7 @@ class BaseConfig(UserDict):
             },
             "static_dirs": {
                 "/resources": "resources",
-                "/documentation": f"{self.root_path}/webpages/sweetbook/book",
+                "/documentation": f"sweetbook",
             },
             "cherrypy": {
                 "/": f"{self.root_path}/configuration/cherrypy.conf",
@@ -126,7 +126,7 @@ class BaseConfig(UserDict):
             <h2>sweetheart</h2>
             <p>a supercharged heart for the non-expert hands</p>
             <p>which will give you coding full power at the speedlight</p>
-            <p><a href="./documentation/index.html">
+            <p><a href="/documentation/index.html">
                 Get Started Now!</a></p>
             <p><br>or code immediately using 
                 <a href="{self.jupyter_host}">JupyterLab</a></p>

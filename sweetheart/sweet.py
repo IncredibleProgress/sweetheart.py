@@ -5,13 +5,21 @@ it provides cli, install process, sandbox and services
 from sweetheart.globals import *
 
 
-def set_config(values:dict={},project:str="sweetheart",file:str=None):
+def set_config(
+
+    values:dict = {},
+    project:str = "sweetheart",
+    config_file:str = None ) -> BaseConfig:
+
     """ set or reset sweetheart configuration 
         allow working with differents projects and configs """
 
+    #NOTE: custom project name not yet allowed
+    assert project == "sweetheart"
+
     global config
     config = BaseConfig(project)
-    if file: config.config_file = file
+    if config_file: config.config_file = config_file
 
     try: 
         # update config from given json file
@@ -44,6 +52,8 @@ def set_config(values:dict={},project:str="sweetheart",file:str=None):
     BaseConfig.cwd = config.subproc['codepath']
     if hasattr(BaseConfig,'python_env') is False:
         sp.set_python_env()
+    
+    return config
 
 
 def webbrowser(url:str):
@@ -108,6 +118,14 @@ def sws(*args):
     try: sp.run(*switch.get(args[0],args),cwd=cwd)
     except: echo("sws has been interrupted")
 
+def install(*packages):
+
+    try: assert 'config' in globals()
+    except: raise Exception("Error, config is missing")
+
+    from sweetheart.install import BaseInstall
+    BaseInstall(config).install_packages(*packages)
+
 
 class CommandLineInterface:
 
@@ -152,7 +170,7 @@ if __name__ == "__main__":
     # build sweetheart command iine interface
     cli = CommandLineInterface()
     cli.set_function(lambda args:
-        echo("type 'sws help' for getting some help",blank=True))
+        echo("type 'sws sweet --help' for getting some help",blank=True))
 
     cli.opt("-v","--verbose",action="count",default=0,
         help="get additional messages about on-going process")
@@ -181,6 +199,11 @@ if __name__ == "__main__":
 
     cli.opt("-s","--server-only",action="store_true",
         help="start Http server without opening webbrowser")
+
+    # create subparser for the 'install' command:
+    cli.sub("install",help="easy way for installing new components")
+    cli.opt("packages",nargs="+",help="names of packages: science|web")
+    cli.set_function(lambda args: install(*args.packages))
 
 
     # execute command line arguments

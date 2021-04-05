@@ -15,7 +15,6 @@
 
   + [the HTML reference at www.w3schools.com](https://www.w3schools.com/html/html_intro.asp)
   + [the CSS reference at www.w3schools.com](https://www.w3schools.com/css/css_intro.asp)
-  + [use KNACss for building clean responsive webpages](https://www.knacss.com/doc.html#intro)
 
 + Learning Data Processing
 

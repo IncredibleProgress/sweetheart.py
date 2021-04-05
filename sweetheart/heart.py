@@ -4,6 +4,7 @@ it provides services and facilities classes
 """
 from sweetheart.globals import *
 
+import uvicorn
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
 from starlette.routing import Route, Mount, WebSocketRoute
@@ -130,7 +131,6 @@ class HttpServer(BaseService):
         """ run web-app within local Http server """
 
         if service == False:
-            import uvicorn
             #NOTE: current working dir should not be changed
             assert os.getcwd() == self.config['working_dir']
             uvicorn.run(self.app,**self.uargs)
@@ -171,7 +171,8 @@ class Notebook(BaseService):
 class Documentation(BaseService):
 
     def __init__(self,config:BaseConfig,run_local:bool=False) -> None:
-        """ set mdBook as a service for buildin documentations
+        """ FIXME: for test
+            set mdBook as a service for buildin documentations
             server starts immediatly when run_local is True """
 
         #NOTE: auto set url from config

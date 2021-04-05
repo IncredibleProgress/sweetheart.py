@@ -4,6 +4,6 @@
         "pylibs":["xlrd","xlwt","pyxlsb","openpyxl","xlsxwriter","tabulate","seaborn","scikit-learn"]
     },
     "web": {
-        "pylibs": ["beautifulsoup4","html5lib","lxml","resquests","scrapy"]
+        "pylibs": ["beautifulsoup4","html5lib","lxml","requests","scrapy"]
     }
 }
