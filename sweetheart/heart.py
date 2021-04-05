@@ -51,7 +51,7 @@ class Database(BaseService):
 
         #NOTE: url auto set from config
         super().__init__(config.database_host,config)
-        self.command = config.subproc['mongodb']
+        self.command = f"mongod --dbpath={config.subproc['mongopath']}"
 
         if run_local: self.run_local(service=True)
         

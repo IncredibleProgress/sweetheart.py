@@ -89,7 +89,7 @@ class BaseConfig(UserDict):
         self.subproc = {
             'rustpath': f"{self.HOME}/.cargo/bin",
             'codepath': f"{self.root_path}/programs/my_python",# no / at end
-            'mongodb': f"mongod --dbpath={self.root_path}/database",
+            'mongopath': f"{self.root_path}/database",
             'msedge.exe': f"cmd.exe /c start msedge --app=",
             'firefox': f"firefox ",# space is needed
         }

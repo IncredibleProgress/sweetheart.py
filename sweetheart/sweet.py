@@ -38,7 +38,7 @@ def set_config(
             verbose("subproc file:",config.subproc_file)
 
         # fix updatable subproc settings here
-        for key in ('pyenv','rustpath','codepath'):
+        for key in ('pyenv','rustpath','codepath','mongopath'):
 
             value = subproc_settings.get(key)
             if key == 'pyenv': 
