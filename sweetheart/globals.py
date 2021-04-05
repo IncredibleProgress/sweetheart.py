@@ -79,10 +79,11 @@ class BaseConfig(UserDict):
         self.is_cherrypy_local = False
 
         # default productive settings
-        self.async_host = "http://localhost:8000"# uvicorn
-        self.static_host = "http://localhost:8080"# cherrypy
-        self.database_host = "mongodb://localhost:27017"# mongoDB
-        self.jupyter_host = "http://localhost:8888"# jupyterlab
+        self.async_host = "http://127.0.0.1:8000"# uvicorn
+        self.static_host = "http://127.0.0.1:8080"# cherrypy
+        self.database_host = "mongodb://127.0.0.1:27017"# mongoDB
+        self.jupyter_host = "http://127.0.0.1:8888"# jupyterlab
+        self.mdbook_host = "http://127.0.0.1:3000"# mdbook
 
         # subprocess settings
         self.subproc = {
@@ -97,9 +98,8 @@ class BaseConfig(UserDict):
         self.data = {
             "working_dir": f"{self.root_path}/webpages",
             "notebooks_dir": f"{self.root_path}/documentation/notebooks",
-            "docs_url": "https://github.com/IncredibleProgress/sweetheart.py",
-            "db_select": "test",
-
+            "selected_DB": "test",
+            
             "templates_dir": "templates",
             "templates_settings": {
                 "__load __": "py",
@@ -111,6 +111,7 @@ class BaseConfig(UserDict):
             },
             "static_dirs": {
                 "/resources": "resources",
+                "/documentation": f"{self.root_path}/webpages/sweetbook/book",
             },
             "cherrypy": {
                 "/": f"{self.root_path}/configuration/cherrypy.conf",
@@ -125,7 +126,7 @@ class BaseConfig(UserDict):
             <h2>sweetheart</h2>
             <p>a supercharged heart for the non-expert hands</p>
             <p>which will give you coding full power at the speedlight</p>
-            <p><a href="{self['docs_url']}">
+            <p><a href="./documentation/index.html">
                 Get Started Now!</a></p>
             <p><br>or code immediately using 
                 <a href="{self.jupyter_host}">JupyterLab</a></p>

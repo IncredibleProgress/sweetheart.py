@@ -1,6 +1,6 @@
 {
     "science": {
-        "aptlibs":["fish"],"npmlibs":["d3"],
+        "npmlibs":["d3"],
         "pylibs":["xlrd","xlwt","pyxlsb","openpyxl","xlsxwriter","tabulate","seaborn","scikit-learn"]
     },
     "web": {

@@ -68,11 +68,11 @@ def quickstart(*args):
     try: assert 'config' in globals()
     except: set_config(project="sweetheart")
 
-    # start jupyter lab server
+    # start Jupyterlab server
     if config.is_jupyter_local:
         Notebook(config,run_local=True)
 
-    # connect mongo database local server
+    # connect mongo database server
     if config.is_mongodb_local:
         sp.mongo = Database(config,run_local=True)
 
@@ -100,8 +100,12 @@ def sws(*args):
         'start': [py,"-m","sweetheart.sweet","start",*args[1:]],
         'jupyter': [py,"-m","jupyter",*args[1:]],
         }
-    
-    try: sp.run(*switch.get(args[0],args),cwd=BaseConfig.cwd)
+
+    if args[0]=='poetry': cwd= BaseConfig.cwd
+    elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
+    else: cwd= config.PWD
+
+    try: sp.run(*switch.get(args[0],args),cwd=cwd)
     except: echo("sws has been interrupted")
 
 

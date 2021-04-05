@@ -65,8 +65,8 @@ class Database(BaseService):
         echo("available mongo databases:",
             self.client.list_database_names())
 
-        self.database = self.client[self.config['db_select']]
-        echo(f"selected database:",self.config['db_select'],
+        self.database = self.client[self.config['selected_DB']]
+        echo(f"selected database:",self.config['selected_DB'],
             "\nexisting mongo collections:",
             self.database.list_collection_names())
 
@@ -82,10 +82,12 @@ class HttpServer(BaseService):
     def __init__(self,config:BaseConfig) -> None:
         """ set Starlette web-app as a service """
         
-        #NOTE: self.command not set here
         #NOTE: url auto set here from config
         super().__init__(config.async_host,config)
         self.data = []
+
+        #NOTE: self.command not set here
+        #self.command = f"{config.python_bin} -m uvicorn $*"
 
         # set default uvivorn server args
         self.uargs = {
@@ -164,4 +166,31 @@ class Notebook(BaseService):
     def cli_func(self, args):
         """ JupyterLab command line function """
         self.run_local(service=True)
-    
+
+
+class Documentation(BaseService):
+
+    def __init__(self,config:BaseConfig,run_local:bool=False) -> None:
+        """ set mdBook as a service for buildin documentations
+            server starts immediatly when run_local is True """
+
+        #NOTE: auto set url from config
+        super().__init__(config.mdbook_host,config)
+
+        self.cwd = f"{config.root_path}/documentation"
+        self.mdbook = f"{config.subproc['rustpath']}/mdbook"
+
+        # self.command = f"{self.mdbook} -d {config['documentation_dir']} \
+        #     -n {self.url} -p {self.port}"
+
+        if run_local: self.run_local(service=True)
+
+    def init(self,dir:str,input:str="n",**kwargs):
+        """ create new book directory and a deliverable access link """
+
+        sp.run(self.mdbook,"init","--force",dir,cwd=self.cwd,
+            capture_output=True,text=True,input=input,**kwargs)
+
+        pth = os.path.join
+        os.symlink(pth(self.cwd,dir),pth(self.config['working_dir'],dir))
+        

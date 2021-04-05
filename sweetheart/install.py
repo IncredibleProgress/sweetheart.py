@@ -11,6 +11,7 @@ def init(config:BaseConfig):
         #f"{config.root_path}/configuration",
         f"{config.root_path}/database",
         f"{config.root_path}/documentation/notebooks",
+        f"{config.root_path}/documentation/sweetbook",
         #f"{config.root_path}/programs/scripts",
         f"{config.root_path}/webpages/resources",
         f"{config.root_path}/webpages/markdown",
@@ -25,6 +26,9 @@ def init(config:BaseConfig):
     os.symlink("/usr/share/javascript",
         f"{config.root_path}/webpages/resources/javascript")
 
+    os.symlink(f"{config.root_path}/documentation/sweetbook",
+        f"{config.root_path}/webpages/sweetbook")
+
 
 class BaseInstall:
 
@@ -36,7 +40,10 @@ class BaseInstall:
         'aptlibs': ["xterm","rustc","mongodb","node-typescript","npm"],
         'npmlibs': ["brython","assemblyscript","bootstrap","vue"],
         'pylibs': ["bottle","pymongo","uvicorn","aiofiles","fastapi","jupyterlab"],
-        'files': ["webpages/SWEET.HTML"] }
+        'files': ["webpages/HTML",
+            "documentation/sweetbook/book.toml",
+            "documentation/sweetbook/src/SUMMARY.md",
+            "documentation/sweetbook/src/welcome.md" ] }
 
     def __init__(self,config:BaseConfig) -> None:
         self.config = config

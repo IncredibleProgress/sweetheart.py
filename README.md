@@ -75,7 +75,7 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 ### your first *sweet* Html webpage
 
 ``` html
-%rebase("SWEET.HTML")
+%rebase("HTML")
 
 <div style="text-align:center;">
   <h1>Welcome!</h1>
@@ -88,21 +88,27 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 ### first steps with Bash
 
 ``` bash
-#1: set prerequisites
+# first set prerequisites
 curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -
-#2: get sweetheart components
+
+# then get sweetheart components
+bash
 sws sweet --init
-#3: run sweetheart enabling JupyterLab 
+
+# at last run sweetheart enabling JupyterLab 
 sws start --jupyter-lab
 ```
 
 Be quite, there are no heavy installation process which could badly interact with the operating system. Everything goes and runs safely within dedicated */home* directories. [Click-here]() for detailed informations.
 
-### go one with many additionnal resources
+### get power with many additionnal resources
 
 ``` bash
-# get calculation, machine-learning and ms-excel components
+# interested for calculation, machine-learning, ms-excel
 sws install science
+
+# interested for processing and scraping the web
+sws install web
 ```
 
 ## Epilogue: a new life starts now
