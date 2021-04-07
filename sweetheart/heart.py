@@ -11,6 +11,16 @@ from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
 
+try:
+    import cherrypy
+except:
+    class cherrypy:
+        @staticmethod
+        def expose(*args):
+            """ set cherrypy.expose as a ghost method """
+            pass
+
+
 class BaseService:
 
     def __init__(self,url:str,config:BaseConfig) -> None:
@@ -83,12 +93,11 @@ class HttpServer(BaseService):
     def __init__(self,config:BaseConfig) -> None:
         """ set Starlette web-app as a service """
         
-        #NOTE: url auto set here from config
+        # auto set url from config
         super().__init__(config.async_host,config)
         self.data = []
 
-        #NOTE: self.command not set here
-        #self.command = f"{config.python_bin} -m uvicorn $*"
+        # self.command = f"{config.python_bin} -m uvicorn $*"
 
         # set default uvivorn server args
         self.uargs = {
@@ -168,30 +177,23 @@ class Notebook(BaseService):
         self.run_local(service=True)
 
 
-class Documentation(BaseService):
+class StaticServer(BaseService):
 
     def __init__(self,config:BaseConfig,run_local:bool=False) -> None:
-        """ FIXME: for test
-            set mdBook as a service for buildin documentations
-            server starts immediatly when run_local is True """
+        """ set cherrypy as a service for serving static contents
+            should be used for improving server performances if needed """
 
-        #NOTE: auto set url from config
-        super().__init__(config.mdbook_host,config)
+        # auto set url from config
+        super().__init__(config.static_host,config)
 
-        self.cwd = f"{config.root_path}/documentation"
-        self.mdbook = f"{config.subproc['rustpath']}/mdbook"
+    @cherrypy.expose
+    def default(self):
+        return """
+          <div style="text-align:center;">
+            <h1><br><br>I'm Ready<br><br></h1>
+            <h3>cherrypy server is running</h3>
+          </div>"""
 
-        # self.command = f"{self.mdbook} -d {config['documentation_dir']} \
-        #     -n {self.url} -p {self.port}"
-
-        if run_local: self.run_local(service=True)
-
-    def init(self,dir:str,input:str="n",**kwargs):
-        """ create new book directory and a deliverable access link """
-
-        sp.run(self.mdbook,"init","--force",dir,cwd=self.cwd,
-            capture_output=True,text=True,input=input,**kwargs)
-
-        pth = os.path.join
-        os.symlink(pth(self.cwd,dir),pth(self.config['working_dir'],dir))
-        
+    def cli_func(self, args):
+        """ CherryPy command line function """
+        cherrypy.quickstart(self,config=self.config.subproc['cherrypy'])

@@ -14,7 +14,7 @@ def set_config(
     """ set or reset sweetheart configuration 
         allow working with differents projects and configs """
 
-    #NOTE: custom project name not yet allowed
+    #FIXME: custom project name not allowed
     assert project == "sweetheart"
 
     global config
@@ -23,8 +23,8 @@ def set_config(
 
     try: 
         # update config from given json file
-        with open(config.config_file) as infile:
-            config.update(json.load(infile))
+        with open(config.config_file) as fi:
+            config.update(json.load(fi))
             verbose("config file:",config.config_file)
     except: pass
 
@@ -33,15 +33,15 @@ def set_config(
 
     try: 
         # get subproc settings from given json file
-        with open(config.subproc_file) as infile:
-            subproc_settings = json.load(infile)
+        with open(config.subproc_file) as fi:
+            subproc_settings = json.load(fi)
             verbose("subproc file:",config.subproc_file)
 
         # fix updatable subproc settings here
         for key in ('pyenv','rustpath','codepath','mongopath'):
 
             value = subproc_settings.get(key)
-            if key == 'pyenv': 
+            if value and key == 'pyenv': 
                 BaseConfig.python_env = value
                 BaseConfig.python_bin = f"{value}/bin/python"
             elif value:
@@ -108,6 +108,7 @@ def sws(*args):
         'mdbook': [f"{sb['rustpath']}/mdbook",*args[1:]],
         'sweet': [py,"-m","sweetheart.sweet",*args[1:]],
         'start': [py,"-m","sweetheart.sweet","start",*args[1:]],
+        'install': [py,"-m","sweetheart.sweet","install",*args[1:]],
         'jupyter': [py,"-m","jupyter",*args[1:]],
         }
 
@@ -117,6 +118,7 @@ def sws(*args):
 
     try: sp.run(*switch.get(args[0],args),cwd=cwd)
     except: echo("sws has been interrupted")
+
 
 def install(*packages):
 
@@ -187,6 +189,11 @@ if __name__ == "__main__":
     cli.opt("subargs",nargs=cli.REMAINDER,help="remaining args processed by SWeet Shell")
     cli.set_function(lambda args: sws(*args.subargs))
 
+    # create subparser for the 'install' command:
+    cli.sub("install",help="easy way for installing new components")
+    cli.opt("packages",nargs="+",help="names of packages to install: science|web")
+    cli.set_function(lambda args: install(*args.packages))
+
     # create subparser for the 'start' command:
     cli.sub("start",help="start webapp with required services")
     cli.set_function(cli.quickstart)
@@ -199,11 +206,6 @@ if __name__ == "__main__":
 
     cli.opt("-s","--server-only",action="store_true",
         help="start Http server without opening webbrowser")
-
-    # create subparser for the 'install' command:
-    cli.sub("install",help="easy way for installing new components")
-    cli.opt("packages",nargs="+",help="names of packages: science|web")
-    cli.set_function(lambda args: install(*args.packages))
 
 
     # execute command line arguments

@@ -36,7 +36,8 @@ class sp:
     @classmethod
     def set_python_env(cls,**kwargs):
         """ get python venv path from poetry and set it within config
-            beware that path must exist and contain a poetry project """
+            beware that Baseconfig.cwd or cwd kwargs has to be given 
+            when current working dir doesn't include a poetry project """
 
         env = cls.poetry("env","info","--path",
             text=True,capture_output=True,**kwargs).stdout.strip()
@@ -81,15 +82,16 @@ class BaseConfig(UserDict):
         # default productive settings
         self.async_host = "http://127.0.0.1:8000"# uvicorn
         self.static_host = "http://127.0.0.1:8080"# cherrypy
-        self.database_host = "mongodb://127.0.0.1:27017"# mongoDB
-        self.jupyter_host = "http://127.0.0.1:8888"# jupyterlab
-        self.mdbook_host = "http://127.0.0.1:3000"# mdbook
+        self.database_host = "mongodb://127.0.0.1:27017"
+        self.jupyter_host = "http://127.0.0.1:8888"
+        self.mdbook_host = "http://127.0.0.1:3000"
 
         # subprocess settings
         self.subproc = {
             'rustpath': f"{self.HOME}/.cargo/bin",
             'codepath': f"{self.root_path}/programs/my_python",# no / at end
             'mongopath': f"{self.root_path}/database",
+            'cherrypy': f"{self.root_path}/configuration/cherrypy.conf",
             'msedge.exe': f"cmd.exe /c start msedge --app=",
             'firefox': f"firefox ",# space is needed
         }
@@ -99,6 +101,7 @@ class BaseConfig(UserDict):
             "working_dir": f"{self.root_path}/webpages",
             "notebooks_dir": f"{self.root_path}/documentation/notebooks",
             "selected_DB": "test",
+            "webbrowser": "default",
             
             "templates_dir": "templates",
             "templates_settings": {
@@ -112,9 +115,6 @@ class BaseConfig(UserDict):
             "static_dirs": {
                 "/resources": "resources",
                 "/documentation": f"sweetbook",
-            },
-            "cherrypy": {
-                "/": f"{self.root_path}/configuration/cherrypy.conf",
             },}
 
     def welcome(self) -> str:
@@ -161,4 +161,4 @@ def echo(*args,mode="default",blank=False):
 
 def verbose(*args,level:int=1):
     """convenient function for verbose messages"""
-    if BaseConfig.verbosity >= level: print(" ",*args)
+    if BaseConfig.verbosity >= level: print("",*args)

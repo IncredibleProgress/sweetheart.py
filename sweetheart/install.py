@@ -1,6 +1,10 @@
 
 from sweetheart.globals import *
 
+from zipfile import ZipFile
+from urllib.parse import urljoin
+from urllib.request import urlretrieve
+
 
 def init(config:BaseConfig):
     """ set require configuration before sweetheart installation
@@ -40,7 +44,7 @@ def init(config:BaseConfig):
             f"{config.root_path}/webpages/sweetbook")
     except:
         verbose("\n*an error occured creating symlinks during init process",
-            "\n an expected cause is that links are already existing")
+            "\n an expected cause coukld be that links are already existing")
 
 
 class BaseInstall:
@@ -54,8 +58,7 @@ class BaseInstall:
         self.packages_file = f"{config.root_path}/configuration/packages.json"
 
         # if config.project != "sweetheart":
-        #     sp.run(config.poetry_bin,'new','my_python',
-        #         cwd= f"{config.root_path}/programs")
+        #     pass
 
     def apt(self,libs:list,**kwargs):
         """ install distro packages using apt """
@@ -74,7 +77,6 @@ class BaseInstall:
         """ install python packages using poetry """
 
         echo("poetry add python modules:",*libs,blank=True)
-        #s.chdir(self.config.subproc['codepath'])
         return sp.poetry("add",*libs,**kwargs)
 
     def npm(self,libs:list,init=False,**kwargs):
@@ -112,9 +114,6 @@ class BaseInstall:
     def download(self,files_list:list):
         """ download given listed files from github """
 
-        from urllib.parse import urljoin
-        from urllib.request import urlretrieve
-
         for relpath in files_list:
             echo("download file:",relpath)
             urlretrieve(urljoin(self.raw_github,relpath),
@@ -123,7 +122,6 @@ class BaseInstall:
     def unzip_doc(self,zipfile:str,remove:bool=True):
         """ unzip and build documentation """
 
-        from zipfile import ZipFile
         os.chdir(f"{self.config.root_path}/documentation")
         name,ext = os.path.splitext(zipfile)
         assert ext == ".zip"
