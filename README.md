@@ -5,11 +5,11 @@
 
 Since Ubuntu 20.04 can be installed as usual softwares within Windows 10, it provides an incredible way for any organization to develop, deploy, and administrate **powerful responsive web-apps including AI** on its own local network keeping high capabilities of integration with the already existing tools like databases, MS-Excel, and SAP.
 
-Sweetheart provides a simple Python/Html centric approach leading you implementing best components and best coding practices. Due to the current top-rated place of the Python language regarding to data processing, calculations and AI, this makes sweetheart a fast and ideal toolkit to e-volute towards **Industry4.0** precepts and innovative ideas.
+Sweetheart provides a simple Python/Html centric approach leading you implementing best components and best coding practices. Due to the top-rated place of the Python language regarding to data processing, calculations and AI, this makes sweetheart a fast and ideal toolkit to e-volute towards **Industry4.0** precepts and innovative ideas.
 
 Sweetheart is shared under the [CeCILL-C FREE SOFTWARE LICENSE AGREEMENT](https://github.com/IncredibleProgress/sweetheart.py/blob/master/LICENSE).
 
-## Get coding full power at the speedlight including AI
+## Get coding full power including AI at the light speed
 
 Sweetheart supports you getting coding full power from scratch:
 
@@ -24,14 +24,14 @@ Sweetheart supports you getting coding full power from scratch:
 
 ## Stick to good standards without thinking about it
 
-Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. It just intends to transform you step-wise in a good driver and maybe in a pilot! Due to provided components, configuration and documentation **you will learn quickly to make great python/html code** including up-to-date best practices and patterns. You won't learn Sweetheart itself, you will learn Python/Html real programming life like any other developer, but gradually and under control. Meaning that you don't need any kind of expertise to use the good things in the right way.
+Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. It just intends to transform you stepwise in a good driver and maybe in a pilot! Due to provided components, configuration and documentation **you will learn quickly to make great python/html code** including up-to-date best practices and patterns. You won't learn Sweetheart itself, you will learn Python/Html real programming life like any other developer, but gradually and under control. Meaning that you don't need any kind of expertise to use the good things in the right way.
 
 ## The highest quality components which can be adopted by newbies
 
 Sweetheart delivers a stock of ready-to-use features:
 
-- backend language: [**Python**](https://www.python.org/)
-- provided database server: [**MongoDB**](https://www.mongodb.com/)
+- backend language: [Python](https://www.python.org/)
+- provided database server: [MongoDB](https://www.mongodb.com/)
 - provided asynchronous webserver: [Uvicorn](https://www.uvicorn.org/)
 - optionnal webserver for static contents: [CherryPy](https://cherrypy.org/)
 - provided asgi framework: [Starlette](https://www.starlette.io/), [FastApi](https://fastapi.tiangolo.com/)
@@ -42,9 +42,9 @@ Sweetheart delivers a stock of ready-to-use features:
 - optionnal frontend language: [Typescript](https://www.typescriptlang.org/), [WebAssembly](https://www.assemblyscript.org/)
 - optionnal low-level language: [Rust](https://www.rust-lang.org/)
 
-**And all other nice things you wish** using [apt](https://en.wikipedia.org/wiki/APT_(software)), [cargo](https://doc.rust-lang.org/cargo/), [pip](https://pip.pypa.io/en/stable/) and [npm](https://docs.npmjs.com/about-npm/): Sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting any new project.
+**And all other nice things you wish** using [poetry](https://python-poetry.org/), [npm](https://docs.npmjs.com/about-npm/), [apt](https://en.wikipedia.org/wiki/APT_(software)) and [cargo](https://doc.rust-lang.org/cargo/): Sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting new projects.
 
-In a first approach just consider these provide to you **an incredible full-stacked sandbox**. In a second time you will take benefits of Sweetheart as a low-costs and convenient super-orchestrator.
+In a first approach consider it provides to you **an incredible full-stacked sandbox**. In a second time you will take benefits of Sweetheart as a convenient super-orchestrator and for low-costs.
 
 ## Keep permanently innovative capabilities
 
@@ -79,19 +79,23 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 
 <div style="text-align:center;">
   <h1>Welcome!</h1>
-  <p>get coding full power at the speedlight</p>
+  <p>get coding full power at the light speed now</p>
 </div>
 ```
 
 ## Install and run Sweetheart
 
+### Windows 10: WSL must be set up
+
+Discovering what is the WSL, have a look at the [Microsoft documentation](https://docs.microsoft.com/en-us/windows/wsl/about). Then install *Ubuntu 20.04* via the Windows Store. At this step installing *VS Code* and *Windows Terminal* can be recommended to you too. When done click on Ubuntu within start menu, and now *Bash* is runing!
+
 ### first steps with Bash
 
 ``` bash
-# first set prerequisites
+# set prerequisites
 curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -
 
-# then get sweetheart components
+# then restart bash and get initial components
 bash
 sws sweet --init
 
@@ -99,7 +103,7 @@ sws sweet --init
 sws start --jupyter-lab
 ```
 
-Be quite, there are no heavy installation process which could badly interact with the operating system. Everything goes and runs safely within dedicated */home* directories. [Click-here]() for detailed informations.
+There is here no heavy installation process which could badly interact with the operating system. Everything goes and runs safely within dedicated */home* directories. [Click-here]() for detailed informations.
 
 ### get power with many additionnal resources
 
@@ -107,10 +111,10 @@ Be quite, there are no heavy installation process which could badly interact wit
 # interested for calculation, machine-learning, ms-excel
 sws install science
 
-# interested for processing and scraping the web
+# interested for processing or scraping the web
 sws install web
 ```
 
 ## Epilogue: a new life starts now
 
-Even at this Beta step, Sweetheart allows you to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using amazing raw materials widely used by GAFAM and others!
+Even at this Beta-stage, Sweetheart allows you to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using amazing raw materials widely used by GAFAM and others!

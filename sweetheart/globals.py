@@ -20,11 +20,14 @@ class sp:
         xterm = f"xterm -C -geometry 190x19 -e {cmd} &"
 
         assert select in "xterm|winterm|wsl"
-        cls.shell(eval(select))
+        os.system(eval(select))
         
     @classmethod
     def poetry(cls,*args,**kwargs):
-        if hasattr(BaseConfig,'cwd'): kwargs['cwd'] = BaseConfig.cwd
+
+        if hasattr(BaseConfig,'_'):
+            kwargs['cwd'] = BaseConfig._.subproc['codepath']
+
         return cls.run(BaseConfig.poetry_bin,*args,**kwargs)
 
     @classmethod
@@ -36,7 +39,7 @@ class sp:
     @classmethod
     def set_python_env(cls,**kwargs):
         """ get python venv path from poetry and set it within config
-            beware that Baseconfig.cwd or cwd kwargs has to be given 
+            beware that Baseconfig._ or cwd kwargs has to be given 
             when current working dir doesn't include a poetry project """
 
         env = cls.poetry("env","info","--path",

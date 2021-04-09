@@ -48,11 +48,11 @@ def set_config(
                 config.subproc[key] = value
     except: pass
 
-    # ensure python/poetry subprocess
-    BaseConfig.cwd = config.subproc['codepath']
+    # ensure python subprocess
     if hasattr(BaseConfig,'python_env') is False:
         sp.set_python_env()
-    
+
+    BaseConfig._ = config
     return config
 
 
@@ -71,13 +71,19 @@ def webbrowser(url:str):
     else: sp.shell(config.subproc['firefox']+url)
 
 
-def quickstart(*args):
+def quickstart(*args,_cli_args=None):
     """ build and run webapp for the existing config """
     from sweetheart.heart import HttpServer,Database,Notebook
 
     try: assert 'config' in globals()
     except: set_config(project="sweetheart")
 
+    # set config from cli if given
+    if _cli_args:
+        config.is_webapp_open = not _cli_args.server_only
+        config.is_mongodb_local = not _cli_args.mongo_disabled
+        config.is_jupyter_local = _cli_args.jupyter_lab
+    
     # start Jupyterlab server
     if config.is_jupyter_local:
         Notebook(config,run_local=True)
@@ -112,7 +118,7 @@ def sws(*args):
         'jupyter': [py,"-m","jupyter",*args[1:]],
         }
 
-    if args[0]=='poetry': cwd= BaseConfig.cwd
+    if args[0]=='poetry': cwd= cf.subproc['codepath']
     elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
     else: cwd= config.PWD
 
@@ -151,20 +157,21 @@ class CommandLineInterface:
         self.dict[args[0]] = self.subparser.add_parser(*args,**kwargs)
     
     def set_function(self,func):
-        """ set a related function for the current parser or subparser """
+        """ set related function for the current parser or subparser """
+        self.dict[self.cur].set_defaults(func=func)
+
+    def set_service(self,classname:str):
+        """ set related service for the current parser or subparser """
+
+        def func(args):
+            exec(f"from sweetheart.heart import {classname}")
+            eval(f"{classname}(config).cli_func(args)")
+
         self.dict[self.cur].set_defaults(func=func)
 
     def set_parser(self):
         self.args = self.parser.parse_args()
         return self.args
-
-    def quickstart(self,args):
-        """ set quickstart call from cli """
-
-        config.is_webapp = not args.server_only
-        config.is_mongodb_local = not args.mongo_disabled
-        config.is_jupyter_local = args.jupyter_lab
-        quickstart()
 
 
 if __name__ == "__main__":
@@ -172,16 +179,30 @@ if __name__ == "__main__":
     # build sweetheart command iine interface
     cli = CommandLineInterface()
     cli.set_function(lambda args:
-        echo("type 'sws sweet --help' for getting some help",blank=True))
+        echo("type 'sws sweet --help' for getting some help"))
 
     cli.opt("-v","--verbose",action="count",default=0,
         help="get additional messages about on-going process")
 
-    cli.opt("-p",dest="project",nargs="?",const="sweetheart",
+    cli.opt("-p",dest="project",nargs=1,
         help="set a project name different of sweetheart")
 
     cli.opt("-i","--init",action="store_true",
         help="launch init process for building new sweetheart project")
+
+
+    # create subparser for the 'start' command:
+    cli.sub("start",help="start webapp with required services")
+    cli.set_function(lambda args: quickstart(_cli_args=args))
+
+    cli.opt("-x","--mongo-disabled",action="store_true",
+        help="start without local Mongo Database server")
+
+    cli.opt("-j","--jupyter-lab",action="store_true",
+        help="start JupyterLab http server for enabling notebooks")
+
+    cli.opt("-s","--server-only",action="store_true",
+        help="start Http server without opening webbrowser")
 
 
     # create subparser for the 'shell' command:
@@ -194,31 +215,30 @@ if __name__ == "__main__":
     cli.opt("packages",nargs="+",help="names of packages to install: science|web")
     cli.set_function(lambda args: install(*args.packages))
 
-    # create subparser for the 'start' command:
-    cli.sub("start",help="start webapp with required services")
-    cli.set_function(cli.quickstart)
+    # create subparsers for services
+    cli.sub("mongodb-server",help="run the Mongo Database server")
+    cli.opt("-o","--open-terminal",action="store_true")
+    cli.set_service("Database")
 
-    cli.opt("-x","--mongo-disabled",action="store_true",
-        help="start without local Mongo Database server")
+    cli.sub("jupyter-server",help="run the JupyterLab server")
+    cli.opt("-o","--open-terminal",action="store_true")
+    cli.set_service("Notebook")
 
-    cli.opt("-j","--jupyter-lab",action="store_true",
-        help="start JupyterLab http server for enabling notebooks")
-
-    cli.opt("-s","--server-only",action="store_true",
-        help="start Http server without opening webbrowser")
+    cli.sub("cherrypy-server",help="run cherrypy as http static server")
+    cli.opt("-o","--open-terminal",action="store_true")
+    cli.set_service("StaticServer")
 
 
     # execute command line arguments
     argv = cli.set_parser()
     BaseConfig.verbosity = argv.verbose
 
-    if argv.project:
+    if getattr(argv,"project",None):
         set_config(project=argv.project)
     else:
         set_config(project="sweetheart")
 
-    if argv.init is True:
-        
+    if argv.init:
         from sweetheart.install import init
         init(config)
 

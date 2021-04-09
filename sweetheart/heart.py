@@ -23,7 +23,7 @@ except:
 
 class BaseService:
 
-    def __init__(self,url:str,config:BaseConfig) -> None:
+    def __init__(self,url:str,config:BaseConfig):
         """ set basic features of sweeheart service objects
             the given url should follow http://host:port pattern
             the child class must set self.command attribute """
@@ -50,8 +50,12 @@ class BaseService:
             sp.shell(self.command)
 
     def cli_func(self,args):
-        """ provided function for command line interface """
-        raise NotImplementedError
+        """ provided default function for command line interface """
+
+        if getattr(args,"open_terminal",None):
+            self.run_local(service=True)
+        else:
+            self.run_local(service=False)
 
 
 class Database(BaseService):
@@ -59,7 +63,7 @@ class Database(BaseService):
     def __init__(self,config:BaseConfig,run_local:bool=False):
         """ set Mongo Database as a service """
 
-        #NOTE: url auto set from config
+        # url auto set from config
         super().__init__(config.database_host,config)
         self.command = f"mongod --dbpath={config.subproc['mongopath']}"
 
@@ -82,15 +86,11 @@ class Database(BaseService):
             self.database.list_collection_names())
 
         return self.client,self.database
-    
-    def cli_func(self,args):
-        """ provided function for command line interface """
-        self.run_local(service=False)
 
 
 class HttpServer(BaseService):
 
-    def __init__(self,config:BaseConfig) -> None:
+    def __init__(self,config:BaseConfig):
         """ set Starlette web-app as a service """
         
         # auto set url from config
@@ -144,16 +144,15 @@ class HttpServer(BaseService):
             assert os.getcwd() == self.config['working_dir']
             uvicorn.run(self.app,**self.uargs)
         else:
-            # run self.command if given
-            super().run_local(service)
+            raise NotImplementedError
 
 
 class Notebook(BaseService):
 
-    def __init__(self,config:BaseConfig,run_local:bool=False) -> None:
+    def __init__(self,config:BaseConfig,run_local:bool=False):
         """ set JupyterLab as a service """
 
-        #NOTE: auto set url from config
+        # auto set url from config
         super().__init__(config.jupyter_host,config)
         
         self.command = f"{config.python_bin} -m jupyterlab \
@@ -172,19 +171,18 @@ class Notebook(BaseService):
         """ required for JupyterLab initialization """
         sp.python("-m","jupyter","notebook","password","-y")
     
-    def cli_func(self, args):
-        """ JupyterLab command line function """
-        self.run_local(service=True)
-
 
 class StaticServer(BaseService):
 
-    def __init__(self,config:BaseConfig,run_local:bool=False) -> None:
+    def __init__(self,config:BaseConfig,run_local:bool=False):
         """ set cherrypy as a service for serving static contents
             should be used for improving server performances if needed """
 
         # auto set url from config
         super().__init__(config.static_host,config)
+        
+        self.command =\
+            f"{config.python_bin} -m sweetheart.sweet cherrypy-server"
 
     @cherrypy.expose
     def default(self):
@@ -194,6 +192,9 @@ class StaticServer(BaseService):
             <h3>cherrypy server is running</h3>
           </div>"""
 
-    def cli_func(self, args):
-        """ CherryPy command line function """
-        cherrypy.quickstart(self,config=self.config.subproc['cherrypy'])
+    def run_local(self,service):
+        """ run CherryPy for serving statics """
+        if service == False:
+            cherrypy.quickstart(self,config=self.config.subproc['cherrypy'])
+        else: 
+            sp.terminal(self.command,self.terminal)
