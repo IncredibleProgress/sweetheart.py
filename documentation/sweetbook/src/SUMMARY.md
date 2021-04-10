@@ -1,15 +1,15 @@
 
-[Welcome](./welcome.md)
-[Installation](./empty.md)
+[Welcome](welcome.md)
+[Installation](empty.md)
 [Getting started]()
 [Build documentations]()
-[Bibliography](./biblio.md)
+[Bibliography](biblio.md)
 
 # Fast learning
 
-- [Python](./python.md)
-- [Html/Css]()
-- [Data processing](./process.md)
+- [Python](python.md)
+- [Html&Css]()
+- [Data processing]()
 - [Good practices]()
 
 # Go further
@@ -20,10 +20,10 @@
 
 # In deep
 
-- [Bash](./bash.md)
+- [Bash](bash.md)
 - [Rust]()
 
 # Developpement
 
-- [History of versions](./versions.md)
+- [History of versions]()
 - [Contribute]()

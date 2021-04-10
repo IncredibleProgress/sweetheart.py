@@ -10,7 +10,6 @@ from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
 from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
-
 try:
     import cherrypy
 except:
@@ -42,19 +41,15 @@ class BaseService:
         """ start and run the command attribute locally
             self.command must be set previously """
 
-        if service:
-            sp.terminal(self.command,self.terminal)
-        else:
-            sp.shell(self.command)
+        if service: sp.terminal(self.command,self.terminal)
+        else: sp.shell(self.command)
 
     def cli_func(self,args):
         """ provided default function for command line interface """
 
-        echo(f"run service\n{self.command}")
-        if getattr(args,"open_terminal",None):
-            self.run_local(service=True)
-        else:
-            self.run_local(service=False)
+        echo(f"run service:\n{self.command}")
+        if getattr(args,"open_terminal",None): self.run_local(service=True)
+        else: self.run_local(service=False)
 
 
 class Database(BaseService):
@@ -96,8 +91,6 @@ class HttpServer(BaseService):
         super().__init__(config.async_host,config)
         self.data = []
 
-        # self.command = f"{config.python_bin} -m uvicorn $*"
-
         # set default uvivorn server args
         self.uargs = {
             "host": self.host,
@@ -136,7 +129,7 @@ class HttpServer(BaseService):
             open_with(self.url)
 
     def run_local(self,service:bool):
-        """ run web-app within local Http server """
+        """ run webapp within local Http server """
 
         if service == False:
             assert os.getcwd() == self.config['working_dir']
@@ -152,7 +145,7 @@ class Notebook(BaseService):
 
         # auto set url from config
         super().__init__(config.jupyter_host,config)
-        
+
         self.command = f"{config.python_bin} -m jupyterlab \
             --no-browser --notebook-dir={config['notebooks_dir']}"
 

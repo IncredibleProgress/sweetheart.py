@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sweetheart"
-version = "0.1.1-alpha"
+version = "0.1.1-beta"
 description = "less code, more power, AI included"
 authors = ["Nicolas Champion <champion.nicolas@gmail.com>"]
 license = "CECILL-C"

@@ -125,7 +125,7 @@ class BaseConfig(UserDict):
         """ return default Html welcome message """
 
         return f"""
-          <div style="text-align:center;font-size:1.2em;">
+          <div style="text-align:center;font-size:1.1em;">
             <h1><br><br>Welcome {self.USER} !<br><br></h1>
             <h2>sweetheart</h2>
             <p>a supercharged heart for the non-expert hands</p>

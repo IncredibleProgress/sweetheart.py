@@ -110,18 +110,19 @@ class BaseInstall:
             self.install_libs(json_pkg[pkg])
 
 
-#ensure_prerequisites()
+ensure_prerequisites()
 def init(config:BaseConfig):
     """ set require configuration before sweetheart installation
         and intends to provide minimalistic sweetheart features """
 
     PKG_INIT = { 
+        'documentation': "sweetbook.zip",
         'cargolibs': ["mdbook","mdbook-toc"],
         'aptlibs': ["xterm","rustc","mongodb","node-typescript","npm"],
         'npmlibs': ["brython","assemblyscript","bootstrap","vue"],
         'pylibs': ["bottle","pymongo","uvicorn","aiofiles","fastapi","jupyterlab"],
-        'files': ["configuration/packages.json","webpages/HTML","documentation/sweetbook.zip"],
-        'documentation': "sweetbook.zip" }
+        'files': ["configuration/packages.json","configuration/cherrypy.conf",
+            "webpages/HTML","documentation/sweetbook.zip"] }
 
     # require directories
     for basedir in [

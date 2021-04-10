@@ -1,8 +1,15 @@
 # Bash
+*the linux shell power in your hands*
 
-bash is the default shell within ubuntu
+## SWeet Shell commands
 
-## file system commands
+    sws sweet --init        #install default sweetheart components 
+    sws install <package>   #install additionnal resources
+    sws start -j            #start and discover sweeheart and jupyter
+    sws python              #get ipython shell in dedicated virtual env
+    sws poetry add <module> #install new python module in dedicated virtual env
+
+## File system commands
 
 ### working directory
 
@@ -13,14 +20,9 @@ bash is the default shell within ubuntu
     cd ../..    #change current directory to the parent of the parent directory
     cd <match>* #change current directory to first directory starting with <match>
 
-usual commands examples coding within sweetheart:
-
-    cd /opt/sweet*/programs
-    cd /opt/sweet*/webpages
-
 ### list files within a directory
 
-    ls          #lists your files in the current directory
-    ls <dir>    #lists your files in the given directory <dir>
-    ls -l       #lists your files in the current dir with details
-    ls -l <dir> #lists your files in the given directory <dir> 
+    ls          #list your files in the current directory
+    ls <dir>    #list your files in the given directory <dir>
+    ls -l       #list your files in the current dir with details
+    ls -l <dir> #list your files in the given directory <dir> 
