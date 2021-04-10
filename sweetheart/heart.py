@@ -3,6 +3,7 @@ heart.py is ... the heart of sweetheart !
 it provides services and facilities classes 
 """
 from sweetheart.globals import *
+from bottle import template
 
 import uvicorn
 from starlette.applications import Starlette
@@ -97,6 +98,12 @@ class HttpServer(BaseService):
             "port": self.port,
             "log_level": "info" }
 
+    def HTMLTemplate(self,filename:str,**kwargs):
+        return HTMLResponse(template(
+            f"{self.config['templates_dir']}/{filename}",
+            **self.config['templates_settings'],
+            **kwargs ))
+
     def mount(self,*args:Route,open_with:callable=None):
         """ mount given Route(s) and set facilities from config
             open_with allows setting a function for opening self.url """
@@ -106,9 +113,9 @@ class HttpServer(BaseService):
         echo("mount webapp:",self.config['working_dir'])
 
         if not args:
-            # set a welcome message
-            self.data.append(
-                Route("/",HTMLResponse(self.config.welcome())) )
+            self.data.extend([
+                Route("/",HTMLResponse(self.config.welcome())),
+            ])
         else:
             self.data.extend(args)
 
@@ -131,11 +138,11 @@ class HttpServer(BaseService):
     def run_local(self,service:bool):
         """ run webapp within local Http server """
 
-        if service == False:
+        if service:
+            raise NotImplementedError
+        else:
             assert os.getcwd() == self.config['working_dir']
             uvicorn.run(self.app,**self.uargs)
-        else:
-            raise NotImplementedError
 
 
 class Notebook(BaseService):
@@ -187,7 +194,5 @@ class StaticServer(BaseService):
 
     def run_local(self,service):
         """ run CherryPy for serving statics """
-        if service:
-            sp.terminal(self.command,self.terminal)
-        else: 
-            cherrypy.quickstart(self,config=self.config.subproc['cherrypy'])
+        if service: sp.terminal(self.command,self.terminal)
+        else: cherrypy.quickstart(self,config=self.config.subproc['cherrypy'])

@@ -1,20 +1,15 @@
-% rebase("sweet.HTML")
+%rebase("HTML")
 
-<div class="txtcenter">
-  <br>
-  <h1>sweetheart.py</h1>
-  <br>
-  <br>
+<div style="text-align:center;">
+  <h1><br>sweetheart<br><br></h1>
+
 <form method="post">
-  <h6>connexion</h6>
-  <br>
-  <input type="text" placeholder="utilisateur" name="username">
-  <br>
-  <br>
-  <input type="password" placeholder="mot de passe" name="password">
-  <br>
-  <br>
-  <br>
-  <input type="submit" value="Ok">
+  <h6><br>connexion<br><br></h6>
+
+  <p><input type="text" placeholder="utilisateur" name="username"><br></p>
+  <p><input type="password" placeholder="mot de passe" name="password"><br></p>
+
+  <p><br><input type="submit" value="  ok  "></p>
+
 </form>
 </div>
