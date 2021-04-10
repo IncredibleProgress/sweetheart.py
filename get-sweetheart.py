@@ -5,6 +5,8 @@ allow installation without any python dependencies matter
 import os,sys,stat,json
 from subprocess import run
 
+__version__  = "0.1.1"
+
 # paths setting
 POETRY_BIN = f"{os.environ['HOME']}/.poetry/bin/poetry"
 CONFIG_PATH = f"{os.environ['HOME']}/.sweet/sweetheart/configuration"

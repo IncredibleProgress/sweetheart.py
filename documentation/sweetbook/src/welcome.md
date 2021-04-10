@@ -1,9 +1,9 @@
 # Discovering Sweetheart 
-*make programming a joy leading you to best coding practices and performances*
+*make programming a joy leading you to best coding practices*
 
 ## foreword
 
-I'm happy that you look interested by the Sweetheart project. I spent many hours on my free time to provide the best of what coding can offer. Thanks a lot to my wife and my children also for their long patience and understanding. Now discover what you really can do with computers and furthermore... at the speed-light!
+I'm happy that you look interested by the Sweetheart project. I spent many hours on my free time to provide the best of what coding can offer. I thank a lot my wife and my children also very much for their understanding and long patience. Now discover what you really can do with computers and furthermore at the light speed!
 
  *Nicolas Champion, the Sweetheart creator*
 

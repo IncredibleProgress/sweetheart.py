@@ -11,7 +11,7 @@ class sp:
     shell = lambda str,**kwargs: subprocess.run(str,**kwargs,shell=True)
 
     @classmethod
-    def terminal(cls,cmd:str,select:str):
+    def terminal(cls,cmd:str,select:str,**kwargs):
         """ run cmd within selected terminal 
             select must be in xterm|winterm|wsl """
 
@@ -20,7 +20,7 @@ class sp:
         xterm = f"xterm -C -geometry 190x19 -e {cmd} &"
 
         assert select in "xterm|winterm|wsl"
-        os.system(eval(select))
+        cls.shell(eval(select),**kwargs)
         
     @classmethod
     def poetry(cls,*args,**kwargs):
@@ -63,6 +63,7 @@ class BaseConfig(UserDict):
     HOME = os.environ['HOME']
     USER = os.environ['USER'].capitalize()
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
+    #SWEETHEART = os.environ['SWEETHEART'] = 'sandbox'
 
     # default path settings
     poetry_bin = f"{HOME}/.poetry/bin/poetry"
@@ -164,4 +165,4 @@ def echo(*args,mode="default",blank=False):
 
 def verbose(*args,level:int=1):
     """convenient function for verbose messages"""
-    if BaseConfig.verbosity >= level: print("",*args)
+    if BaseConfig.verbosity >= level: print("sws::",*args)

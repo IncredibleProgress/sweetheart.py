@@ -6,51 +6,21 @@ from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
 
-def init(config:BaseConfig):
-    """ set require configuration before sweetheart installation
-        and intends to provide minimalistic sweetheart features """
+def ensure_prerequisites():
 
-    PKG_INIT = { 
-        'cargolibs': ["mdbook","mdbook-toc"],
-        'aptlibs': ["xterm","rustc","mongodb","node-typescript","npm"],
-        'npmlibs': ["brython","assemblyscript","bootstrap","vue"],
-        'pylibs': ["bottle","pymongo","uvicorn","aiofiles","fastapi","jupyterlab"],
-        'files': ["configuration/packages.json","webpages/HTML","documentation/sweetbook.zip"],
-        'documentation': "sweetbook.zip" }
+    if os.path.isfile(
+        f"{os.environ['HOME']}/.sweet/sweetheart/programs/my_python/pyproject.toml"):
+            verbose("install: existing prerequisites found")
+            return
 
-    # require directories
-    for basedir in [
-        #f"{config.root_path}/configuration",
-        f"{config.root_path}/database",
-        f"{config.root_path}/documentation/notebooks",
-        #f"{config.root_path}/documentation/sweetbook",
-        f"{config.root_path}/programs/scripts",
-        f"{config.root_path}/webpages/resources",
-        #f"{config.root_path}/webpages/markdown",
-        f"{config.root_path}/webpages/{config['templates_dir']}",
-    ]: os.makedirs(basedir,exist_ok=True)
+    sp.shell(BaseInstall.get_prereq)
 
-    # install default libs
-    installer = BaseInstall(config)
-    installer.install_libs(PKG_INIT,init=True)
-
-    try:
-        # provide installed javascript libs (Ubuntu)
-        os.symlink("/usr/share/javascript",
-            f"{config.root_path}/webpages/resources/javascript")
-
-        # provide sweetheart html documentation    
-        os.symlink(f"{config.root_path}/documentation/sweetbook/book",
-            f"{config.root_path}/webpages/sweetbook")
-    except:
-        verbose("\n*an error occured creating symlinks during init process",
-            "\n an expected cause coukld be that links are already existing")
-
-
+    
 class BaseInstall:
 
     raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"# / is needed
     get_poetry = "curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -"
+    get_prereq = "curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -"
 
     def __init__(self,config:BaseConfig) -> None:
 
@@ -138,3 +108,45 @@ class BaseInstall:
 
         for pkg in packages:
             self.install_libs(json_pkg[pkg])
+
+
+#ensure_prerequisites()
+def init(config:BaseConfig):
+    """ set require configuration before sweetheart installation
+        and intends to provide minimalistic sweetheart features """
+
+    PKG_INIT = { 
+        'cargolibs': ["mdbook","mdbook-toc"],
+        'aptlibs': ["xterm","rustc","mongodb","node-typescript","npm"],
+        'npmlibs': ["brython","assemblyscript","bootstrap","vue"],
+        'pylibs': ["bottle","pymongo","uvicorn","aiofiles","fastapi","jupyterlab"],
+        'files': ["configuration/packages.json","webpages/HTML","documentation/sweetbook.zip"],
+        'documentation': "sweetbook.zip" }
+
+    # require directories
+    for basedir in [
+        #f"{config.root_path}/configuration",
+        f"{config.root_path}/database",
+        f"{config.root_path}/documentation/notebooks",
+        #f"{config.root_path}/documentation/sweetbook",
+        f"{config.root_path}/programs/scripts",
+        f"{config.root_path}/webpages/resources",
+        #f"{config.root_path}/webpages/markdown",
+        f"{config.root_path}/webpages/{config['templates_dir']}",
+    ]: os.makedirs(basedir,exist_ok=True)
+
+    # install default libs
+    installer = BaseInstall(config)
+    installer.install_libs(PKG_INIT,init=True)
+
+    try:
+        # provide installed javascript libs (Ubuntu)
+        os.symlink("/usr/share/javascript",
+            f"{config.root_path}/webpages/resources/javascript")
+
+        # provide sweetheart html documentation    
+        os.symlink(f"{config.root_path}/documentation/sweetbook/book",
+            f"{config.root_path}/webpages/sweetbook")
+    except:
+        verbose("\n*an error occured creating symlinks during init process",
+            "\n an expected cause coukld be that links are already existing")

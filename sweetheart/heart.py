@@ -43,15 +43,14 @@ class BaseService:
             self.command must be set previously """
 
         if service:
-            # run service locally opening new shell
             sp.terminal(self.command,self.terminal)
         else:
-            # run service locally within current shell
             sp.shell(self.command)
 
     def cli_func(self,args):
         """ provided default function for command line interface """
 
+        echo(f"run service\n{self.command}")
         if getattr(args,"open_terminal",None):
             self.run_local(service=True)
         else:
@@ -140,7 +139,6 @@ class HttpServer(BaseService):
         """ run web-app within local Http server """
 
         if service == False:
-            #NOTE: current working dir should not be changed
             assert os.getcwd() == self.config['working_dir']
             uvicorn.run(self.app,**self.uargs)
         else:
@@ -184,6 +182,8 @@ class StaticServer(BaseService):
         self.command =\
             f"{config.python_bin} -m sweetheart.sweet cherrypy-server"
 
+        if run_local: self.run_local(service=True)
+
     @cherrypy.expose
     def default(self):
         return """
@@ -194,7 +194,7 @@ class StaticServer(BaseService):
 
     def run_local(self,service):
         """ run CherryPy for serving statics """
-        if service == False:
-            cherrypy.quickstart(self,config=self.config.subproc['cherrypy'])
-        else: 
+        if service:
             sp.terminal(self.command,self.terminal)
+        else: 
+            cherrypy.quickstart(self,config=self.config.subproc['cherrypy'])

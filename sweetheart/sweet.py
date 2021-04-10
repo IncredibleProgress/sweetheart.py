@@ -73,7 +73,6 @@ def webbrowser(url:str):
 
 def quickstart(*args,_cli_args=None):
     """ build and run webapp for the existing config """
-    from sweetheart.heart import HttpServer,Database,Notebook
 
     try: assert 'config' in globals()
     except: set_config(project="sweetheart")
@@ -83,16 +82,25 @@ def quickstart(*args,_cli_args=None):
         config.is_webapp_open = not _cli_args.server_only
         config.is_mongodb_local = not _cli_args.mongo_disabled
         config.is_jupyter_local = _cli_args.jupyter_lab
+        config.is_cherrypy_local = _cli_args.cherrypy
     
-    # start Jupyterlab server
+    # run Jupyterlab server
     if config.is_jupyter_local:
+        from sweetheart.heart import Notebook
         Notebook(config,run_local=True)
 
-    # connect mongo database server
+    # run CherryPy server
+    if config.is_cherrypy_local:
+        from sweetheart.heart import StaticServer
+        StaticServer(config,run_local=True)
+
+    # run MongoDB server
     if config.is_mongodb_local:
+        from sweetheart.heart import Database
         sp.mongo = Database(config,run_local=True)
 
     # build and start webapp
+    from sweetheart.heart import HttpServer
     webapp = HttpServer(config)
     webapp.mount(*args,open_with=webbrowser)
     webapp.run_local(service=False)
@@ -192,14 +200,17 @@ if __name__ == "__main__":
 
 
     # create subparser for the 'start' command:
-    cli.sub("start",help="start webapp with required services")
+    cli.sub("start",help="start webapp and the required services")
     cli.set_function(lambda args: quickstart(_cli_args=args))
 
     cli.opt("-x","--mongo-disabled",action="store_true",
         help="start without local Mongo Database server")
 
     cli.opt("-j","--jupyter-lab",action="store_true",
-        help="start JupyterLab http server for enabling notebooks")
+        help="start JupyterLab Http server for enabling notebooks")
+
+    cli.opt("-c","--cherrypy",action="store_true",
+        help="start CherryPy Http server for static contents")
 
     cli.opt("-s","--server-only",action="store_true",
         help="start Http server without opening webbrowser")
@@ -207,13 +218,18 @@ if __name__ == "__main__":
 
     # create subparser for the 'shell' command:
     cli.sub("shell",help="the SWeet Shell command line interface")
-    cli.opt("subargs",nargs=cli.REMAINDER,help="remaining args processed by SWeet Shell")
     cli.set_function(lambda args: sws(*args.subargs))
+
+    cli.opt("subargs",nargs=cli.REMAINDER,
+        help="remaining arguments processed by SWeet Shell")
 
     # create subparser for the 'install' command:
     cli.sub("install",help="easy way for installing new components")
-    cli.opt("packages",nargs="+",help="names of packages to install: science|web")
     cli.set_function(lambda args: install(*args.packages))
+
+    cli.opt("packages",nargs="+",
+        help="names of packages to install: science|web")
+
 
     # create subparsers for services
     cli.sub("mongodb-server",help="run the Mongo Database server")
@@ -243,7 +259,7 @@ if __name__ == "__main__":
         init(config)
 
         from sweetheart.heart import Notebook
-        echo("set JupyerLab ipkernel and required password",blank=True)
+        echo("set the JupyerLab ipkernel and required password",blank=True)
         jupyter = Notebook(config)
         jupyter.set_ipykernel()
         jupyter.set_password()

@@ -44,7 +44,7 @@ Sweetheart delivers a stock of ready-to-use features:
 
 **And all other nice things you wish** using [poetry](https://python-poetry.org/), [npm](https://docs.npmjs.com/about-npm/), [apt](https://en.wikipedia.org/wiki/APT_(software)) and [cargo](https://doc.rust-lang.org/cargo/): Sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting new projects.
 
-In a first approach consider it provides to you **an incredible full-stacked sandbox**. In a second time you will take benefits of Sweetheart as a convenient super-orchestrator and for low-costs.
+In a first approach consider it provides to you **an incredible full-stacked sandbox**. In a second time you will take benefits of Sweetheart as a convenient super-orchestrator for low-costs.
 
 ## Keep permanently innovative capabilities
 
@@ -85,7 +85,7 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 
 ## Install and run Sweetheart
 
-### Windows 10: WSL must be set up
+### WSL must be set up on Windows 10
 
 Discovering what is the WSL, have a look at the [Microsoft documentation](https://docs.microsoft.com/en-us/windows/wsl/about). Then install *Ubuntu 20.04* via the Windows Store. At this step installing *VS Code* and *Windows Terminal* can be recommended to you too. When done click on Ubuntu within start menu, and now *Bash* is runing!
 
