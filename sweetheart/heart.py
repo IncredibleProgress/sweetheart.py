@@ -5,6 +5,10 @@ it provides services and facilities classes
 from sweetheart.globals import *
 from bottle import template
 
+# patch running within JupyterLab
+import nest_asyncio
+nest_asyncio.apply()
+
 import uvicorn
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
