@@ -109,7 +109,7 @@ class BaseConfig(UserDict):
             
             "templates_dir": "templates",
             "templates_settings": {
-                "__load__": "py",
+                "__load__": "pylibs bootstrap",
                 "__async__": self.async_host,
                 "__static__": "",# ""=disabled
             },

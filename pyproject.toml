@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "sweetheart"
 version = "0.1.1-beta"
-description = "less code, more power, AI included"
+description = "get coding full power from scratch including AI"
 authors = ["Nicolas Champion <champion.nicolas@gmail.com>"]
 license = "CECILL-C"
 readme = "README.md"

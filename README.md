@@ -87,7 +87,7 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 
 ### set WSL on Windows 10
 
-Discovering what is the WSL, have a look at the [Microsoft documentation](https://docs.microsoft.com/en-us/windows/wsl/about). Then install *Ubuntu 20.04* via the Windows Store. At this step installing *VS Code* and *Windows Terminal* can be recommended to you too. When done click on Ubuntu within start menu, and now *Bash* is runing!
+Discovering what is the WSL, have a look at the [Microsoft documentation](https://docs.microsoft.com/en-us/windows/wsl/about). Then install *Ubuntu 20.04* via the Windows Store. At this step installing *VS Code* and *Windows Terminal* can be recommended to you too. When done click on Ubuntu within start menu, and now *Bash* is running!
 
 ### first steps with Bash
 
@@ -96,8 +96,7 @@ Discovering what is the WSL, have a look at the [Microsoft documentation](https:
 curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -
 
 # then restart bash and get initial components
-bash
-sws sweet --init
+bash sws sweet --init
 
 # at last run sweetheart enabling JupyterLab 
 sws start --jupyter-lab

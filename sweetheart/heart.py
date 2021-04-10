@@ -3,13 +3,14 @@ heart.py is ... the heart of sweetheart !
 it provides services and facilities classes 
 """
 from sweetheart.globals import *
-from bottle import template
 
 # patch running within JupyterLab
 import nest_asyncio
 nest_asyncio.apply()
 
 import uvicorn
+from bottle import template
+
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
 from starlette.routing import Route, Mount, WebSocketRoute
