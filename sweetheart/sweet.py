@@ -123,7 +123,7 @@ def sws(*args):
         'sweet': [py,"-m","sweetheart.sweet",*args[1:]],
         'start': [py,"-m","sweetheart.sweet","start",*args[1:]],
         'install': [py,"-m","sweetheart.sweet","install",*args[1:]],
-        'jupyter': [py,"-m","jupyter",*args[1:]],
+        'jupyter': [py,"-m","jupyterlab","--no-browser",*args[1:]],
         }
 
     if args[0]=='poetry': cwd= cf.subproc['codepath']

@@ -99,6 +99,7 @@ class HttpServer(BaseService):
             "log_level": "info" }
 
     def HTMLTemplate(self,filename:str,**kwargs):
+        os.chdir(self.config['working_dir'])
         return HTMLResponse(template(
             f"{self.config['templates_dir']}/{filename}",
             **self.config['templates_settings'],
