@@ -119,9 +119,11 @@ class HttpServer(BaseService):
         echo("mount webapp:",self.config['working_dir'])
 
         if not args:
-            self.data.extend([
-                Route("/",HTMLResponse(self.config.welcome())),
-            ])
+            # change port to 8181 (keep free 8000)
+            self.port = self.uargs['port'] = 8181
+            self.url = f"http://{self.host}:{self.port}"
+            # route welcome message
+            self.data.append(Route("/",HTMLResponse(self.config.welcome())))
         else:
             self.data.extend(args)
 

@@ -63,7 +63,6 @@ class BaseConfig(UserDict):
     HOME = os.environ['HOME']
     USER = os.environ['USER'].capitalize()
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
-    #SWEETHEART = os.environ['SWEETHEART'] = 'sandbox'
 
     # default path settings
     poetry_bin = f"{HOME}/.poetry/bin/poetry"
@@ -110,8 +109,8 @@ class BaseConfig(UserDict):
             "templates_dir": "templates",
             "templates_settings": {
                 "__load__": "pylibs bootstrap",
-                "__async__": self.async_host,
-                "__static__": "",# ""=disabled
+                #"__async__": self.async_host,
+                #"__static__": "",# ""=disabled
             },
             "static_files": {
                 #"/favicon.ico": "resources/favicon.ico",

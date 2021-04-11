@@ -2,41 +2,52 @@
 <html>
 <%
 # PYTHON optionnal args:
-# load = "py|pylibs|bootstrap|vue"
-setdefault("load",__load__)
+# load = "py|pylibs|d3|bootstrap|vue"
+
+setdefault("__load__","")
+setdefault("__async__","")
+setdefault("__static__","")
+
+setdefault("_",f"{__static__}/resources/node_modules")
 %>
 <head>
-% if "bootstrap" in load:
-  <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="{{__static__}}/resources/node_modules/bootstrap/dist/css/bootstrap.min.css">
-  <script src="{{__static__}}/resources/node_modules/jquery/dist/jquery.slim.min.js"></script>
-  <script src="{{__static__}}/resources/node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
+% if "bootstrap" in __load__:
+  <!-- set Bootstrap -->
+  <link rel="stylesheet" href="{{_}}/bootstrap/dist/css/bootstrap.min.css">
+  <script src="{{_}}/jquery/dist/jquery.slim.min.js"></script>
+  <script src="{{_}}/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 % end
-% if "pylibs" in load:
-  <!-- for use of python3 instead of javascript including standard libs-->
-  <script src="{{__static__}}/resources/node_modules/brython/brython.js"></script>
-  <script src="{{__static__}}/resources/node_modules/brython/brython_stdlib.js"></script>
-% elif "py" in load: 
-  <!-- for use of python3 instead of javascript -->
-  <script src="{{__static__}}/resources/node_modules/brython/brython.js"></script>
+% if "d3" in __load__:
+  <!-- set D3.js -->
+  <script src="{{_}}/d3/dist/d3.min.js"></script>
 % end
-% if "vue" in load:
-  <!-- provide the Vue.js framework -->
-  <link rel="stylesheet" href="{{__static__}}/resources/node_modules/vue/dist/vue.min.js">
+% if "pylibs" in __load__:
+  <!-- set Python3 including standard libs-->
+  <script src="{{_}}/brython/brython.js"></script>
+  <script src="{{_}}/brython/brython_stdlib.js"></script>
+% elif "py" in __load__: 
+  <!-- set Python3 without standard libs -->
+  <script src="{{_}}/brython/brython.js"></script>
+% end
+% if "vue" in __load__:
+  <!-- set Vue.js -->
+  <link rel="stylesheet" href="{{_}}/vue/dist/vue.min.js">
 % end
 </head>
-% if "py" in load: #NOTE: can be "py" or "pylibs"
+% if "py" in __load__: #NOTE: can be "py" or "pylibs"
 <body onload="brython()">
 % else:
 <body>
 % end
-  {{ !base }}
+{{ !base }}
 <script>
   // set title from first <h1> heading
   var heading = document.getElementsByTagName("h1")[0];
   if (heading != null) {document.title = heading.innerText;}
 </script>
+
 </body>
 </html>
