@@ -101,9 +101,14 @@ def quickstart(*args,_cli_args=None):
 
     # build and start webapp
     from sweetheart.heart import HttpServer
-    webapp = HttpServer(config)
-    webapp.mount(*args,open_with=webbrowser)
-    webapp.run_local(service=False)
+    if isinstance(args[0],HttpServer):
+        # allow tests within JupyterLab
+        args[0].mount(*args[1:],open_with=webbrowser)
+        args[0].run_local(service=False)
+    else:
+        webapp = HttpServer(config)
+        webapp.mount(*args,open_with=webbrowser)
+        webapp.run_local(service=False)
 
 
 def sws(*args):

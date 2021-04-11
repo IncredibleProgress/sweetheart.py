@@ -116,11 +116,12 @@ def init(config:BaseConfig):
         and intends to provide minimalistic sweetheart features """
 
     PKG_INIT = { 
-        'documentation': "sweetbook.zip",
         'cargolibs': ["mdbook","mdbook-toc"],
         'aptlibs': ["xterm","rustc","mongodb","node-typescript","npm"],
         'npmlibs': ["brython","assemblyscript","bootstrap","vue"],
         'pylibs': ["bottle","pymongo","uvicorn","aiofiles","fastapi","jupyterlab"],
+
+        'documentation': "sweetbook.zip",
         'files': ["configuration/packages.json","configuration/cherrypy.conf",
             "webpages/HTML","documentation/sweetbook.zip"] }
 
@@ -131,9 +132,9 @@ def init(config:BaseConfig):
         f"{config.root_path}/documentation/notebooks",
         #f"{config.root_path}/documentation/sweetbook",
         f"{config.root_path}/programs/scripts",
+        f"{config.root_path}/webpages/templates",
         f"{config.root_path}/webpages/resources",
         #f"{config.root_path}/webpages/markdown",
-        f"{config.root_path}/webpages/{config['templates_dir']}",
     ]: os.makedirs(basedir,exist_ok=True)
 
     # install default libs
