@@ -25,7 +25,7 @@ class sp:
     @classmethod
     def poetry(cls,*args,**kwargs):
 
-        if hasattr(BaseConfig,'_'):
+        if not kwargs.get('cwd') and hasattr(BaseConfig,'_'):
             kwargs['cwd'] = BaseConfig._.subproc['codepath']
 
         return cls.run(BaseConfig.poetry_bin,*args,**kwargs)
@@ -63,6 +63,9 @@ class BaseConfig(UserDict):
     HOME = os.environ['HOME']
     USER = os.environ['USER'].capitalize()
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
+    # set sws level into environment 
+    SWSLVL = os.environ['SWSLVL'] =\
+        f"{int(os.getenv('SWSLVL','0'))+1}"
 
     # default path settings
     poetry_bin = f"{HOME}/.poetry/bin/poetry"
@@ -96,7 +99,8 @@ class BaseConfig(UserDict):
             'mongopath': f"{self.root_path}/database",
             'cherrypy': f"{self.root_path}/configuration/cherrypy.conf",
             'msedge.exe': f"cmd.exe /c start msedge --app=",
-            'firefox': f"firefox ",# space is needed
+            'brave.exe': f"cmd.exe /c start brave --app=",
+            #'firefox': f"firefox ",# space is needed
         }
 
         # default editable settings
@@ -104,7 +108,7 @@ class BaseConfig(UserDict):
             "working_dir": f"{self.root_path}/webpages",
             "notebooks_dir": f"{self.root_path}/documentation/notebooks",
             "selected_DB": "test",
-            "webbrowser": "default",
+            "webbrowser": "msedge.exe",
             
             "templates_dir": "templates",
             "templates_settings": {
@@ -113,11 +117,11 @@ class BaseConfig(UserDict):
                 #"__static__": "",# ""=disabled
             },
             "static_files": {
-                #"/favicon.ico": "resources/favicon.ico",
+                "/favicon.ico": "resources/favicon.ico",
             },
             "static_dirs": {
-                "/resources": "resources",
-                "/documentation": f"sweetbook",
+                "/resources": f"resources",
+                "/documentation": "sweetbook",
             },}
 
     def welcome(self) -> str:
@@ -164,4 +168,5 @@ def echo(*args,mode="default",blank=False):
 
 def verbose(*args,level:int=1):
     """convenient function for verbose messages"""
-    if BaseConfig.verbosity >= level: print("sws::",*args)
+    if BaseConfig.verbosity >= level:
+        print(f"sws:{BaseConfig.SWSLVL}:",*args)

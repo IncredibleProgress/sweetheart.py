@@ -104,7 +104,7 @@ class HttpServer(BaseService):
             "log_level": "info" }
 
     def HTMLTemplate(self,filename:str,**kwargs):
-        os.chdir(self.config['working_dir'])
+        os.chdir(f"{self.config['working_dir']}")
         return HTMLResponse(template(
             f"{self.config['templates_dir']}/{filename}",
             **self.config['templates_settings'],
@@ -143,13 +143,13 @@ class HttpServer(BaseService):
         if self.config.is_webapp_open and open_with:
             open_with(self.url)
 
-    def run_local(self,service:bool):
+    def run_local(self,service:bool=False):
         """ run webapp within local Http server """
 
         if service:
             raise NotImplementedError
         else:
-            assert os.getcwd() == self.config['working_dir']
+            os.chdir(self.config['working_dir'])
             uvicorn.run(self.app,**self.uargs)
 
 

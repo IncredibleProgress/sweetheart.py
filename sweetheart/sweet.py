@@ -14,8 +14,7 @@ def set_config(
     """ set or reset sweetheart configuration 
         allow working with differents projects and configs """
 
-    #FIXME: custom project name not allowed
-    assert project == "sweetheart"
+    from sys import argv
 
     global config
     config = BaseConfig(project)
@@ -49,8 +48,9 @@ def set_config(
     except: pass
 
     # ensure python subprocess
-    if hasattr(BaseConfig,'python_env') is False:
-        sp.set_python_env()
+    if not '--init' in argv and\
+        not hasattr(BaseConfig,'python_env'):
+            sp.set_python_env()
 
     BaseConfig._ = config
     return config
@@ -63,12 +63,12 @@ def webbrowser(url:str):
     except: select = None
 
     if select and config.subproc.get(select):
-        sp.shell(config.subproc['select']+url)
+        sp.shell(config.subproc[select]+url)
 
     elif BaseConfig.WSL_DISTRO_NAME:
         sp.shell(config.subproc['msedge.exe']+url)
 
-    else: sp.shell(config.subproc['firefox']+url)
+    else: sp.run(BaseConfig.python_bin,"-m","webbrowser","url")
 
 
 def quickstart(*args,_cli_args=None):
@@ -111,12 +111,13 @@ def quickstart(*args,_cli_args=None):
         webapp.run_local(service=False)
 
 
-def sws(*args):
+def sws(args):
     """ SWeet Shell command line interface """
 
     try: assert 'config' in globals()
     except: raise Exception("Error, config is missing")
 
+    if isinstance(args,str): args = args.split()
     cf,sb = config, config.subproc
     sw = [config.python_bin,"-m","sweetheart.sweet"]
     vv,py,po = config.python_env,config.python_bin,config.poetry_bin
@@ -135,6 +136,7 @@ def sws(*args):
     elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
     else: cwd= config.PWD
 
+    verbose("cwd:",cwd)
     try: sp.run(*switch.get(args[0],args),cwd=cwd)
     except: echo("sws has been interrupted")
 
@@ -223,7 +225,7 @@ if __name__ == "__main__":
 
     # create subparser for the 'shell' command:
     cli.sub("shell",help="the SWeet Shell command line interface")
-    cli.set_function(lambda args: sws(*args.subargs))
+    cli.set_function(lambda args: sws(args.subargs))
 
     cli.opt("subargs",nargs=cli.REMAINDER,
         help="remaining arguments processed by SWeet Shell")
@@ -255,18 +257,12 @@ if __name__ == "__main__":
     BaseConfig.verbosity = argv.verbose
 
     if getattr(argv,"project",None):
-        set_config(project=argv.project)
+        set_config(project=argv.project[0])
     else:
         set_config(project="sweetheart")
 
     if argv.init:
         from sweetheart.install import init
         init(config)
-
-        from sweetheart.heart import Notebook
-        echo("set the JupyerLab ipkernel and required password",blank=True)
-        jupyter = Notebook(config)
-        jupyter.set_ipykernel()
-        jupyter.set_password()
 
     argv.func(argv)

@@ -7,12 +7,10 @@ from urllib.request import urlretrieve
 
 
 def ensure_prerequisites():
-
     if os.path.isfile(
         f"{os.environ['HOME']}/.sweet/sweetheart/programs/my_python/pyproject.toml"):
             verbose("install: existing prerequisites found")
             return
-
     sp.shell(BaseInstall.get_prereq)
 
     
@@ -22,37 +20,43 @@ class BaseInstall:
     get_poetry = "curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -"
     get_prereq = "curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -"
 
-    def __init__(self,config:BaseConfig) -> None:
+    def __init__(self,config:BaseConfig):
 
         self.config = config
         self.packages_file = f"{config.root_path}/configuration/packages.json"
 
-        # if config.project != "sweetheart":
-        #     pass
+        if config.project != "sweetheart":
 
-    def apt(self,libs:list,**kwargs):
+            sp.poetry("new","my_python",cwd=f"{config.root_path}/programs")
+            sp.poetry("add","sweetheart")
+            sp.set_python_env(cwd=f"{config.root_path}/programs/my_python")
+
+            with open(f"{config.root_path}/configuration/subproc.json","w") as fi:
+                json.dump({'pyenv':config.python_env},fi)
+
+    def apt(self,*libs:str,**kwargs):
         """ install distro packages using apt """
 
-        echo("apt install:",*libs,blank=True)
+        echo("apt install:",*libs)
         return sp.run("sudo","apt","install",*libs,**kwargs)
 
-    def cargo(self,libs:list,**kwargs):
+    def cargo(self,*libs:str,**kwargs):
         """ install rust crates using cargo """
 
-        echo("cargo install:",*libs,blank=True)
+        echo("cargo install:",*libs)
         path = self.config.subproc['rustpath']
         return sp.run(f"{path}/cargo","install",*libs,**kwargs)
     
-    def poetry(self,libs:list,**kwargs):
+    def poetry(self,*libs:str,**kwargs):
         """ install python packages using poetry """
 
-        echo("poetry add python modules:",*libs,blank=True)
+        echo("poetry add python modules:",*libs)
         return sp.poetry("add",*libs,**kwargs)
 
-    def npm(self,libs:list,init=False,**kwargs):
+    def npm(self,*libs:str,init=False,**kwargs):
         """ install node modules using npm """
 
-        echo("npm install:",*libs,blank=True)
+        echo("npm install:",*libs)
         os.chdir(f"{self.config.root_path}/webpages/resources")
         if init: sp.run("npm","init","--yes")
         return sp.run("npm","install",*libs,**kwargs)
@@ -63,25 +67,25 @@ class BaseInstall:
             no libs arg will set init process for new project """
 
         aptlibs = libs.get('aptlibs')
-        if aptlibs: self.apt(aptlibs)
+        if aptlibs: self.apt(*aptlibs)
 
         cargolibs = libs.get('cargolibs')
-        if cargolibs: self.cargo(cargolibs)
+        if cargolibs: self.cargo(*cargolibs)
 
         pylibs = libs.get('pylibs')
-        if pylibs: self.poetry(pylibs)
+        if pylibs: self.poetry(*pylibs)
 
         npmlibs = libs.get('npmlibs')
-        if npmlibs: self.npm(npmlibs,init)
+        if npmlibs: self.npm(*npmlibs,init=init)
 
         files = libs.get('files')
-        if files: self.download(files)
+        if files: self.download(*files)
 
         # install package documentation if given
         documentation = libs.get('documentation')
         if documentation: self.unzip_doc(documentation)
 
-    def download(self,files_list:list):
+    def download(self,*files_list:str):
         """ download given listed files from github """
 
         for relpath in files_list:
@@ -118,7 +122,7 @@ def init(config:BaseConfig):
     PKG_INIT = { 
         'cargolibs': ["mdbook","mdbook-toc"],
         'aptlibs': ["xterm","rustc","mongodb","node-typescript","npm"],
-        'npmlibs': ["brython","assemblyscript","bootstrap","vue"],
+        'npmlibs': ["brython","assemblyscript","jquery","bootstrap","vue"],
         'pylibs': ["bottle","pymongo","uvicorn","aiofiles","fastapi","jupyterlab"],
 
         'documentation': "sweetbook.zip",
@@ -127,7 +131,7 @@ def init(config:BaseConfig):
 
     # require directories
     for basedir in [
-        #f"{config.root_path}/configuration",
+        f"{config.root_path}/configuration",
         f"{config.root_path}/database",
         f"{config.root_path}/documentation/notebooks",
         #f"{config.root_path}/documentation/sweetbook",
@@ -150,5 +154,13 @@ def init(config:BaseConfig):
         os.symlink(f"{config.root_path}/documentation/sweetbook/book",
             f"{config.root_path}/webpages/sweetbook")
     except:
-        verbose("\n*an error occured creating symlinks during init process",
+        verbose("INFO:\n an error occured creating symlinks during init process",
             "\n an expected cause coukld be that links are already existing")
+
+    # set JupyterLab service
+    from sweetheart.heart import Notebook
+    echo("set the JupyerLab ipkernel and required password",blank=True)
+    jupyter = Notebook(config)
+    jupyter.set_ipykernel()
+    if config.project == "sweetheart":
+        jupyter.set_password()
