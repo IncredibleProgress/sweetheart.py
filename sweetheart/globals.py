@@ -2,6 +2,9 @@
 import os,subprocess,json
 from collections import UserDict
 
+# default project name 
+SWEETHEART = "sweetheart"
+
 
 class sp:
     """ namespace providing basic subprocess features 
@@ -71,7 +74,7 @@ class BaseConfig(UserDict):
     poetry_bin = f"{HOME}/.poetry/bin/poetry"
     python_bin = "python3"# unknown python env
 
-    def __init__(self,project) -> None:
+    def __init__(self,project):
 
         # general settings
         self.project = self.label = project
@@ -108,7 +111,7 @@ class BaseConfig(UserDict):
             "working_dir": f"{self.root_path}/webpages",
             "notebooks_dir": f"{self.root_path}/documentation/notebooks",
             "selected_DB": "test",
-            "webbrowser": "msedge.exe",
+            "webbrowser": "default",
             
             "templates_dir": "templates",
             "templates_settings": {

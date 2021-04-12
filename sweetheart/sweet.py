@@ -8,7 +8,7 @@ from sweetheart.globals import *
 def set_config(
 
     values:dict = {},
-    project:str = "sweetheart",
+    project:str = SWEETHEART,
     config_file:str = None ) -> BaseConfig:
 
     """ set or reset sweetheart configuration 
@@ -75,7 +75,7 @@ def quickstart(*args,_cli_args=None):
     """ build and run webapp for the existing config """
 
     try: assert 'config' in globals()
-    except: set_config(project="sweetheart")
+    except: set_config(project=SWEETHEART)
 
     # set config from cli if given
     if _cli_args:
@@ -128,6 +128,7 @@ def sws(args):
         'mdbook': [f"{sb['rustpath']}/mdbook",*args[1:]],
         'sweet': [py,"-m","sweetheart.sweet",*args[1:]],
         'start': [py,"-m","sweetheart.sweet","start",*args[1:]],
+        #'new': [*sw,"-p",args[1],"--init",*args[2:]],
         'install': [py,"-m","sweetheart.sweet","install",*args[1:]],
         'jupyter': [py,"-m","jupyterlab","--no-browser",*args[1:]],
         }
@@ -259,7 +260,7 @@ if __name__ == "__main__":
     if getattr(argv,"project",None):
         set_config(project=argv.project[0])
     else:
-        set_config(project="sweetheart")
+        set_config(project=SWEETHEART)
 
     if argv.init:
         from sweetheart.install import init
