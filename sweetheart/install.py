@@ -101,7 +101,7 @@ class BaseInstall:
         assert ext == ".zip"
 
         with ZipFile(zipfile,"r") as zf: zf.extractall()
-        sp.shell(f"{self.config.subproc['rustpath']}/mdbook build {name}")
+        #sp.shell(f"{self.config.subproc['rustpath']}/mdbook build {name}")
         if remove: os.remove(zipfile)
 
     def install_packages(self,*packages:str):
@@ -155,7 +155,7 @@ def init(config:BaseConfig):
             f"{config.root_path}/webpages/sweetbook")
     except:
         verbose("INFO:\n an error occured creating symlinks during init process",
-            "\n an expected cause coukld be that links are already existing")
+            "\n an expected cause could be that links are already existing")
 
     # set JupyterLab service
     from sweetheart.heart import Notebook
