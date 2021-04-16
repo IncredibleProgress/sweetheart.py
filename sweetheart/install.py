@@ -25,14 +25,12 @@ def init(config:BaseConfig):
         and intends to provide minimalistic sweetheart features """
 
     PKG_INIT = { 
-        'cargolibs': ["mdbook","mdbook-toc"],
-        'aptlibs': ["xterm","rustc","mongodb","node-typescript","npm"],
-        'npmlibs': ["brython","assemblyscript","jquery","bootstrap","vue"],
-        'pylibs': ["bottle","pymongo","uvicorn","aiofiles","fastapi","jupyterlab"],
-
+        'npmlibs': ["brython"],
         'documentation': "sweetbook.zip",
-        'files': ["configuration/packages.json","configuration/cherrypy.conf",
-            "webpages/HTML","documentation/sweetbook.zip"] }
+        'cargolibs': ["mdbook","mdbook-toc"],
+        'aptlibs': ["xterm","rustc","mongodb","npm"],
+        'pylibs': ["bottle","pymongo","uvicorn","aiofiles","starlette","jupyter"],
+        'files': ["configuration/packages.json","webpages/HTML","documentation/sweetbook.zip"] }
 
     # require directories
     for basedir in [
@@ -104,7 +102,7 @@ class BaseInstall:
     def poetry(self,*libs:str,**kwargs):
         """ install python packages using poetry """
 
-        echo("poetry add python modules:",*libs)
+        echo("poetry add:",*libs)
         return sp.poetry("add",*libs,**kwargs)
 
     def npm(self,*libs:str,init=False,**kwargs):

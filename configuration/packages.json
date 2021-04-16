@@ -4,6 +4,11 @@
         "pylibs":["xlrd","xlwt","pyxlsb","openpyxl","xlsxwriter","tabulate","seaborn","scikit-learn"]
     },
     "web": {
-        "pylibs": ["beautifulsoup4","html5lib","lxml","requests","scrapy"]
+        "pylibs":["beautifulsoup4","html5lib","lxml","requests","scrapy"]
+    },
+    "frontend": {
+        "pylibs":["fastapi"],
+        "aptlibs":["node-typescript"],
+        "npmlibs":["assemblyscript","jquery","bootstrap","vue"]
     }
 }
