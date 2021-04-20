@@ -3,7 +3,7 @@
 
 ## A supercharged heart for the non-expert hands
 
-Since Ubuntu 20.04 can be installed as usual softwares within Windows 10, it provides an incredible way for any organization to develop, deploy, and administrate **powerful responsive web-apps including AI** on its own local network keeping high capabilities of integration with the already existing tools like databases, MS-Excel, and SAP.
+Since Ubuntu 20.04 can be installed as usual softwares within Windows 10, it provides an incredible way for any organization to develop, deploy, and administrate **powerful responsive webapps including AI** on its own local network keeping high capabilities of integration with the already existing tools like databases, MS-Excel, and SAP.
 
 Sweetheart provides a simple Python/Html centric approach leading you implementing best components and best coding practices. Due to the top-rated place of the Python language regarding to data processing, calculations and AI, this makes sweetheart a fast and ideal toolkit to e-volute towards **Industry4.0** precepts and innovative ideas.
 
@@ -37,7 +37,7 @@ Sweetheart delivers a stock of ready-to-use features:
 - provided asgi framework: [Starlette](https://www.starlette.io/), [FastApi](https://fastapi.tiangolo.com/)
 - provided fast documentation builder: [mdBook](https://rust-lang.github.io/mdBook/index.html)
 - responsive user interfaces: [Html](https://www.w3schools.com/), [JupyterLab](https://jupyter.org/)
-- provided web libs for going fast: [Bootstrap](https://getbootstrap.com/)
+- provided web libs for going fast: [TailwindCss](https://tailwindcss.com/), [Bootstrap](https://getbootstrap.com/)
 - provided web libs for high-level featuring: [Vue](https://vuejs.org/)
 - optionnal frontend language: [Typescript](https://www.typescriptlang.org/), [WebAssembly](https://www.assemblyscript.org/)
 - optionnal low-level language: [Rust](https://www.rust-lang.org/)
@@ -79,7 +79,7 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 
 <div style="text-align:center;">
   <h1>Welcome!</h1>
-  <p>get coding full power at the light speed now</p>
+  <p>get coding full power at the light speed</p>
 </div>
 ```
 
@@ -116,4 +116,4 @@ sws install web
 
 ## Epilogue: a new life starts now
 
-Even at this Beta-stage, Sweetheart allows you to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using amazing raw materials widely used by GAFAM and others!
+Even at this BETA stage, Sweetheart allows you to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using amazing raw materials widely used by GAFAM and others!

@@ -1,4 +1,4 @@
-# Discover Python
+# Python for newbies
 
 ## Basics
 

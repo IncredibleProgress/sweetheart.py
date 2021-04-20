@@ -128,13 +128,15 @@ def sws(args):
         'mdbook': [f"{sb['rustpath']}/mdbook",*args[1:]],
         'sweet': [py,"-m","sweetheart.sweet",*args[1:]],
         'start': [py,"-m","sweetheart.sweet","start",*args[1:]],
-        'init': [*sw,"-p",args[1],"--init",*args[2:]],
+        'init': [*sw,"-p",*args[1:1],"--init",*args[2:]],
         'install': [py,"-m","sweetheart.sweet","install",*args[1:]],
         'jupyter': [py,"-m","jupyterlab","--no-browser",*args[1:]],
+        'build-css': [*config.subproc['tailwindcss'].split()],
         }
 
     if args[0]=='poetry': cwd= cf.subproc['codepath']
     elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
+    elif args[0]=='build-css': cwd= f"{cf.root_path}/webpages/resources"
     else: cwd= config.PWD
 
     verbose("cwd:",cwd)

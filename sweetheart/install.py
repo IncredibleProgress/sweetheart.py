@@ -6,9 +6,11 @@ from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
 
-wsl_rustup = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+#get_w3css = "curl -sSL https://www.w3schools.com/w3css/4/w3.css -o w3.css"
+#wsl_rustup = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+node_source = "curl -sSL https://deb.nodesource.com/setup_14.x | sudo bash -"
 raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"# / is needed
-get_poetry = "curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -"
+#get_poetry = "curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -"
 get_prereq = "curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -"
 
 
@@ -25,12 +27,13 @@ def init(config:BaseConfig):
         and intends to provide minimalistic sweetheart features """
 
     PKG_INIT = { 
-        'npmlibs': ["brython"],
         'documentation': "sweetbook.zip",
         'cargolibs': ["mdbook","mdbook-toc"],
         'aptlibs': ["xterm","rustc","mongodb","npm"],
+        'npmlibs': ["brython","tailwindcss","postcss","autoprefixer"],
         'pylibs': ["bottle","pymongo","uvicorn","aiofiles","starlette","jupyter"],
-        'files': ["configuration/packages.json","webpages/HTML","documentation/sweetbook.zip"] }
+        'files': ["configuration/packages.json","webpages/HTML","documentation/sweetbook.zip",
+            "webpages/resources/tailwind.config.js","webpages/resources/tailwind.base.css" ] }
 
     # require directories
     for basedir in [
@@ -47,6 +50,10 @@ def init(config:BaseConfig):
     # install default libs
     installer = BaseInstall(config)
     installer.install_libs(PKG_INIT,init=True)
+    
+    # build default tailwind.css
+    sp.shell(config.subproc['tailwindcss'],
+        cwd=f"{config.root_path}/webpages/resources")
 
     try:
         # provide installed javascript libs (Ubuntu)
@@ -56,6 +63,10 @@ def init(config:BaseConfig):
         # provide sweetheart html documentation    
         os.symlink(f"{config.root_path}/documentation/sweetbook/book",
             f"{config.root_path}/webpages/sweetbook")
+
+        # provide tailwindcss configuration file
+        os.symlink(f"{config.root_path}/webpages/resources/tailwind.config.js",
+            f"{config.root_path}/configuration/")
     except:
         verbose("INFO:\n an error occured creating symlinks during init process",
             "\n an expected cause could be that links are already existing")
@@ -107,6 +118,11 @@ class BaseInstall:
 
     def npm(self,*libs:str,init=False,**kwargs):
         """ install node modules using npm """
+
+        if init:
+            echo("set node.js:",node_source.split()[2])
+            sp.shell(node_source)
+            sp.shell("sudo apt install -y nodejs")
 
         echo("npm install:",*libs)
         os.chdir(f"{self.config.root_path}/webpages/resources")

@@ -104,28 +104,31 @@ class BaseConfig(UserDict):
             'msedge.exe': f"cmd.exe /c start msedge --app=",
             'brave.exe': f"cmd.exe /c start brave --app=",
             #'firefox': f"firefox ",# space is needed
+            'jupyterurl': f"{self.jupyter_host}/tree",
+            'tailwindcss': "npx tailwindcss build tailwind.base.css -o tailwind.css"
         }
 
         # default editable settings
         self.data = {
+            # editable path settings
             "working_dir": f"{self.root_path}/webpages",
             "notebooks_dir": f"{self.root_path}/documentation/notebooks",
-            "selected_DB": "test",
-            "webbrowser": "default",
-            
             "templates_dir": "templates",
+            # editable subprocess settings
+            "webbrowser": "default",
+            "selected_DB": "test",
+            # html rendering settings
             "templates_settings": {
-                "__load__": "pylibs",
-                #"__async__": self.async_host,
-                #"__static__": "",# ""=disabled
+                "__load__": "tailwind pylibs",
             },
             "static_files": {
                 "/favicon.ico": "resources/favicon.ico",
+                "/tailwind.css": "resources/tailwind.css",
             },
             "static_dirs": {
                 "/resources": f"resources",
                 "/documentation": "sweetbook",
-            },}
+            }}
 
     def welcome(self) -> str:
         """ return default Html welcome message """
@@ -139,7 +142,7 @@ class BaseConfig(UserDict):
             <p><a href="/documentation/index.html">
                 Get Started Now!</a></p>
             <p><br>or code immediately using 
-                <a href="{self.jupyter_host}">JupyterLab</a></p>
+                <a href="{self.subproc['jupyterurl']}">JupyterLab</a></p>
             <p><br><br><em>this message appears because there
             was nothing else to render here</em></p>
           </div>"""
