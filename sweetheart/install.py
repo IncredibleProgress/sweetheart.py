@@ -6,12 +6,11 @@ from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
 
+node_source = "curl -sSL https://deb.nodesource.com/setup_14.x | sudo -E bash -"
+raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"# / is needed
 #get_w3css = "curl -sSL https://www.w3schools.com/w3css/4/w3.css -o w3.css"
 #wsl_rustup = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-node_source = "curl -sSL https://deb.nodesource.com/setup_14.x | sudo bash -"
-raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"# / is needed
 #get_poetry = "curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -"
-get_prereq = "curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -"
 
 
 # ensure prerequisites
@@ -19,7 +18,7 @@ if os.path.isfile(
     f"{os.environ['HOME']}/.sweet/{SWEETHEART}/programs/my_python/pyproject.toml"):
         verbose("install: existing prerequisites found")
 else:
-    sp.shell(get_prereq)
+    sp.shell("curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -")
 
 
 def init(config:BaseConfig):
@@ -29,7 +28,7 @@ def init(config:BaseConfig):
     PKG_INIT = { 
         'documentation': "sweetbook.zip",
         'cargolibs': ["mdbook","mdbook-toc"],
-        'aptlibs': ["xterm","rustc","mongodb","npm"],
+        'aptlibs': ["xterm","rustc","mongodb"],
         'npmlibs': ["brython","tailwindcss","postcss","autoprefixer"],
         'pylibs': ["bottle","pymongo","uvicorn","aiofiles","starlette","jupyter"],
         'files': ["configuration/packages.json","webpages/HTML","documentation/sweetbook.zip",
@@ -63,10 +62,6 @@ def init(config:BaseConfig):
         # provide sweetheart html documentation    
         os.symlink(f"{config.root_path}/documentation/sweetbook/book",
             f"{config.root_path}/webpages/sweetbook")
-
-        # provide tailwindcss configuration file
-        os.symlink(f"{config.root_path}/webpages/resources/tailwind.config.js",
-            f"{config.root_path}/configuration/")
     except:
         verbose("INFO:\n an error occured creating symlinks during init process",
             "\n an expected cause could be that links are already existing")
@@ -134,6 +129,10 @@ class BaseInstall:
             and download listed files from github if given
             no libs arg will set init process for new project """
 
+        # init nodejs/npm before apt install
+        npmlibs = libs.get('npmlibs')
+        if npmlibs: self.npm(*npmlibs,init=init)
+
         aptlibs = libs.get('aptlibs')
         if aptlibs: self.apt(*aptlibs)
 
@@ -142,9 +141,6 @@ class BaseInstall:
 
         pylibs = libs.get('pylibs')
         if pylibs: self.poetry(*pylibs)
-
-        npmlibs = libs.get('npmlibs')
-        if npmlibs: self.npm(*npmlibs,init=init)
 
         files = libs.get('files')
         if files: self.download(*files)

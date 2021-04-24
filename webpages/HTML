@@ -6,7 +6,7 @@
 load = get('load','__load__')
 %>
 <head>
-  <!-- [SWEETHEART] Html -->
+  <!-- this Html has been generated with Sweetheart -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 % if "tailwind" in load:
