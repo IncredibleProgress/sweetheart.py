@@ -29,7 +29,7 @@ def init(config:BaseConfig):
         'documentation': "sweetbook.zip",
         'cargolibs': ["mdbook","mdbook-toc"],
         'aptlibs': ["xterm","rustc","mongodb"],
-        'npmlibs': ["brython","tailwindcss","postcss","autoprefixer"],
+        'npmlibs': ["brython","tailwindcss","postcss","autoprefixer","vue@next"],# Vue3
         'pylibs': ["bottle","pymongo","uvicorn","aiofiles","starlette","jupyter"],
         'files': ["configuration/packages.json","webpages/HTML","documentation/sweetbook.zip",
             "webpages/resources/tailwind.config.js","webpages/resources/tailwind.base.css" ] }

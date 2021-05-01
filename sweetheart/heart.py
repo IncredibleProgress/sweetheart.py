@@ -3,14 +3,13 @@ heart.py is ... the heart of sweetheart !
 it provides services and facilities classes 
 """
 from sweetheart.globals import *
+from sweetheart.bottle import SimpleTemplate
 
 # patch running within JupyterLab
 import nest_asyncio
 nest_asyncio.apply()
 
 import uvicorn
-from bottle import template
-
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
 from starlette.routing import Route, Mount, WebSocketRoute
@@ -104,9 +103,16 @@ class HttpServer(BaseService):
             "log_level": "info" }
 
     def HTMLTemplate(self,filename:str,**kwargs):
-        os.chdir(f"{self.config['working_dir']}")
-        return HTMLResponse(template(
-            f"{self.config['templates_dir']}/{filename}",
+        """ set given template and return rendering if render is True """
+
+        os.chdir(self.config['working_dir'])
+
+        with open(f"{self.config['templates_dir']}/{filename}","r") as tpl:
+            self.template = SimpleTemplate(tpl.read(),
+                #FIXME: doesn't work with rebase() included
+                syntax = self.config.subproc['stsyntax'])
+
+        return HTMLResponse(self.template.render(
             **self.config['templates_settings'],
             **kwargs ))
 

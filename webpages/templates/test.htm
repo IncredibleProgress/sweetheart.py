@@ -1,0 +1,22 @@
+%rebase("HTML")
+
+<script>
+  vuedata({
+    test_vue: "Vue is running",
+    test_brython: "Brython and Vue together failed"
+  })
+</script>
+
+<script type="text/python">
+  from browser import window, document
+  document["test_brython"] <= "Brython is running"
+</script>
+
+<div id="vue" class="p-14 space-y-2 max-w-screen-sm m-auto">
+  <h1 class="text-3xl">Test html</h1>
+  <hr>
+  <p>loading "{% __load__ %}"</p>
+  <p>{{ test_vue }}</p>
+  <p id="test_brython"></p>
+  <p>{{ test_brython }}</p>
+</div>

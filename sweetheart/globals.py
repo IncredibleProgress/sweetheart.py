@@ -1,5 +1,5 @@
 
-import os,subprocess,json
+import os,subprocess,json,locale
 from collections import UserDict
 
 # default project name 
@@ -60,6 +60,7 @@ class BaseConfig(UserDict):
     # set messages to stdout
     verbosity = 0
     label = "sweetheart"
+    locale_lang = locale.getlocale()[0][0:2]
 
     # get environment settings
     PWD = os.environ['PWD']
@@ -97,15 +98,17 @@ class BaseConfig(UserDict):
 
         # subprocess settings
         self.subproc = {
+            # can be changed within sweet.set_config()
             'rustpath': f"{self.HOME}/.cargo/bin",
             'codepath': f"{self.root_path}/programs/my_python",# no / at end
             'mongopath': f"{self.root_path}/database",
+            'stsyntax': r"<% %> % {% %}",
+            # can not be changed within sweet.set_config()
             'cherrypy': f"{self.root_path}/configuration/cherrypy.conf",
             'msedge.exe': f"cmd.exe /c start msedge --app=",
             'brave.exe': f"cmd.exe /c start brave --app=",
-            #'firefox': f"firefox ",# space is needed
             'jupyterurl': f"{self.jupyter_host}/tree",
-            'tailwindcss': "npx tailwindcss build tailwind.base.css -o tailwind.css"
+            'tailwindcss': "npx tailwindcss build tailwind.base.css -o tailwind.css",
         }
 
         # default editable settings
@@ -119,11 +122,14 @@ class BaseConfig(UserDict):
             "selected_DB": "test",
             # html rendering settings
             "templates_settings": {
-                "__load__": "tailwind pylibs",
+                '__load__': "tailwind pylibs vue",
+                '__lang__': self.locale_lang,
+                '__debug__': 1,# brython() debug argument
             },
             "static_files": {
                 "/favicon.ico": "resources/favicon.ico",
                 "/tailwind.css": "resources/tailwind.css",
+                "/vue.js": "/resources/node_modules/vue/dist/vue.global.js"
             },
             "static_dirs": {
                 "/resources": f"resources",

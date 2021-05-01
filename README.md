@@ -66,8 +66,7 @@ The following *sweetheart development chart* allows to evaluate coding and costs
 ### your first webpage controller written in Python
 
 ``` python
-from sweetheart.sweet import quickstart
-from sweetheart.heart import Route, HTMLResponse
+from sweetheart.sandbox import *
 
 quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 ```
@@ -77,7 +76,7 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 ``` html
 %rebase("HTML")
 
-<div style="text-align:center;">
+<div class="text-center">
   <h1>Welcome!</h1>
   <p>get coding full power at the light speed</p>
 </div>
@@ -87,7 +86,7 @@ quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
 
 ### set WSL on Windows 10
 
-Discovering what is the WSL, have a look at the [Microsoft documentation](https://docs.microsoft.com/en-us/windows/wsl/about). Then install *Ubuntu 20.04* via the Windows Store. At this step installing *VS Code* and *Windows Terminal* can be recommended to you too. When done click on Ubuntu within start menu, and now *Bash* is running!
+Discovering what is the WSL, have a look at the [Microsoft documentation](https://docs.microsoft.com/en-us/windows/wsl/about). Then install *Ubuntu 20.04* via the Microsoft Store. At this step installing *VS Code* and *Windows Terminal* can be recommended to you too. When done click on Ubuntu within start menu, and now *Bash* is running!
 
 ### first steps with Bash
 

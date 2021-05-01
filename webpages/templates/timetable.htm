@@ -1,0 +1,46 @@
+%rebase("HTML")
+
+<script>
+  vuedata({
+    year: 2020,
+    years: [2020,2021,2022],
+    user: 'Nicolas Champion',
+    users: ['Julie Latour','Marcel Dupont'],
+    days: ['Lu','Ma','Me','Je','Ve','Sa','Di'],
+    months: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+  })
+</script>
+
+<div id="vue">
+
+  <select id="year" v-model="year">
+    <option v-for="year in years">{{ year }}</option>
+  </select>
+
+  <select id="user" v-model="user">
+    <option>Mon Planning</option>
+    <optgroup label="Mon équipe">
+      <option v-for="user in users">{{ user }}</option>
+    </optgroup>
+  </select>
+
+  <div class="grid md:grid-cols-6 grid-cols-3">
+    <table v-for="month in 12" class="col-span-1">
+      <thead>
+        <tr>
+          <th>{{ months[month-1] }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="day in 31">
+          <td>
+            <select v-bind:id="year+'-'+month+'-'+day">
+
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>

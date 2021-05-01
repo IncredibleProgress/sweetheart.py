@@ -37,7 +37,7 @@ def set_config(
             verbose("subproc file:",config.subproc_file)
 
         # fix updatable subproc settings here
-        for key in ('pyenv','rustpath','codepath','mongopath'):
+        for key in ('pyenv','rustpath','codepath','mongopath','stsyntax'):
 
             value = subproc_settings.get(key)
             if value and key == 'pyenv': 
@@ -68,7 +68,7 @@ def webbrowser(url:str):
     elif BaseConfig.WSL_DISTRO_NAME:
         sp.shell(config.subproc['msedge.exe']+url)
 
-    else: sp.run(BaseConfig.python_bin,"-m","webbrowser","url")
+    else: sp.run(BaseConfig.python_bin,"-m","webbrowser",url)
 
 
 def quickstart(*args,_cli_args=None):

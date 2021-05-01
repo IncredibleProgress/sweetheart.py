@@ -8,7 +8,8 @@
     },
     "frontend": {
         "pylibs":["fastapi"],
-        "aptlibs":["node-typescript"],
-        "npmlibs":["assemblyscript","jquery","bootstrap","vue"]
+        "aptlibs":["node-typescript","node-vue"],
+        "npmlibs":["assemblyscript","jquery","bootstrap"],
+        "files": ["webpages/resources/w3.css"]
     }
 }
