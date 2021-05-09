@@ -11,12 +11,12 @@ nest_asyncio.apply()
 
 import uvicorn
 from starlette.applications import Starlette
-from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
-from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
+from starlette.endpoints import WebSocketEndpoint
+from starlette.routing import Route, Mount, WebSocketRoute
+from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
 
-try:
-    import cherrypy
+try: import cherrypy
 except:
     class cherrypy:
         @staticmethod
@@ -85,6 +85,29 @@ class Database(BaseService):
             self.database.list_collection_names())
 
         return self.client,self.database
+
+
+class WebSocket(WebSocketEndpoint):
+
+    encoding = 'json'
+    allowed_queries = ['find_one','insert_one','update_one']
+
+    async def on_receive(self, websocket, data):
+
+        database = sp.mongo
+
+        assert data['query'] in self.allowed_queries
+        query_func = eval(f"{self.database}.{data['collection']}.{data['query']}")
+
+        if data['query'] == 'find_one':
+            await websocket.send_json(query_func(data['select']))
+        
+        elif data['query'] == 'insert_one':
+            newdata = data['values'].update(data['select'])
+            await websocket.send_json(query_func(newdata))
+
+        elif data['query'] == 'update_one':
+            raise NotImplementedError
 
 
 class HttpServer(BaseService):

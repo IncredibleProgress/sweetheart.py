@@ -2,10 +2,10 @@
 from sweetheart.globals import *
 from sweetheart.sweet import set_config as _set_config_, install as _install_
 from sweetheart.sweet import webbrowser,install,quickstart,sws
-from sweetheart.heart import Database,HttpServer,Notebook
+from sweetheart.heart import Database,WebSocket,HttpServer,Notebook
 from sweetheart.install import BaseInstall
 
-from starlette.routing import Route, Mount
+from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
 

@@ -122,7 +122,8 @@ class BaseConfig(UserDict):
             "selected_DB": "test",
             # html rendering settings
             "templates_settings": {
-                '__load__': "tailwind pylibs vue",
+                '__host__': self.async_host[7:],
+                '__load__': "tailwind pylibs vue websocket",
                 '__lang__': self.locale_lang,
                 '__debug__': 1,# brython() debug argument
             },
