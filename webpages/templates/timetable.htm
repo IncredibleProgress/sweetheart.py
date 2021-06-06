@@ -1,24 +1,82 @@
-%rebase("HTML")
+% rebase("HTML", load="tailwind vue")
 
-<script>
-  vuedata({
-    year: 2020,
-    years: [2020,2021,2022],
-    user: 'Nicolas Champion',
-    users: ['Julie Latour','Marcel Dupont'],
-    days: ['Lu','Ma','Me','Je','Ve','Sa','Di'],
-    months: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
-  })
+<script type="text/javascript">
+
+  // set table facilities
+  rowMark = 'm'; colMark = 'd';
+  function getRowFromId(id=null) {
+    if (id == null) { var id = event.target.id };
+    var ir = id.indexOf(rowMark); 
+    var ic = id.indexOf(colMark);
+    if (ir < ic) { var ir2 = ic } else { var ir2 = id.length };
+    return parseInt(id.slice(ir+1,ir2))
+  }
+  function getColFromId(id=null) {
+    if (id == null) { var id = event.target.id };
+    var ir = id.indexOf(rowMark);
+    var ic = id.indexOf(colMark);
+    if (ir < ic) { var ic2 = id.length } else { var ic2 = ir };
+    return parseInt(id.slice(ic+1,ic2))
+  }
+  function getIdFromRowCol(row,col) {
+    return rowMark+toString(row)+colMark+toString(col)
+  }
+
+  // set websocket facilities
+  function websocket_send(json) { 
+    var websocket = new WebSocket("ws://{% __host__ %}/database");
+    websocket.onmessage = websocket_receive;
+    websocket.onopen = function() {
+      websocket.send(JSON.stringify(json));
+      websocket.close();
+    }
+  }
+  function websocket_receive(event) { 
+    var date_id = getIdFromRowCol(event.data.month,event.data.day);
+    document.getElementById(date_id).value = event.data.status;
+  }
+
+  // set Vue3 facilities
+  createVueApp({
+    data() { return {
+      options: ['J','RTT'],
+      user: 'Nicolas Champion',
+      users: ['Julie Latour','Marcel Dupont'],
+      year: 2020,
+      days_labels: ['Di','Lu','Ma','Me','Je','Ve','Sa'],
+      months_lengths: [31,28,31,30,31,30,31,31,30,31,30,31],
+      months_labels: [null,'Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+    }},
+    created() {
+      for (var mth=0; mth<12; mth++) {
+        for (var day=0; day<31; day++) {
+          websocket_send({
+            collection: 'timetable', query: 'find_one',
+            select: { user: this.user, year: this.year, month: mth+1, day: day+1 },
+          })
+        }
+      }
+    },
+    methods: {
+      update_timetable(event) {
+        websocket_send({
+          collection: 'timetable', query: 'update_one',
+          select: { user: this.user, year: this.year, month: getRowFromId(), day: getColFromId() },
+          values: { status: event.target.value }
+        })
+      },
+    },
+  });
 </script>
 
-<div id="vue">
+<div id="VueApp">
 
   <select id="year" v-model="year">
-    <option v-for="year in years">{{ year }}</option>
+    <option v-for="year in [year-1,year,year+1]">{{ year }}</option>
   </select>
 
   <select id="user" v-model="user">
-    <option>Mon Planning</option>
+    <option>{{ user }}</option>
     <optgroup label="Mon équipe">
       <option v-for="user in users">{{ user }}</option>
     </optgroup>
@@ -28,15 +86,17 @@
     <table v-for="month in 12" class="col-span-1">
       <thead>
         <tr>
-          <th>{{ months[month-1] }}</th>
+          <th>{{ months_labels[month] }}</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="day in 31">
           <td>
-            <select v-bind:id="year+'-'+month+'-'+day">
-
-            </select>
+            <label>{{ days_labels[new Date(year,month,day).getDay()] }}
+              <select v-bind:id="'d'+day+'m'+month" v-on:change="update_timetable" >
+                <option v-for="option in options">{{ option }}</option>
+              </select>
+            </label>
           </td>
         </tr>
       </tbody>

@@ -1,5 +1,5 @@
 # Sweetheart **0.1.1**
-*do better with low-code and low-costs python programs*
+*get power with low-code and low-costs python programs*
 
 ## A supercharged heart for the non-expert hands
 

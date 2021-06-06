@@ -68,12 +68,11 @@ class BaseConfig(UserDict):
     USER = os.environ['USER'].capitalize()
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
     # set sws level into environment 
-    SWSLVL = os.environ['SWSLVL'] =\
-        f"{int(os.getenv('SWSLVL','0'))+1}"
+    SWSLVL = os.environ['SWSLVL'] = f"{int(os.getenv('SWSLVL','0'))+1}"
 
     # default path settings
     poetry_bin = f"{HOME}/.poetry/bin/poetry"
-    python_bin = "python3"# unknown python env
+    python_bin = "python3"# unset python env
 
     def __init__(self,project):
 
@@ -128,13 +127,14 @@ class BaseConfig(UserDict):
                 '__debug__': 1,# brython() debug argument
             },
             "static_files": {
-                "/favicon.ico": "resources/favicon.ico",
-                "/tailwind.css": "resources/tailwind.css",
-                "/vue.js": "/resources/node_modules/vue/dist/vue.global.js"
+                '/favicon.ico': "resources/favicon.ico",
+                '/tailwind.css': "resources/tailwind.css",
+                '/vue.js': "resources/node_modules/vue/dist/vue.global.js",
+                '/alpine.js': "resources/node_modules/alpinejs/dist/alpine.js",
             },
             "static_dirs": {
-                "/resources": f"resources",
-                "/documentation": "sweetbook",
+                '/resources': f"resources",
+                '/documentation': "sweetbook",
             }}
 
     def welcome(self) -> str:
@@ -158,8 +158,8 @@ class BaseConfig(UserDict):
 # provide convenient functions for givin messages
 _msg_ = []
 def echo(*args,mode="default",blank=False):
-    """convenient function for printing messages
-    mode = 0|default|stack|release"""
+    """ convenient function for printing messages
+        mode = 0|default|stack|release """
 
     if blank: print()
     
@@ -179,7 +179,9 @@ def echo(*args,mode="default",blank=False):
     else:
         print("[%s]"% BaseConfig.label.upper(),*args)
 
+
 def verbose(*args,level:int=1):
     """convenient function for verbose messages"""
+
     if BaseConfig.verbosity >= level:
         print(f"sws:{BaseConfig.SWSLVL}:",*args)
