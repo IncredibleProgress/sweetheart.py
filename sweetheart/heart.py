@@ -39,12 +39,14 @@ class BaseService:
         else: self.terminal = 'xterm'
 
         self.url = url
-        self.host = url.split(":")[1].strip("/")
-        self.port = int(url.split(":")[2])
+        url_split = url.split(":")
+        self.protocol = url_split[0].lower()
+        self.host = url_split[1].strip("/")
+        self.port = int(url_split[2])
 
     def run_local(self,service:bool=True):
         """ start and run the command attribute locally
-            self.command must be set previously """
+            the 'command' attribute must be set previously """
 
         if service: sp.terminal(self.command,self.terminal)
         else: sp.shell(self.command)
@@ -56,8 +58,61 @@ class BaseService:
         if getattr(args,"open_terminal",None): self.run_local(service=True)
         else: self.run_local(service=False)
 
+    def set_websocket(self,encoding='json'):
+        self.WS = get_websocket(self,encoding)
+        return self.WS
 
-class Database(BaseService):
+
+def get_websocket(parent:object,encoding:str):
+    """ factory function for implementing WebSocketEndpoint 
+        the object 'parent' must provide an 'on_receive' method """
+
+    class WebSocket(WebSocketEndpoint):
+        async def on_receive(self,websocket,data):
+            await parent.on_receive(websocket,data)
+
+    WebSocket.encoding = encoding
+    return WebSocket
+
+
+class RethinkDB(BaseService):
+
+    def __init__(self,config:BaseConfig,run_local:bool=False):
+        """ set RethinkDB as a service """
+
+        #NOTE: url is auto set here from config
+        super().__init__(config.database_host,config)
+        assert self.protocol == 'rethinkdb'
+
+        self.command = f"rethinkdb -d {config.subproc['rethinkpath']}"
+        if run_local: self.run_local(service=True)
+    
+    def connect(self,db:str=None):
+
+        if hasattr(self,'conn'): self.conn.close()
+        if db is None: db = self.config['selected_DB']
+        self.conn = self.client.connect(self.host,self.port,db=db)
+
+    def set_client(self):
+
+        from rethinkdb import r
+        self.client = r
+        self.conn = r.connect(self.host,self.port,db=self.config['selected_DB'])
+        return self.client,self.conn
+    
+    def on_receive(self,websocket,data):
+        
+        reql = eval(f"self.client.{data['reql']}.run(self.conn)")
+        return websocket.send_json({'test':'ok'})
+
+    def __del__(self):
+
+        if hasattr(self,'conn'): 
+            self.conn.close()
+            verbose("last RethinkDB connection closed")
+
+
+class MongoDB(BaseService):
 
     def __init__(self,config:BaseConfig,run_local:bool=False):
         """ set Mongo Database as a service """
@@ -65,7 +120,6 @@ class Database(BaseService):
         # url auto set from config
         super().__init__(config.database_host,config)
         self.command = f"mongod --dbpath={config.subproc['mongopath']}"
-
         if run_local: self.run_local(service=True)
         
     def set_client(self):
@@ -76,43 +130,25 @@ class Database(BaseService):
         from pymongo import MongoClient
 
         self.client = MongoClient(host=self.host,port=self.port)
-        echo("available mongo databases:",
-            self.client.list_database_names())
+        echo("available databases:",self.client.list_database_names()[3:])
 
         self.database = self.client[self.config['selected_DB']]
-        echo(f"selected database:",self.config['selected_DB'],
-            "\nexisting mongo collections:",
-            self.database.list_collection_names())
+        echo(f"selected database:",self.config['selected_DB'])
+        echo("existing collections:",self.database.list_collection_names())
 
         return self.client,self.database
 
+    def on_receive(self,websocket,data):
 
-class WebSocket(WebSocketEndpoint):
-
-    encoding = 'json'
-    allowed_queries = ['find_one','insert_one','update_one']
-
-    async def on_receive(self, websocket, data):
-
-        database = sp.mongo
-
-        assert data['query'] in self.allowed_queries
-        query_func = eval(f"{self.database}.{data['collection']}.{data['query']}")
-
-        if data['query'] == 'find_one':
-            await websocket.send_json(query_func(data['select']))
-        
-        elif data['query'] == 'insert_one':
-            newdata = data['values'].update(data['select'])
-            await websocket.send_json(query_func(newdata))
-
-        elif data['query'] == 'update_one':
-            raise NotImplementedError
+        # collection.find_one(data['select'],{'_id':0})
+        # collection.update_one(data['select'],{'$set':data['values']})
+        # collection.insert_one(data['values'])
+        raise NotImplementedError
 
 
 class HttpServer(BaseService):
 
-    def __init__(self,config:BaseConfig):
+    def __init__(self,config:BaseConfig,set_database:bool=False):
         """ set Starlette web-app as a service """
         
         # auto set url from config
@@ -125,15 +161,15 @@ class HttpServer(BaseService):
             "port": self.port,
             "log_level": "info" }
 
+        if set_database: RethinkDB(config).set_client()
+
     def HTMLTemplate(self,filename:str,**kwargs):
         """ set given template and return rendering if render is True """
 
         os.chdir(self.config['working_dir'])
 
         with open(f"{self.config['templates_dir']}/{filename}","r") as tpl:
-            self.template = SimpleTemplate(tpl.read(),
-                #FIXME: doesn't work with rebase() included
-                syntax = self.config.subproc['stsyntax'])
+            self.template = SimpleTemplate(tpl.read())
 
         return HTMLResponse(self.template.render(
             **self.config['templates_settings'],
@@ -182,7 +218,7 @@ class HttpServer(BaseService):
             uvicorn.run(self.app,**self.uargs)
 
 
-class Notebook(BaseService):
+class JupyterLab(BaseService):
 
     def __init__(self,config:BaseConfig,run_local:bool=False):
         """ set JupyterLab as a service """
@@ -207,7 +243,7 @@ class Notebook(BaseService):
         sp.python("-m","jupyter","notebook","password","-y")
     
 
-class StaticServer(BaseService):
+class HttpStaticServer(BaseService):
 
     def __init__(self,config:BaseConfig,run_local:bool=False):
         """ set cherrypy as a service for serving static contents
@@ -215,10 +251,8 @@ class StaticServer(BaseService):
 
         # auto set url from config
         super().__init__(config.static_host,config)
-        
         self.command =\
             f"{config.python_bin} -m sweetheart.sweet cherrypy-server"
-
         if run_local: self.run_local(service=True)
 
     @cherrypy.expose
@@ -232,4 +266,4 @@ class StaticServer(BaseService):
     def run_local(self,service):
         """ run CherryPy for serving statics """
         if service: sp.terminal(self.command,self.terminal)
-        else: cherrypy.quickstart(self,config=self.config.subproc['cherrypy'])
+        else: cherrypy.quickstart(self,config=self.config.subproc['cherryconf'])

@@ -84,30 +84,32 @@ class BaseConfig(UserDict):
 
         # default sandbox settings
         self.is_webapp_open = True
-        self.is_mongodb_local = True
+        self.is_rethinkdb_local = True
+        self.is_mongodb_local = False
         self.is_jupyter_local = False
         self.is_cherrypy_local = False
 
         # default productive settings
         self.async_host = "http://127.0.0.1:8000"# uvicorn
         self.static_host = "http://127.0.0.1:8080"# cherrypy
-        self.database_host = "mongodb://127.0.0.1:27017"
+        self.database_host = "rethinkdb://127.0.0.1:28015"
         self.jupyter_host = "http://127.0.0.1:8888"
         self.mdbook_host = "http://127.0.0.1:3000"
 
         # subprocess settings
         self.subproc = {
-            # can be changed within sweet.set_config()
+            # can be changed within set_config()
             'rustpath': f"{self.HOME}/.cargo/bin",
             'codepath': f"{self.root_path}/programs/my_python",# no / at end
-            'mongopath': f"{self.root_path}/database",
+            'mongopath': f"{self.root_path}/database/mongodb",
+            'rethinkpath': f"{self.root_path}/database/rethinkdb",
+            'cherryconf': f"{self.root_path}/configuration/cherrypy.conf",
             'stsyntax': r"<% %> % {% %}",
-            # can not be changed within sweet.set_config()
-            'cherrypy': f"{self.root_path}/configuration/cherrypy.conf",
-            'msedge.exe': f"cmd.exe /c start msedge --app=",
-            'brave.exe': f"cmd.exe /c start brave --app=",
-            'jupyterurl': f"{self.jupyter_host}/tree",
-            'tailwindcss': "npx tailwindcss build tailwind.base.css -o tailwind.css",
+            # can not be changed within set_config()
+            '.msedge.exe': f"cmd.exe /c start msedge --app=",
+            '.brave.exe': f"cmd.exe /c start brave --app=",
+            '.jupyterurl': f"{self.jupyter_host}/tree",
+            '.tailwindcss': "npx tailwindcss build tailwind.base.css -o tailwind.css",
         }
 
         # default editable settings
@@ -149,7 +151,7 @@ class BaseConfig(UserDict):
             <p><a href="/documentation/index.html">
                 Get Started Now!</a></p>
             <p><br>or code immediately using 
-                <a href="{self.subproc['jupyterurl']}">JupyterLab</a></p>
+                <a href="{self.subproc['.jupyterurl']}">JupyterLab</a></p>
             <p><br><br><em>this message appears because there
             was nothing else to render here</em></p>
           </div>"""

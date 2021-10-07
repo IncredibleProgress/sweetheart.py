@@ -9,6 +9,7 @@ def set_config(
 
     values:dict = {},
     project:str = SWEETHEART,
+    sandbox:bool = True,
     config_file:str = None ) -> BaseConfig:
 
     """ set or reset sweetheart configuration 
@@ -19,6 +20,13 @@ def set_config(
     global config
     config = BaseConfig(project)
     if config_file: config.config_file = config_file
+
+    if not sandbox:
+        # don't start any services
+        config.is_webapp_open = False
+        config.is_mongodb_local = False
+        config.is_jupyter_local = False
+        config.is_cherrypy_local = False
 
     try: 
         # update config from given json file
@@ -37,9 +45,12 @@ def set_config(
             verbose("subproc file:",config.subproc_file)
 
         # fix updatable subproc settings here
-        for key in ('pyenv','rustpath','codepath','mongopath','stsyntax'):
+        for key,value in subproc_settings.items():
 
-            value = subproc_settings.get(key)
+            if key.startswith('.'): 
+                echo(f"WARNING: update of subproc setting '{key}' forbidden")
+                continue
+
             if value and key == 'pyenv': 
                 BaseConfig.python_env = value
                 BaseConfig.python_bin = f"{value}/bin/python"
@@ -65,8 +76,11 @@ def webbrowser(url:str):
     if select and config.subproc.get(select):
         sp.shell(config.subproc[select]+url)
 
+    elif '.'+select in config.subproc:
+        sp.shell(config.subproc['.'+select]+url)
+
     elif BaseConfig.WSL_DISTRO_NAME:
-        sp.shell(config.subproc['msedge.exe']+url)
+        sp.shell(config.subproc['.msedge.exe']+url)
 
     else: sp.run(BaseConfig.python_bin,"-m","webbrowser",url)
 
@@ -74,30 +88,37 @@ def webbrowser(url:str):
 def quickstart(*args,_cli_args=None):
     """ build and run webapp for the existing config """
 
+    from sweetheart.heart import \
+        JupyterLab,RethinkDB,HttpServer,HttpStaticServer
+
     try: assert 'config' in globals()
     except: set_config()
 
     # set config from cli if given
     if _cli_args:
         config.is_webapp_open = not _cli_args.server_only
-        config.is_mongodb_local = not _cli_args.mongo_disabled
+        config.is_rethinkdb_local = not _cli_args.db_disabled
+        config.is_mongodb_local = not _cli_args.db_disabled
         config.is_jupyter_local = _cli_args.jupyter_lab
         config.is_cherrypy_local = _cli_args.cherrypy
     
-    # run Jupyterlab server
+    # set and run Jupyterlab server
     if config.is_jupyter_local:
-        from sweetheart.heart import Notebook
-        Notebook(config,run_local=True)
+        JupyterLab(config,run_local=True)
+
+    # set and run RethinkDB server
+    if config.is_rethinkdb_local:
+        RethinkDB(config,run_local=True)
 
     # run CherryPy server
-    if config.is_cherrypy_local:
-        from sweetheart.heart import StaticServer
-        StaticServer(config,run_local=True)
+    if config.is_cherrypy_local: 
+        HttpStaticServer(config,run_local=True)
 
-    # run MongoDB server
-    if config.is_mongodb_local:
-        from sweetheart.heart import Database
-        sp.mongo = Database(config,run_local=True)
+    # # run MongoDB server
+    # if config.is_mongodb_local:
+    #     from sweetheart.heart import MongoDB
+    #     sp.mongoclient,sp.database =\
+    #         MongoDB(config,run_local=True).set_client()
 
     # build and start webapp
     from sweetheart.heart import HttpServer
@@ -131,15 +152,16 @@ def sws(args):
         'init': [*sw,"-p",*args[1:1],"--init",*args[2:]],
         'install': [py,"-m","sweetheart.sweet","install",*args[1:]],
         'jupyter': [py,"-m","jupyterlab","--no-browser",*args[1:]],
-        'build-css': [*config.subproc['tailwindcss'].split()],
+        'build-css': [*config.subproc['.tailwindcss'].split()],
+        'test': [py,"-m","sweetheart.tests",*args[1:]],
         }
 
     if args[0]=='poetry': cwd= cf.subproc['codepath']
     elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
     elif args[0]=='build-css': cwd= f"{cf.root_path}/webpages/resources"
     else: cwd= config.PWD
-
-    verbose("cwd:",cwd)
+    verbose("set current working directory:",cwd)
+    
     try: sp.run(*switch.get(args[0],args),cwd=cwd)
     except: echo("sws has been interrupted")
 
@@ -213,8 +235,8 @@ if __name__ == "__main__":
     cli.sub("start",help="start webapp and the required services")
     cli.set_function(lambda args: quickstart(_cli_args=args))
 
-    cli.opt("-x","--mongo-disabled",action="store_true",
-        help="start without local Mongo Database server")
+    cli.opt("-x","--db-disabled",action="store_true",
+        help="start without local Database server")
 
     cli.opt("-j","--jupyter-lab",action="store_true",
         help="start JupyterLab Http server for enabling notebooks")
@@ -242,17 +264,21 @@ if __name__ == "__main__":
 
 
     # create subparsers for services
-    cli.sub("mongodb-server",help="run the Mongo Database server")
+    cli.sub("rethinkdb-server",help="run the Rethink-Database server")
     cli.opt("-o","--open-terminal",action="store_true")
-    cli.set_service("Database")
+    cli.set_service("RethinkDB")
+
+    cli.sub("mongodb-server",help="run the Mongo-Database server")
+    cli.opt("-o","--open-terminal",action="store_true")
+    cli.set_service("MongoDB")
 
     cli.sub("jupyter-server",help="run the JupyterLab server")
     cli.opt("-o","--open-terminal",action="store_true")
-    cli.set_service("Notebook")
+    cli.set_service("JupyterLab")
 
     cli.sub("cherrypy-server",help="run cherrypy as http static server")
     cli.opt("-o","--open-terminal",action="store_true")
-    cli.set_service("StaticServer")
+    cli.set_service("HttpStaticServer")
 
 
     # execute command line arguments

@@ -10,17 +10,31 @@ Homepage and documentation: http://bottlepy.org/
 Copyright (c) 2016, Marcel Hellkamp.
 License: MIT (see LICENSE for details)
 """
-
 from __future__ import with_statement
+
+
+  #############################################################################
+ ## set SimpleTemplate syntax for Sweetheart #################################
+#############################################################################
+
+from sweetheart.globals import BaseConfig, verbose
+
+try:
+    # if existing, BaseConfig._ provides the current sweetheart config
+    SWEETHEART_SYNTAX = BaseConfig._.subproc['stsyntax']
+    verbose(f"set SimpleTemplate syntax from given config: {SWEETHEART_SYNTAX}")
+    
+except:
+    SWEETHEART_SYNTAX = r"<% %> % {% %}"
+    verbose(f"set the default SimpleTemplate syntax: {SWEETHEART_SYNTAX}")
+
+###############################################################################
+###############################################################################
+
 
 __author__ = 'Marcel Hellkamp'
 __version__ = '0.12.19'
 __license__ = 'MIT'
-
-
-# set SimpleTemplate syntax for sweetheart
-SWEETHEART_SYNTAX = r"<% %> % {% %}"
-
 
 # The gevent server adapter needs to patch some modules before they are imported
 # This is why we parse the commandline parameters here but handle them later

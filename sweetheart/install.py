@@ -30,7 +30,7 @@ def init(config:BaseConfig):
         'cargolibs': ["mdbook","mdbook-toc"],
         'aptlibs': ["xterm","rustc","mongodb"],
         'npmlibs': ["brython","tailwindcss","postcss","autoprefixer","vue@next"],# Vue3
-        'pylibs': ["pymongo","uvicorn[standard]","aiofiles","starlette","jupyter"],
+        'pylibs': ["pymongo","rethinkdb","uvicorn[standard]","aiofiles","starlette","jupyter"],
         'files': ["configuration/packages.json","webpages/HTML","documentation/sweetbook.zip",
             "webpages/resources/tailwind.config.js","webpages/resources/tailwind.base.css" ] }
 
@@ -51,7 +51,7 @@ def init(config:BaseConfig):
     installer.install_libs(PKG_INIT,init=True)
     
     # build default tailwind.css
-    sp.shell(config.subproc['tailwindcss'],
+    sp.shell(config.subproc['.tailwindcss'],
         cwd=f"{config.root_path}/webpages/resources")
 
     try:
