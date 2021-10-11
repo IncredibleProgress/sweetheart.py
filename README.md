@@ -31,14 +31,13 @@ Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. I
 Sweetheart delivers a stock of ready-to-use features:
 
 - backend language: [Python](https://www.python.org/)
-- provided database server: [MongoDB](https://www.mongodb.com/)
-- provided asynchronous webserver: [Uvicorn](https://www.uvicorn.org/)
-- optionnal webserver for static contents: [CherryPy](https://cherrypy.org/)
-- provided asgi framework: [Starlette](https://www.starlette.io/), [FastApi](https://fastapi.tiangolo.com/)
-- provided fast documentation builder: [mdBook](https://rust-lang.github.io/mdBook/index.html)
+- database server: [RethinkDB](https://rethinkdb.com)
+- asynchronous webserver: [Uvicorn](https://www.uvicorn.org/)
+- optionnal webserver for statics: [CherryPy](https://cherrypy.dev/)
+- asgi framework: [Starlette](https://www.starlette.io/), [FastApi](https://fastapi.tiangolo.com/)
+- fast documentation builder: [mdBook](https://rust-lang.github.io/mdBook/index.html)
 - responsive user interfaces: [Html](https://www.w3schools.com/), [JupyterLab](https://jupyter.org/)
-- provided web libs for going fast: [TailwindCss](https://tailwindcss.com/), [Bootstrap](https://getbootstrap.com/)
-- provided web libs for high-level featuring: [Vue](https://vuejs.org/)
+- web libs for going fast: [TailwindCss](https://tailwindcss.com/), [Vue](https://v3.vuejs.org/)
 - optionnal frontend language: [Typescript](https://www.typescriptlang.org/), [WebAssembly](https://www.assemblyscript.org/)
 - optionnal low-level language: [Rust](https://www.rust-lang.org/)
 

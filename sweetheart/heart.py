@@ -3,6 +3,7 @@ heart.py is ... the heart of sweetheart !
 it provides services and facilities classes 
 """
 from sweetheart.globals import *
+from sweetheart.sweet import webbrowser
 from sweetheart.bottle import SimpleTemplate
 
 # patch running within JupyterLab
@@ -102,14 +103,18 @@ class RethinkDB(BaseService):
     
     def on_receive(self,websocket,data):
         
-        reql = eval(f"self.client.{data['reql']}.run(self.conn)")
-        return websocket.send_json({'test':'ok'})
+        reql = eval(f"self.client.table('{data['table']}').filter({data['filter']}).run(self.conn)")
+
+        return websocket.send_json({
+            'grid_id': data['filter']['grid_id'],
+            'select': 'test',
+            'reql': list(reql) })
 
     def __del__(self):
 
         if hasattr(self,'conn'): 
             self.conn.close()
-            verbose("last RethinkDB connection closed")
+            verbose("the last RethinkDB connection has been closed")
 
 
 class MongoDB(BaseService):
@@ -146,6 +151,19 @@ class MongoDB(BaseService):
         raise NotImplementedError
 
 
+def HTMLTemplate(filename:str,**kwargs):
+    """ set given template and return rendering """
+
+    os.chdir(BaseConfig._['working_dir'])
+
+    with open(f"{BaseConfig._['templates_dir']}/{filename}","r") as tpl:
+        template = SimpleTemplate(tpl.read())
+
+    return HTMLResponse(template.render(
+        **BaseConfig._['templates_settings'],
+        **kwargs ))
+
+
 class HttpServer(BaseService):
 
     def __init__(self,config:BaseConfig,set_database:bool=False):
@@ -161,23 +179,11 @@ class HttpServer(BaseService):
             "port": self.port,
             "log_level": "info" }
 
-        if set_database: RethinkDB(config).set_client()
+        if set_database: self.db = RethinkDB(config)
 
-    def HTMLTemplate(self,filename:str,**kwargs):
-        """ set given template and return rendering if render is True """
 
-        os.chdir(self.config['working_dir'])
-
-        with open(f"{self.config['templates_dir']}/{filename}","r") as tpl:
-            self.template = SimpleTemplate(tpl.read())
-
-        return HTMLResponse(self.template.render(
-            **self.config['templates_settings'],
-            **kwargs ))
-
-    def mount(self,*args:Route,open_with:callable=None):
-        """ mount given Route(s) and set facilities from config
-            open_with allows setting a function for opening self.url """
+    def mount(self,*args:Route):
+        """ mount given Route(s) and set facilities from config """
 
         assert hasattr(self,'data')
         os.chdir(self.config['working_dir'])
@@ -204,12 +210,12 @@ class HttpServer(BaseService):
         self.app = Starlette(routes=self.data)
         del self.data# new setting forbidden
 
-        # open url when relevant
-        if self.config.is_webapp_open and open_with:
-            open_with(self.url)
+        return self
 
     def run_local(self,service:bool=False):
         """ run webapp within local Http server """
+
+        if self.config.is_webapp_open: webbrowser(self.url)
 
         if service:
             raise NotImplementedError

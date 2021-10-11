@@ -9,21 +9,20 @@ def set_config(
 
     values:dict = {},
     project:str = SWEETHEART,
-    sandbox:bool = True,
+    sandbox:bool = False,
     config_file:str = None ) -> BaseConfig:
 
     """ set or reset sweetheart configuration 
         allow working with differents projects and configs """
 
-    from sys import argv
-
     global config
     config = BaseConfig(project)
     if config_file: config.config_file = config_file
 
-    if not sandbox:
-        # don't start any services
+    if sandbox is False:
+        # disable sandbox settings
         config.is_webapp_open = False
+        config.is_rethinkdb_local = False
         config.is_mongodb_local = False
         config.is_jupyter_local = False
         config.is_cherrypy_local = False
@@ -59,9 +58,11 @@ def set_config(
     except: pass
 
     # ensure python subprocess
-    if not '--init' in argv and\
-        not hasattr(BaseConfig,'python_env'):
-            sp.set_python_env()
+    if 'argv' in globals(): is_init = argv.init
+    else: is_init = False    
+
+    if not is_init and not hasattr(BaseConfig,'python_env'):
+        sp.set_python_env()
 
     BaseConfig._ = config
     return config
@@ -70,29 +71,26 @@ def set_config(
 def webbrowser(url:str):
     """ start url within webbrowser set in config """
 
-    try: select = config['webbrowser']
+    try: select = BaseConfig._['webbrowser']
     except: select = None
 
-    if select and config.subproc.get(select):
-        sp.shell(config.subproc[select]+url)
+    if select and '.'+select in BaseConfig._.subproc:
+        sp.shell(BaseConfig._.subproc['.'+select]+url)
 
-    elif '.'+select in config.subproc:
-        sp.shell(config.subproc['.'+select]+url)
+    elif BaseConfig._.WSL_DISTRO_NAME:
+        sp.shell(BaseConfig._.subproc['.msedge.exe']+url)
 
-    elif BaseConfig.WSL_DISTRO_NAME:
-        sp.shell(config.subproc['.msedge.exe']+url)
-
-    else: sp.run(BaseConfig.python_bin,"-m","webbrowser",url)
+    else: sp.python("-m","webbrowser",url)
 
 
 def quickstart(*args,_cli_args=None):
     """ build and run webapp for the existing config """
 
     from sweetheart.heart import \
-        JupyterLab,RethinkDB,HttpServer,HttpStaticServer
+        RethinkDB,MongoDB,JupyterLab,HttpServer,HttpStaticServer
 
-    try: assert 'config' in globals()
-    except: set_config()
+    if hasattr(BaseConfig,"_"): config = BaseConfig._
+    else: config = set_config(sandbox=True)
 
     # set config from cli if given
     if _cli_args:
@@ -114,21 +112,17 @@ def quickstart(*args,_cli_args=None):
     if config.is_cherrypy_local: 
         HttpStaticServer(config,run_local=True)
 
-    # # run MongoDB server
-    # if config.is_mongodb_local:
-    #     from sweetheart.heart import MongoDB
-    #     sp.mongoclient,sp.database =\
-    #         MongoDB(config,run_local=True).set_client()
+    # run MongoDB server
+    if config.is_mongodb_local:
+        MongoDB(config,run_local=True)
 
     # build and start webapp
-    from sweetheart.heart import HttpServer
     if args and isinstance(args[0],HttpServer):
-        # allow tests within JupyterLab
-        args[0].mount(*args[1:],open_with=webbrowser)
+        if hasattr(args[0],'data'): args[0].mount(*args[1:])
         args[0].run_local(service=False)
     else:
         webapp = HttpServer(config)
-        webapp.mount(*args,open_with=webbrowser)
+        webapp.mount(*args)
         webapp.run_local(service=False)
 
 
@@ -167,9 +161,10 @@ def sws(args):
 
 
 def install(*packages):
+    """ an easy way for installing any packages """
 
-    try: assert 'config' in globals()
-    except: raise Exception("Error, config is missing")
+    if hasattr(BaseConfig,"_"): config = BaseConfig._
+    else: config = set_config(sandbox=True)
 
     from sweetheart.install import BaseInstall
     BaseInstall(config).install_packages(*packages)
