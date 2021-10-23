@@ -20,13 +20,8 @@ def test_template(template:str):
     #config.is_webapp_open = True
 
     webapp = HttpServer(config,set_database=True)
-    websocket = webapp.db.set_websocket()
-    redb,conn = webapp.db.set_client()
-
     quickstart( webapp.mount(
-        Route("/",HTMLTemplate(template)),
-        WebSocketRoute("/database",websocket) ))
-
+        Route("/",HTMLTemplate(template)) ))
 
 if __name__ == '__main__':
 

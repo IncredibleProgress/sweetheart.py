@@ -1,43 +1,27 @@
-%rebase("HTML", load="tailwind vue websocket")
+%rebase("HTML",load="tailwind vue websocket")
 
-<script type="text/javascript">
-  // set websocket
+<script>
+  // set websocket facilities
   websocket.onmessage = function(event) {
     const data = JSON.parse(event.data);
-    document.getElementById(data.grid_id).value = data.select
+    document.getElementById(data.grid_id).value = data.select;
   }
-  // set Vue3 facilities
+  websocket.update = function(event) {
+    websocket.send( JSON.stringify({
+      table: 'timetable',
+      filter: {user: this.user, year: this.year, grid_id: event.target.id},
+      update: {select: event.target.value}
+    }) )
+  }
   createVueApp({
-    data() { return {
-      options: ['J','RTT','test'],
-      user: 'Nicolas Champion',
-      users: ['Julie Latour','Marcel Dupont'],
-      year: 2020,
-      days_labels: ['Di','Lu','Ma','Me','Je','Ve','Sa'],
-      months_lengths: [31,28,31,30,31,30,31,31,30,31,30,31],
-      months_labels: [null,'Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
-    }},
-    // beforeCreate() { brython() },
-    mounted() {
-      // for (var mth=0; mth<12; mth++) {
-      //   for (var day=0; day<31; day++) {
-      //     websocket_send({
-      //       collection: 'timetable', query: 'find_one',
-      //       select: { user: this.user, year: this.year, month: mth+1, day: day+1 },
-      //     })
-      //   }
-      // }
-    },
-    methods: {
-      update_timetable(event) {        
-        websocket.send( JSON.stringify({
-          table: 'timetable',
-          filter: {user: this.user, year: this.year, grid_id: event.target.id},
-          update: {select: event.target.value}
-        }))
-      },
-    },
-  });
+    year: 2020,
+    user: 'Nicolas Champion',
+    options: ['J','RTT','test'],
+    users: ['Julie Latour','Marcel Dupont'],
+    days_labels: ['Di','Lu','Ma','Me','Je','Ve','Sa'],
+    months_lengths: [31,28,31,30,31,30,31,31,30,31,30,31],
+    months_labels: ['','Jan.','Fév.','Mars','Avr.','Mai','Juin','Juil.','Août','Sept.','Oct.','Nov.','Déc.']
+    })
 </script>
 
 <div id="VueApp">
@@ -64,7 +48,7 @@
         <tr v-for="day in 31">
           <td>
             <label>{{ days_labels[new Date(year,month,day).getDay()] }}
-              <select v-bind:id="'d'+day+'m'+month" v-on:change="update_timetable" >
+              <select v-bind:id="'d'+day+'m'+month" v-on:change="update" >
                 <option v-for="option in options">{{ option }}</option>
               </select>
             </label>

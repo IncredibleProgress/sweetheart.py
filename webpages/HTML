@@ -7,9 +7,10 @@ lang = get('lang',get('__lang__','en'))
 <!DOCTYPE html>
 <html lang="{% lang %}">
 <head>
-  <!-- this Html has been generated with Sweetheart -->
+  <!-- [SWEETHEART] -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+%#
 % if "tailwind" in load:
   <link rel="stylesheet" href="/resources/tailwind.css">
 % elif "bootstrap" in load:
@@ -20,6 +21,7 @@ lang = get('lang',get('__lang__','en'))
 % elif "w3" in load:
   <link rel="stylesheet" href="/resources/w3.css">
 % end
+%#
 % if "pylibs" in load:
   <!-- set Python3 including standard libs-->
   <script src="/resources/node_modules/brython/brython.js"></script>
@@ -28,62 +30,38 @@ lang = get('lang',get('__lang__','en'))
   <!-- set Python3 without standard libs -->
   <script src="/resources/node_modules/brython/brython.js"></script>
 % end
+%#
 % if "d3" in load:
   <script src="/resources/node_modules/d3/dist/d3.min.js"></script>
 % end
+%#
 % if "websocket" in load:
-  <!-- set websocket facilities for Sweetheart -->
   <script>
-    websocket = new WebSocket("ws://{% __host__ %}/database");
-    document.addEventListener("unload",function() {websocket.close()} );
-    websocket.onopen = function(event) {console.log("INFO: new websocket is open")}
+    // set websocket facilities
+    websocket = new WebSocket("ws://{% __host__ %}/data");
+    document.addEventListener("unload",()=>websocket.close());
+    websocket.onopen = event => console.log("INFO: websocket is open");
   </script>
 % end
+%#
 % if "vue" in load:
-  <!-- set Vue3 with a ready-to-use default app -->
   <script src="/resources/node_modules/vue/dist/vue.global.js"></script>
   <script>
-    function createVueApp(json) {
+    // set a Vue3 default app
+    function createVueApp(vuedata) {
       document.addEventListener("DOMContentLoaded",function(){
-        vueapp = Vue.createApp(json).mount("#VueApp")
+        vueapp = Vue.createApp({
+          data() { return vuedata },
+          methods: { update(event) { websocket.update(event) } }
+        }).mount("#VueApp")
       })
     }
-
-    // // set table facilities
-    // rowMark = 'm'; colMark = 'd';
-    // function getRowFromId(id=null) {
-    //   if (id == null) { var id = event.target.id };
-    //   var ir = id.indexOf(rowMark); 
-    //   var ic = id.indexOf(colMark);
-    //   if (ir < ic) { var ir2 = ic } else { var ir2 = id.length };
-    //   return parseInt(id.slice(ir+1,ir2))
-    // }
-    // function getColFromId(id=null) {
-    //   if (id == null) { var id = event.target.id };
-    //   var ir = id.indexOf(rowMark);
-    //   var ic = id.indexOf(colMark);
-    //   if (ir < ic) { var ic2 = id.length } else { var ic2 = ir };
-    //   return parseInt(id.slice(ic+1,ic2))
-    // }
-    // function getIdFromRowCol(row,col) {
-    //   return rowMark+toString(row)+colMark+toString(col)
-    // }
-
-    // vuedata = {v:{}};
-    // document.addEventListener("DOMContentLoaded",function(){
-    //   vueapp = Vue.createApp ({
-    //     data() { return vuedata },
-    //   }).mount('#vue');
-    //   try { v = vueapp.v } catch(err) {};
-    //   % if "py" in load:
-    //   brython({% get('__debug__',0) %});
-    //   % end
-    // })
   </script>
 % elif "alpine" in load:
   <!-- set AlpineJS -->
   <script src="/resources/node_modules/alpinejs/dist/alpine.js"></script>
 % end
+%#
 </head>
 % if "py" in load and not "vue" in load:
 <body onload="brython({% get('__debug__',0) %})">
@@ -93,8 +71,8 @@ lang = get('lang',get('__lang__','en'))
 {% !base %}
 <script>
   // set title from first <h1> element
-  var heading = document.getElementsByTagName("h1")[0];
-  if (heading != null) {document.title = heading.innerText;}
+  const heading = document.getElementsByTagName("h1")[0];
+  if (heading != null) document.title = heading.innerText;
 </script>
 </body>
 </html>

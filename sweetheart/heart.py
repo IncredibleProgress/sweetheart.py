@@ -3,7 +3,6 @@ heart.py is ... the heart of sweetheart !
 it provides services and facilities classes 
 """
 from sweetheart.globals import *
-from sweetheart.sweet import webbrowser
 from sweetheart.bottle import SimpleTemplate
 
 # patch running within JupyterLab
@@ -179,8 +178,10 @@ class HttpServer(BaseService):
             "port": self.port,
             "log_level": "info" }
 
-        if set_database: self.db = RethinkDB(config)
-
+        if set_database: 
+            self.database = RethinkDB(config)
+            self.database.set_websocket()
+            self.database.set_client()
 
     def mount(self,*args:Route):
         """ mount given Route(s) and set facilities from config """
@@ -197,6 +198,10 @@ class HttpServer(BaseService):
             self.data.append(Route("/",HTMLResponse(self.config.welcome())))
         else:
             self.data.extend(args)
+
+        # mount websocket
+        if hasattr(self,'database'):
+            self.data.append(WebSocketRoute("/data",self.database.WS))
 
         # mount static files given within config
         self.data.extend([Route(relpath,FileResponse(srcpath))\

@@ -68,21 +68,6 @@ def set_config(
     return config
 
 
-def webbrowser(url:str):
-    """ start url within webbrowser set in config """
-
-    try: select = BaseConfig._['webbrowser']
-    except: select = None
-
-    if select and '.'+select in BaseConfig._.subproc:
-        sp.shell(BaseConfig._.subproc['.'+select]+url)
-
-    elif BaseConfig._.WSL_DISTRO_NAME:
-        sp.shell(BaseConfig._.subproc['.msedge.exe']+url)
-
-    else: sp.python("-m","webbrowser",url)
-
-
 def quickstart(*args,_cli_args=None):
     """ build and run webapp for the existing config """
 
