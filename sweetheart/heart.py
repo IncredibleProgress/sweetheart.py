@@ -151,12 +151,25 @@ class MongoDB(BaseService):
 
 
 def HTMLTemplate(filename:str,**kwargs):
-    """ set given template and return rendering """
+    """ set given template and return the rendering 
+        including some configuration and python stuff """
 
     os.chdir(BaseConfig._['working_dir'])
 
     with open(f"{BaseConfig._['templates_dir']}/{filename}","r") as tpl:
-        template = SimpleTemplate(tpl.read())
+        template = tpl.read()
+        for old,new in {
+        '<!SWEETHEART html>': r'%rebase("HTML")',
+        '<script python>': "\n".join((
+            '<script type="text/python">\n',
+            'import json',
+            'from browser import window, document\n',
+            'console, websocket = window.console, window.websocket',
+            'createVueApp= lambda dict: window.createVueApp(json.dumps(dict))',
+            'websocket.send_json= lambda dict: websocket.send(json.dumps(dict))',
+            ))
+        }.items(): template = template.replace(old,new)
+        template = SimpleTemplate(template)
 
     return HTMLResponse(template.render(
         **BaseConfig._['templates_settings'],

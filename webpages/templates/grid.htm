@@ -1,0 +1,20 @@
+<!SWEETHEART html>
+<script python>
+
+def on_message(event):
+  data = json.load(event.data)
+  document[data.grid_id] <= data.select
+
+def on_update(event):
+  websocket.send_json({'table': '','filter': '','update':''})
+
+websocket.onmessage = on_message
+websocket.onupdate = on_update
+
+createVueApp({'value':'Vue3js test: OK'})
+document <= "Brython test: OK"
+</script>
+
+<div id="VueApp">
+  {{ value }}
+</div>
