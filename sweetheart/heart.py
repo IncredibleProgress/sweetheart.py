@@ -1,6 +1,6 @@
 """
-heart.py is ... the heart of sweetheart !
-it provides services and facilities classes 
+heart.py is ... the heart of sweetheart!
+provides services and utilities classes 
 """
 from sweetheart.globals import *
 from sweetheart.bottle import SimpleTemplate
@@ -58,12 +58,17 @@ class BaseService:
         if getattr(args,"open_terminal",None): self.run_local(service=True)
         else: self.run_local(service=False)
 
-    def set_websocket(self,encoding='json'):
-        self.WS = get_websocket(self,encoding)
-        return self.WS
+    def set_websocket(self,dbname=None,encoding='json'):
+        if not dbname: dbname = self.config['selected_DB']
+        self.WS_dbname = dbname
+        self.WS_route = f"/data/{dbname}"
+        self.WS = get_WebSocketEndpoint(self,encoding)
+        return self.WS_route, self.WS
+    
+    def on_receive(self,websocket,data):
+        raise NotImplementedError
 
-
-def get_websocket(parent:object,encoding:str):
+def get_WebSocketEndpoint(parent:object,encoding:str):
     """ factory function for implementing WebSocketEndpoint 
         the object 'parent' must provide an 'on_receive' method """
 
@@ -74,6 +79,34 @@ def get_websocket(parent:object,encoding:str):
     WebSocket.encoding = encoding
     return WebSocket
 
+
+class ReQL:
+
+    def __init__(self,rdb):
+        self.rdb = rdb
+        self.reql = f"self.rdb.client"
+    
+    def table(self,data):
+        #NOTE: reset self.reql
+        self.data = data
+        self.reql = f"self.rdb.client.table('{data['table']}')"
+        return self
+
+    def filter(self,data):
+        self.reql += f".filter({data['filter']})"
+        return self
+
+    def insert(self,data):
+        self.reql += f".insert({data['insert']})"
+        return self
+
+    def update(self,data):
+        self.reql += f".update({data['update']})"
+        return self
+
+    def run(self):
+        self.reql += f".run(self.rdb.conn)"
+        return eval(self.reql)
 
 class RethinkDB(BaseService):
 
@@ -102,12 +135,27 @@ class RethinkDB(BaseService):
     
     def on_receive(self,websocket,data):
         
-        reql = eval(f"self.client.table('{data['table']}').filter({data['filter']}).run(self.conn)")
+        r = ReQL(self)
+        if data.get('reql'):
 
-        return websocket.send_json({
-            'grid_id': data['filter']['grid_id'],
-            'select': 'test',
-            'reql': list(reql) })
+            r.reql += f".{data['reql']}"
+            return websocket.send_json({
+                'message': 'reql',
+                'return': r.run() })
+
+        elif data.get('message') == 'update|insert':
+
+            if list(r.table(data).filter(data).run()):
+                return websocket.send_json(
+                    r.table(data).filter(data).update(data).run() )
+            else:
+                values = {'insert': {
+                    **json.loads(data['filter']),
+                    **json.loads(data['update']) }}
+                return websocket.send_json(
+                    r.table(data).insert(values).run() )
+        else:
+            raise KeyError("KeyError receiving JSON from websocket")
 
     def __del__(self):
 
@@ -158,20 +206,22 @@ def HTMLTemplate(filename:str,**kwargs):
 
     with open(f"{BaseConfig._['templates_dir']}/{filename}","r") as tpl:
         template = tpl.read()
-        for old,new in {
-        '<!SWEETHEART html>': r'%rebase("HTML")',
-        '<script python>': "\n".join((
-            '<script type="text/python">\n',
-            'import json',
-            'from browser import window, document\n',
-            'console, websocket = window.console, window.websocket',
-            'createVueApp= lambda dict: window.createVueApp(json.dumps(dict))',
-            'websocket.send_json= lambda dict: websocket.send(json.dumps(dict))',
-            ))
-        }.items(): template = template.replace(old,new)
-        template = SimpleTemplate(template)
+
+    for old,new in {
+    '<!SWEETHEART html>': r'%rebase("HTML")',
+    '<script python>': """
+<script type="text/python">
+# many thanks to Brython and Pierre for allowing that!\n
+import json
+from browser import window, document\n
+console,websocket,r = window.console,window.websocket,window.r
+createVueApp = lambda dict: window.createVueApp(json.dumps(dict))
+        """.strip()
+    }.items(): template = template.replace(old,new)
+    template = SimpleTemplate(template)
 
     return HTMLResponse(template.render(
+        __db__ = BaseConfig._['selected_DB'],
         **BaseConfig._['templates_settings'],
         **kwargs ))
 
@@ -214,7 +264,8 @@ class HttpServer(BaseService):
 
         # mount websocket
         if hasattr(self,'database'):
-            self.data.append(WebSocketRoute("/data",self.database.WS))
+            self.data.append(WebSocketRoute(
+                self.database.WS_route,self.database.WS))
 
         # mount static files given within config
         self.data.extend([Route(relpath,FileResponse(srcpath))\

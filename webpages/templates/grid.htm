@@ -1,20 +1,43 @@
 <!SWEETHEART html>
 <script python>
 
-def on_message(event):
-  data = json.load(event.data)
-  document[data.grid_id] <= data.select
-
 def on_update(event):
-  websocket.send_json({'table': '','filter': '','update':''})
+
+  r.table("grid")
+  r.filter({'id':event.target.id})
+  r.update({'value':event.target.value}).conn()
+  console.log("ReQL: "+r.reql)
+
+def on_message(event):
+
+  data = json.loads(event.data)
+  console.log(data['inserted'] or data['replaced'])
 
 websocket.onmessage = on_message
 websocket.onupdate = on_update
 
-createVueApp({'value':'Vue3js test: OK'})
-document <= "Brython test: OK"
+createVueApp({
+  'table_headers': ['col1','col2','col3','col4'],
+})
 </script>
 
-<div id="VueApp">
-  {{ value }}
+<div id="VueApp" class="m-2">
+
+  <h1 class="text-xl mb-2">Realtime Table</h1>
+
+  <table class="table-auto">
+    <thead>
+      <tr>
+        <th v-for="th in table_headers" class="border">{{th}}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="row in 500">
+        <td v-for="col in table_headers.length" class="border">
+          <input v-bind:id="'r'+row+'c'+col" type="text" v-on:change="update">
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
 </div>

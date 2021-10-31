@@ -1,8 +1,9 @@
 <%
 # PYTHON optionnal args:
-# load = "tailwind|bootstrap|w3 py|pylibs alpine|vue d3"
+# load = "tailwind|bootstrap|w3 py|pylibs alpine|vue reql d3"
 load = get('load',get('__load__',''))
 lang = get('lang',get('__lang__','en'))
+dbname = get('dbname',get('__db__','test'))
 %>
 <!DOCTYPE html>
 <html lang="{% lang %}">
@@ -38,11 +39,56 @@ lang = get('lang',get('__lang__','en'))
   <script src="/resources/node_modules/alpinejs/dist/alpine.js"></script>
 % end
 %#
-% if "vue/ws" in load:
+% if "vue" in load and "reql" in load:
   <script>
-    // set default websocket utilities
-    websocket = new WebSocket("ws://{% __host__ %}/data");
-    document.addEventListener("unload",()=>websocket.close());
+    // set some ReQL and websocket capabilities
+    class RethinkDB {
+      constructor(dbname="{% dbname %}") {
+        // set websocket utilities
+        this.websocket = new WebSocket(`ws://{%__host__%}/data/${dbname}`);
+        document.addEventListener("unload",()=>this.websocket.close());
+        // default settings
+        this.database_name = dbname;
+        this.default_message = "update|insert";
+      }
+      table(tablename) {
+        // init a new RethinkDB query 
+        this.message = undefined;
+        this.tablename = tablename;
+        this.filterJSON = undefined;
+        this.updateJSON = undefined;
+        this.reql = `table("${this.tablename}")`;
+        return this
+      }
+      filter(json) {
+        this.filterJSON = JSON.stringify(json);
+        this.reql += `.filter(${this.filterJSON})`;
+        return this
+      }
+      update(json) {
+        this.updateJSON = JSON.stringify(json);
+        this.reql += `.update(${this.updateJSON})`;
+        return this
+      }
+      conn(message=this.default_message) {
+        this.message = message;
+        if ( message == "reql" ) {
+          this.websocket.send(JSON.stringify({
+            message: message,
+            reql: this.reql
+          }) )
+        } else if ( message == "update|insert" ) { 
+          this.websocket.send(JSON.stringify({
+            message: message,
+            table: this.tablename,
+            filter: this.filterJSON,
+            update: this.updateJSON
+          }) )
+        } 
+      }
+    }
+    r = new RethinkDB();
+    websocket = r.websocket;
     // set default Vue3 utilities
     function createVueApp(vuedata) {
       if ( typeof(vuedata) == "object" ) {
@@ -50,14 +96,14 @@ lang = get('lang',get('__lang__','en'))
         document.addEventListener("DOMContentLoaded",function(){
           vueapp = Vue.createApp({
             data() { return vuedata },
-            methods: { update(event) { websocket.update(event) } }
+            methods: { update(event) { r.websocket.onupdate(event) } }
           }).mount("#VueApp")
         })
       } else if ( typeof(vuedata) == "string" ) {
         // should be a Brython function call case
         vueapp = Vue.createApp({
           data() { return JSON.parse(vuedata) },
-          methods: { update(event) { websocket.update(event) } }
+          methods: { update(event) { r.websocket.onupdate(event) } }
           }).mount("#VueApp")
       }
     }
@@ -66,7 +112,7 @@ lang = get('lang',get('__lang__','en'))
 %#
 </head>
 % if "py" in load:
-<body onload="brython(1)">
+<body onload="brython({% get('__debug__',0) %})">
 % else:
 <body>
 % end
