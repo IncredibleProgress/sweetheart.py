@@ -104,10 +104,11 @@ class ReQL:
         self.reql += f".update({data['update']})"
         return self
 
-    def run(self,reql=""):
-        if reql: self.reql += f".{reql}.run(self.rdb.conn)"
-        else: self.reql += f".run(self.rdb.conn)"
-        return eval(self.reql)
+    def run(self,data=None):
+        if data: reql = self.reql + f".{data['run']}.run(self.rdb.conn)"
+        else: reql = self.reql + f".run(self.rdb.conn)"
+        self.reql = f"self.rdb.client"
+        return eval(reql)
 
 class RethinkDB(BaseService):
 
@@ -118,7 +119,7 @@ class RethinkDB(BaseService):
         super().__init__(config.database_host,config)
         assert self.protocol == 'rethinkdb'
 
-        self.command = f"rethinkdb -d {config.subproc['rethinkpath']}"
+        self.command = f"rethinkdb --http-port 8180 -d {config.subproc['rethinkpath']}"
         if run_local: self.run_local(service=True)
     
     def connect(self,db:str=None):
@@ -143,13 +144,14 @@ class RethinkDB(BaseService):
         """ used as the websocket receiver """
         
         r = self.reql_builder
-        if data.get('message') == 'reql':
+
+        if data.get('scope') == 'VueModel':
             return websocket.send_json({
                 'scope': data.get('scope'),
                 'attribute': data.get('attribute'),
-                'data': r.run(data['reql']) })
+                'value': r.run(data) })
 
-        elif data.get('message') == 'update|insert':
+        elif data.get('scope') == 'update|insert':
             if list(r.table(data).filter(data).run()):
                 return websocket.send_json(
                     r.table(data).filter(data).update(data).run() )
@@ -164,7 +166,7 @@ class RethinkDB(BaseService):
 
         r = self.reql_builder
         data = await request.json()
-        return JSONResponse({'data': list(r.run(data['reql'])) })
+        return JSONResponse({'data': list(r.run(data)) })
         
     def __del__(self):
         # close the last RethinkDB connection
@@ -221,11 +223,13 @@ def HTMLTemplate(filename:str,**kwargs):
 import json
 from browser import window, document
 console,websocket,r = window.console,window.websocket,window.r
+allow_setVueModel = window.allow_setVueModel
 
 def createVueApp(dict):
     websocket.onmessage = on_message
     websocket.onupdate = on_update
-    window.vuemounted = vue_mounted
+    try: window.vuecreated = vue_created
+    except: pass
     window.createVueApp(json.dumps(dict)) """.strip()+"\n",
 
       '</python>': "</script>",

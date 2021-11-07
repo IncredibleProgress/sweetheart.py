@@ -6,7 +6,7 @@
 
 def on_update(event):
 
-    """ realtime database updating wihin a Vue App using ReQL/Websocket 
+    """ realtime database updating wihin a Vue3 App using ReQL/Websocket 
         this function should be called only through html event attributes
         e.g. <input id="row1:colname" type="text" v-on:keyup="update"> """
 
@@ -19,30 +19,21 @@ def on_message(event):
 
     """ catch ReQL/Websocket messages here """
 
-    data = json.loads(event.data)
-    console.log(data)
+    allow_setVueModel(event.data)
 
-    if data['scope'] == "setVueData":
-        console.log(f"window.vdata.{data['attribute']} = data['data']")
-        exec(f"window.vdata.{data['attribute']} = data['data']")
+def vue_created(vdata):
 
-def vue_mounted(vdata):
-
-    """ will be called as soon as the Vue model is existing 
+    """ will be called as soon as the Vue instance is existing 
         this allows you fecthing data using ReQL creating a Vue3 App 
         NB: every vdata attributes must be set within createVueApp """
 
-    window.vdata = vdata
     r.table("grid").count().set("row_nbr")
-    console.log(vdata)
 
 createVueApp({
     # Vue data are set here as a python dict:
-
     'headers': "ABCDE",
     'row_nbr': 3,
 })
-
 </python>
 
 

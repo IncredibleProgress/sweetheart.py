@@ -90,9 +90,11 @@ class BaseConfig(UserDict):
         self.is_cherrypy_local = False
 
         # default productive settings
+        #FIXME: port matter should be improved in BaseService
         self.async_host = "http://127.0.0.1:8000"# uvicorn
         self.static_host = "http://127.0.0.1:8080"# cherrypy
         self.database_host = "rethinkdb://127.0.0.1:28015"
+        self.database_admin = "http://127.0.0.1:8180"
         self.jupyter_host = "http://127.0.0.1:8888"
         self.mdbook_host = "http://127.0.0.1:3000"
 

@@ -50,7 +50,7 @@ dbname = get('dbname',get('__db__','test'))
         document.addEventListener("unload",()=>this.websocket.close());
         // default settings
         this.database_name = dbname;
-        this.default_message = "update|insert";
+        this.default_scope = "update|insert";
       }
       table(tablename) {
         // init a new RethinkDB query 
@@ -75,54 +75,42 @@ dbname = get('dbname',get('__db__','test'))
         this.reql += `.update(${this.updateJSON})`;
         return this
       }
-      send(scope=this.default_message) {
-        console.log(this.reql);
-        if ( scope == "update|insert" ) { 
+      send(scope=this.default_scope) {
+        if (scope == "update|insert") { 
           this.websocket.send(JSON.stringify({
-            message: scope,
+            scope: scope,
             table: this.tablename,
             filter: this.filterJSON,
             update: this.updateJSON
           }) )
-        } else if ( scope.slice(0,6) == "table(" ) {
-          this.websocket.send(JSON.stringify({
-            message: "reql",
-            reql: exec
-          }) )
-        } else if ( scope == "setVueData" ) {
-          this.websocket.send(JSON.stringify({
-            message: "reql",
-            scope: scope,
-            reql: this.reql
-          }) )
         }
       }
       fetch(reql=this.reql) {
+        //FIXME: currently not accepted on server side
         return fetch("/reql",{
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({"reql": reql})
+          body: JSON.stringify({"run": reql})
         }).then(response => response.json())
           .then(json => json.data)
       }
-      async set(attr) {
+      set(attr) {
         this.websocket.send(JSON.stringify({
-            message: "reql",
-            scope: "setVueData",
+            scope: "VueModel",
             attribute: attr,
-            reql: this.reql
+            run: this.reql
           }) )
-        await r.set
       }
     }
     r = new RethinkDB();
     websocket = r.websocket;
 
     // set default Vue3 utilities
-    function setVueData(vdata) {
-
+    function allow_setVueModel(json) {
+      const data = JSON.parse(json);
+      if (data.scope == "VueModel") {
+        eval(`vdata.${data.attribute} = data.value`) }
     }
-
     function createVueApp(vuedata) {
       if ( typeof(vuedata) == "object" ) {
         // should be a JavaScript function call case
@@ -136,7 +124,10 @@ dbname = get('dbname',get('__db__','test'))
         // should be a Brython function call case
         vuemodel = Vue.createApp({
           data() { return JSON.parse(vuedata) },
-          mounted() { vuemounted(this.$data) },
+          created() { 
+            vdata = this.$data;
+            vuecreated(this.$data);
+          },
           methods: { update(event) { r.websocket.onupdate(event) }}
           }).mount("#VueApp")
       }
