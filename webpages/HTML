@@ -34,6 +34,7 @@ dbname = get('dbname',get('__db__','test'))
 % end
 %#
 % if "vue" in load:
+  <style>[v-cloak]{display:none;}</style>
   <script src="/resources/node_modules/vue/dist/vue.global.js"></script>
 % elif "alpine" in load:
   <script src="/resources/node_modules/alpinejs/dist/alpine.js"></script>
@@ -41,7 +42,7 @@ dbname = get('dbname',get('__db__','test'))
 %#
 % if "vue" in load and "reql" in load:
   <script>
-    // set some ReQL and websocket capabilities
+    // set ReQL and Websocket capabilities
     class RethinkDB {
       constructor(dbname="{% dbname %}") {
         // set websocket utilities
@@ -60,6 +61,10 @@ dbname = get('dbname',get('__db__','test'))
         this.reql = `table("${this.tablename}")`;
         return this
       }
+      count(arg="") {
+        this.reql += `.count(${arg.toString()})`;
+        return this
+      }
       filter(json) {
         this.filterJSON = JSON.stringify(json);
         this.reql += `.filter(${this.filterJSON})`;
@@ -70,40 +75,69 @@ dbname = get('dbname',get('__db__','test'))
         this.reql += `.update(${this.updateJSON})`;
         return this
       }
-      conn(message=this.default_message) {
-        this.message = message;
-        if ( message == "reql" ) {
+      send(scope=this.default_message) {
+        console.log(this.reql);
+        if ( scope == "update|insert" ) { 
           this.websocket.send(JSON.stringify({
-            message: message,
-            reql: this.reql
-          }) )
-        } else if ( message == "update|insert" ) { 
-          this.websocket.send(JSON.stringify({
-            message: message,
+            message: scope,
             table: this.tablename,
             filter: this.filterJSON,
             update: this.updateJSON
           }) )
-        } 
+        } else if ( scope.slice(0,6) == "table(" ) {
+          this.websocket.send(JSON.stringify({
+            message: "reql",
+            reql: exec
+          }) )
+        } else if ( scope == "setVueData" ) {
+          this.websocket.send(JSON.stringify({
+            message: "reql",
+            scope: scope,
+            reql: this.reql
+          }) )
+        }
+      }
+      fetch(reql=this.reql) {
+        return fetch("/reql",{
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({"reql": reql})
+        }).then(response => response.json())
+          .then(json => json.data)
+      }
+      async set(attr) {
+        this.websocket.send(JSON.stringify({
+            message: "reql",
+            scope: "setVueData",
+            attribute: attr,
+            reql: this.reql
+          }) )
+        await r.set
       }
     }
     r = new RethinkDB();
     websocket = r.websocket;
+
     // set default Vue3 utilities
+    function setVueData(vdata) {
+
+    }
+
     function createVueApp(vuedata) {
       if ( typeof(vuedata) == "object" ) {
         // should be a JavaScript function call case
         document.addEventListener("DOMContentLoaded",function(){
-          vueapp = Vue.createApp({
+          vuemodel = Vue.createApp({
             data() { return vuedata },
-            methods: { update(event) { r.websocket.onupdate(event) } }
+            methods: { update(event) { r.websocket.onupdate(event) }}
           }).mount("#VueApp")
         })
       } else if ( typeof(vuedata) == "string" ) {
         // should be a Brython function call case
-        vueapp = Vue.createApp({
+        vuemodel = Vue.createApp({
           data() { return JSON.parse(vuedata) },
-          methods: { update(event) { r.websocket.onupdate(event) } }
+          mounted() { vuemounted(this.$data) },
+          methods: { update(event) { r.websocket.onupdate(event) }}
           }).mount("#VueApp")
       }
     }

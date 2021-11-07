@@ -14,7 +14,7 @@ from starlette.applications import Starlette
 from starlette.staticfiles import StaticFiles
 from starlette.endpoints import WebSocketEndpoint
 from starlette.routing import Route, Mount, WebSocketRoute
-from starlette.responses import HTMLResponse,FileResponse,RedirectResponse
+from starlette.responses import HTMLResponse,FileResponse,JSONResponse
 
 try: import cherrypy
 except:
@@ -104,8 +104,9 @@ class ReQL:
         self.reql += f".update({data['update']})"
         return self
 
-    def run(self):
-        self.reql += f".run(self.rdb.conn)"
+    def run(self,reql=""):
+        if reql: self.reql += f".{reql}.run(self.rdb.conn)"
+        else: self.reql += f".run(self.rdb.conn)"
         return eval(self.reql)
 
 class RethinkDB(BaseService):
@@ -130,21 +131,25 @@ class RethinkDB(BaseService):
 
         from rethinkdb import r
         self.client = r
-        self.conn = r.connect(self.host,self.port,db=self.config['selected_DB'])
+        self.conn = r.connect(
+            self.host,
+            self.port,
+            db=self.config['selected_DB'])
+
+        self.reql_builder = ReQL(self)
         return self.client,self.conn
     
     def on_receive(self,websocket,data):
+        """ used as the websocket receiver """
         
-        r = ReQL(self)
-        if data.get('reql'):
-
-            r.reql += f".{data['reql']}"
+        r = self.reql_builder
+        if data.get('message') == 'reql':
             return websocket.send_json({
-                'message': 'reql',
-                'return': r.run() })
+                'scope': data.get('scope'),
+                'attribute': data.get('attribute'),
+                'data': r.run(data['reql']) })
 
         elif data.get('message') == 'update|insert':
-
             if list(r.table(data).filter(data).run()):
                 return websocket.send_json(
                     r.table(data).filter(data).update(data).run() )
@@ -154,14 +159,16 @@ class RethinkDB(BaseService):
                     **json.loads(data['update']) }}
                 return websocket.send_json(
                     r.table(data).insert(values).run() )
-        else:
-            raise KeyError("KeyError receiving JSON from websocket")
 
+    async def fetch_endpoint(self,request):
+
+        r = self.reql_builder
+        data = await request.json()
+        return JSONResponse({'data': list(r.run(data['reql'])) })
+        
     def __del__(self):
-
-        if hasattr(self,'conn'): 
-            self.conn.close()
-            verbose("the last RethinkDB connection has been closed")
+        # close the last RethinkDB connection
+        if hasattr(self,'conn'): self.conn.close()
 
 
 class MongoDB(BaseService):
@@ -208,15 +215,22 @@ def HTMLTemplate(filename:str,**kwargs):
         template = tpl.read()
 
     for old,new in {
-    '<!SWEETHEART html>': r'%rebase("HTML")',
-    '<script python>': """
-<script type="text/python">
-# many thanks to Brython and Pierre for allowing that!\n
+
+      '<python>': """<script type="text/python">
+
 import json
-from browser import window, document\n
+from browser import window, document
 console,websocket,r = window.console,window.websocket,window.r
-createVueApp = lambda dict: window.createVueApp(json.dumps(dict))
-        """.strip()
+
+def createVueApp(dict):
+    websocket.onmessage = on_message
+    websocket.onupdate = on_update
+    window.vuemounted = vue_mounted
+    window.createVueApp(json.dumps(dict)) """.strip()+"\n",
+
+      '</python>': "</script>",
+      '<!SWEETHEART html>': r'%rebase("HTML")',
+
     }.items(): template = template.replace(old,new)
     template = SimpleTemplate(template)
 
@@ -262,10 +276,11 @@ class HttpServer(BaseService):
         else:
             self.data.extend(args)
 
-        # mount websocket
+        # mount fetch endpoint and websocket
         if hasattr(self,'database'):
-            self.data.append(WebSocketRoute(
-                self.database.WS_route,self.database.WS))
+            self.data.extend([
+                Route("/reql", self.database.fetch_endpoint),
+                WebSocketRoute(self.database.WS_route, self.database.WS)])
 
         # mount static files given within config
         self.data.extend([Route(relpath,FileResponse(srcpath))\
