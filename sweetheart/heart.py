@@ -65,7 +65,13 @@ class BaseService:
         self.WS = get_WebSocketEndpoint(self,encoding)
         return self.WS_route, self.WS
     
+    # async def fetch_endpoint(self,request):
+    #     data = await request.json()
+    #     return self.on_fetch(data)
+    
     def on_receive(self,websocket,data):
+        raise NotImplementedError
+    def on_fetch(self,data):
         raise NotImplementedError
 
 def get_WebSocketEndpoint(parent:object,encoding:str):
@@ -105,10 +111,15 @@ class ReQL:
         return self
 
     def run(self,data=None):
+        # when given data must be a dict providing a 'run' key
         if data: reql = self.reql + f".{data['run']}.run(self.rdb.conn)"
         else: reql = self.reql + f".run(self.rdb.conn)"
         self.reql = f"self.rdb.client"
-        return eval(reql)
+        result = eval(reql)
+        if type(result) in [str,int,float]: return result
+        else: 
+            verbose("ReQL response type:",type(result))
+            return list(result)
 
 class RethinkDB(BaseService):
 
@@ -163,10 +174,11 @@ class RethinkDB(BaseService):
                     r.table(data).insert(values).run() )
 
     async def fetch_endpoint(self,request):
-
-        r = self.reql_builder
+        
         data = await request.json()
-        return JSONResponse({'data': list(r.run(data)) })
+        return JSONResponse({
+            'target': data['target'],
+            'value': self.reql_builder.run(data) })
         
     def __del__(self):
         # close the last RethinkDB connection
@@ -223,11 +235,12 @@ def HTMLTemplate(filename:str,**kwargs):
 import json
 from browser import window, document
 console,websocket,r = window.console,window.websocket,window.r
-allow_setVueModel = window.allow_setVueModel
 
 def createVueApp(dict):
-    websocket.onmessage = on_message
-    websocket.onupdate = on_update
+    try: websocket.onupdate = on_update
+    except: pass
+    try: websocket.onmessage = on_message
+    except: pass
     try: window.vuecreated = vue_created
     except: pass
     window.createVueApp(json.dumps(dict)) """.strip()+"\n",
@@ -283,7 +296,7 @@ class HttpServer(BaseService):
         # mount fetch endpoint and websocket
         if hasattr(self,'database'):
             self.data.extend([
-                Route("/reql", self.database.fetch_endpoint),
+                Route("/reql", self.database.fetch_endpoint, methods=["POST"]),
                 WebSocketRoute(self.database.WS_route, self.database.WS)])
 
         # mount static files given within config

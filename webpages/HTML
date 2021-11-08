@@ -85,49 +85,35 @@ dbname = get('dbname',get('__db__','test'))
           }) )
         }
       }
-      fetch(reql=this.reql) {
-        //FIXME: currently not accepted on server side
-        return fetch("/reql",{
+      fetch(attr) {
+        fetch("/reql",{
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({"run": reql})
+          body: JSON.stringify({
+            target: `vmodel.$data.${attr}`,
+            run: this.reql })
         }).then(response => response.json())
-          .then(json => json.data)
-      }
-      set(attr) {
-        this.websocket.send(JSON.stringify({
-            scope: "VueModel",
-            attribute: attr,
-            run: this.reql
-          }) )
+          .then(data => eval(`${data.target} = data.value`))
       }
     }
     r = new RethinkDB();
     websocket = r.websocket;
 
     // set default Vue3 utilities
-    function allow_setVueModel(json) {
-      const data = JSON.parse(json);
-      if (data.scope == "VueModel") {
-        eval(`vdata.${data.attribute} = data.value`) }
-    }
     function createVueApp(vuedata) {
       if ( typeof(vuedata) == "object" ) {
         // should be a JavaScript function call case
         document.addEventListener("DOMContentLoaded",function(){
-          vuemodel = Vue.createApp({
+          vmodel = Vue.createApp({
             data() { return vuedata },
             methods: { update(event) { r.websocket.onupdate(event) }}
           }).mount("#VueApp")
         })
       } else if ( typeof(vuedata) == "string" ) {
         // should be a Brython function call case
-        vuemodel = Vue.createApp({
+        vmodel = Vue.createApp({
           data() { return JSON.parse(vuedata) },
-          created() { 
-            vdata = this.$data;
-            vuecreated(this.$data);
-          },
+          created() { vuecreated(this.$data) },
           methods: { update(event) { r.websocket.onupdate(event) }}
           }).mount("#VueApp")
       }

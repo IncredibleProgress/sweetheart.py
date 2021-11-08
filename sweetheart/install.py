@@ -28,9 +28,9 @@ def init(config:BaseConfig):
     PKG_INIT = { 
         'documentation': "sweetbook.zip",
         'cargolibs': ["mdbook","mdbook-toc"],
-        'aptlibs': ["xterm","rustc","mongodb"],
+        'aptlibs': ["xterm","rustc","rethinkdb"],
         'npmlibs': ["brython","tailwindcss","postcss","autoprefixer","vue@next"],# Vue3
-        'pylibs': ["pymongo","rethinkdb","uvicorn[standard]","aiofiles","starlette","jupyter"],
+        'pylibs': ["rethinkdb","uvicorn[standard]","aiofiles","starlette","jupyter"],
         'files': ["configuration/packages.json","webpages/HTML","documentation/sweetbook.zip",
             "webpages/resources/tailwind.config.js","webpages/resources/tailwind.base.css" ] }
 

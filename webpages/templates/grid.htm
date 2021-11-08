@@ -1,37 +1,38 @@
 <!SWEETHEART html>
 
 <python>
-# some nice python code can be given here, many thanks to Brython.js!
+# some nice python code can be given here (many thanks to Brython!)
 # SweetHeart preset also RethinkDB/WebSocket/Vue3 capabilities for you
 
 def on_update(event):
 
-    """ realtime database updating wihin a Vue3 App using ReQL/Websocket 
-        this function should be called only through html event attributes
-        e.g. <input id="row1:colname" type="text" v-on:keyup="update"> """
+    """ this updates in realtime RethinkDB using WebSocket 
+        it should be called only from html event attributes
+        e.g. <input id="row:col" type="text" v-on:keyup="update"> """
 
     r.table("grid")
-    r.filter({'id':event.target.id})
-    r.update({'value':event.target.value})
+    r.filter({"id": event.target.id})
+    r.update({"value": event.target.value})
     r.send()
 
 def on_message(event):
 
-    """ catch ReQL/Websocket messages here """
+    """ catch here WebSocket messages from the server side 
+        you see, we handle directly the JavaScript event object """
 
-    allow_setVueModel(event.data)
+    document["error"] <= event.data.error
 
 def vue_created(vdata):
 
-    """ will be called as soon as the Vue instance is existing 
-        this allows you fecthing data using ReQL creating a Vue3 App 
-        NB: every vdata attributes must be set within createVueApp """
+    """ this will be called as soon as the Vue3 instance is created
+        it allows you fecthing data using ReQL before html rendering
+        the vdata argument provides the $data objet of the Vue model """
 
-    r.table("grid").count().set("row_nbr")
+    #r.table("grid").filter({"id":"headers"}).fetch("headers")
+    r.table("grid").count().fetch("row_nbr")
 
 createVueApp({
-    # Vue data are set here as a python dict:
-    'headers': "ABCDE",
+    'headers': "ABCDEF",
     'row_nbr': 3,
 })
 </python>
