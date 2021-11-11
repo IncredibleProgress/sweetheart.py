@@ -13,23 +13,22 @@ def on_update(event):
     r.table("grid")
     r.filter({"id": event.target.id})
     r.update({"value": event.target.value})
-    r.send()
 
 def on_message(event):
 
     """ catch here WebSocket messages from the server side 
         you see, we handle directly the JavaScript event object """
 
-    document["error"] <= event.data.error
+    console.log(event.data)
 
-def vue_created(vdata):
+def vue_created(data):
 
     """ this will be called as soon as the Vue3 instance is created
         it allows you fecthing data using ReQL before html rendering
-        the vdata argument provides the $data objet of the Vue model """
+        the data argument provides the $data objet of the Vue model """
 
-    #r.table("grid").filter({"id":"headers"}).fetch("headers")
-    r.table("grid").count().fetch("row_nbr")
+    r.table("grid").count().setVueAttr("row_nbr")
+
 
 createVueApp({
     'headers': "ABCDEF",
@@ -50,7 +49,7 @@ createVueApp({
     <tbody>
       <tr v-for="row in row_nbr">
         <td v-for="col in headers.length" class="border">
-          <input v-bind:id="row+':'+col" type="text" v-on:keyup="update">
+          <input :id="row+':'+col" type="text" v-on:keyup="update">
         </td>
       </tr>
     </tbody>

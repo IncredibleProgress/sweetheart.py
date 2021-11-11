@@ -42,19 +42,41 @@ dbname = get('dbname',get('__db__','test'))
 %#
 % if "vue" in load and "reql" in load:
   <script>
-    // set ReQL and Websocket capabilities
-    class RethinkDB {
-      constructor(dbname="{% dbname %}") {
-        // set websocket utilities
-        this.websocket = new WebSocket(`ws://{%__host__%}/data/${dbname}`);
+    // provide data exchange capabilities
+    class DataHub {
+      constructor(dbname) {
+        this.route = `/data/${dbname}`;
+        this.websocket = new WebSocket(`ws://{%__host__%}${this.route}`);
         document.addEventListener("unload",()=>this.websocket.close());
-        // default settings
-        this.database_name = dbname;
-        this.default_scope = "update|insert";
+      }
+      fetchJSON(scope) {
+        return fetch("/data", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(scope)
+        }).then(response => response.json())
+      }
+      setVueAttr(attr,run) {
+        if (this.hasOwnProperty("reql")) {run = this.reql};
+        this.fetchJSON({ run: run,
+          target: `vmodel.$data.${attr}`
+        }).then(data => eval(`${data.target} = data.value`))
+      }
+      setElementById(id,run) {
+        if (this.hasOwnProperty("reql")) {run = this.reql};
+        this.fetchJSON({ run: run,
+          target: `document.getElementById("${id}").value`
+        }).then(data => eval(`${data.target} = data.value`))
+      }
+    }
+    // provide ReQL capabilities
+    class RethinkDB extends DataHub {
+      constructor(dbname) {
+        super(dbname);
+        this.dbname = dbname;
       }
       table(tablename) {
         // init a new RethinkDB query 
-        this.message = undefined;
         this.tablename = tablename;
         this.filterJSON = undefined;
         this.updateJSON = undefined;
@@ -70,52 +92,41 @@ dbname = get('dbname',get('__db__','test'))
         this.reql += `.filter(${this.filterJSON})`;
         return this
       }
-      update(json) {
+      update(json,allow="update|insert") {
         this.updateJSON = JSON.stringify(json);
         this.reql += `.update(${this.updateJSON})`;
-        return this
-      }
-      send(scope=this.default_scope) {
-        if (scope == "update|insert") { 
-          this.websocket.send(JSON.stringify({
-            scope: scope,
-            table: this.tablename,
-            filter: this.filterJSON,
-            update: this.updateJSON
-          }) )
-        }
-      }
-      fetch(attr) {
-        fetch("/reql",{
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({
-            target: `vmodel.$data.${attr}`,
-            run: this.reql })
-        }).then(response => response.json())
-          .then(data => eval(`${data.target} = data.value`))
+        this.websocket.send(JSON.stringify({
+          run: allow,
+          table: this.tablename,
+          filter: this.filterJSON,
+          update: this.updateJSON
+        }))
       }
     }
-    r = new RethinkDB();
-    websocket = r.websocket;
+    r = new RethinkDB("{% dbname %}");
 
     // set default Vue3 utilities
-    function createVueApp(vuedata) {
+    function createVueApp(vuedata, options={
+          vm: "vmodel",
+          id: "VueApp"
+        }) {
       if ( typeof(vuedata) == "object" ) {
         // should be a JavaScript function call case
+        // here vuedata allows setting the entire vue model
         document.addEventListener("DOMContentLoaded",function(){
-          vmodel = Vue.createApp({
-            data() { return vuedata },
-            methods: { update(event) { r.websocket.onupdate(event) }}
-          }).mount("#VueApp")
+          let vm = Vue.createApp(vuedata).mount(`#${options.id}`);
+          eval(`${options.vm} = vm`);
         })
       } else if ( typeof(vuedata) == "string" ) {
         // should be a Brython function call case
-        vmodel = Vue.createApp({
+        let vm = Vue.createApp({
           data() { return JSON.parse(vuedata) },
           created() { vuecreated(this.$data) },
-          methods: { update(event) { r.websocket.onupdate(event) }}
-          }).mount("#VueApp")
+          methods: { 
+            update(event) { r.websocket.onupdate(event) }
+          }
+          }).mount(`#${options.id}`);
+        eval(`${options.vm} = vm`);
       }
     }
   </script>

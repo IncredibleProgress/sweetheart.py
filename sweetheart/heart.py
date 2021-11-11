@@ -65,13 +65,7 @@ class BaseService:
         self.WS = get_WebSocketEndpoint(self,encoding)
         return self.WS_route, self.WS
     
-    # async def fetch_endpoint(self,request):
-    #     data = await request.json()
-    #     return self.on_fetch(data)
-    
     def on_receive(self,websocket,data):
-        raise NotImplementedError
-    def on_fetch(self,data):
         raise NotImplementedError
 
 def get_WebSocketEndpoint(parent:object,encoding:str):
@@ -86,41 +80,6 @@ def get_WebSocketEndpoint(parent:object,encoding:str):
     return WebSocket
 
 
-class ReQL:
-
-    def __init__(self,rdb):
-        self.rdb = rdb
-        self.reql = f"self.rdb.client"
-    
-    def table(self,data):
-        #NOTE: reset self.reql
-        self.data = data
-        self.reql = f"self.rdb.client.table('{data['table']}')"
-        return self
-
-    def filter(self,data):
-        self.reql += f".filter({data['filter']})"
-        return self
-
-    def insert(self,data):
-        self.reql += f".insert({data['insert']})"
-        return self
-
-    def update(self,data):
-        self.reql += f".update({data['update']})"
-        return self
-
-    def run(self,data=None):
-        # when given data must be a dict providing a 'run' key
-        if data: reql = self.reql + f".{data['run']}.run(self.rdb.conn)"
-        else: reql = self.reql + f".run(self.rdb.conn)"
-        self.reql = f"self.rdb.client"
-        result = eval(reql)
-        if type(result) in [str,int,float]: return result
-        else: 
-            verbose("ReQL response type:",type(result))
-            return list(result)
-
 class RethinkDB(BaseService):
 
     def __init__(self,config:BaseConfig,run_local:bool=False):
@@ -129,12 +88,10 @@ class RethinkDB(BaseService):
         #NOTE: url is auto set here from config
         super().__init__(config.database_host,config)
         assert self.protocol == 'rethinkdb'
-
         self.command = f"rethinkdb --http-port 8180 -d {config.subproc['rethinkpath']}"
         if run_local: self.run_local(service=True)
     
     def connect(self,db:str=None):
-
         if hasattr(self,'conn'): self.conn.close()
         if db is None: db = self.config['selected_DB']
         self.conn = self.client.connect(self.host,self.port,db=db)
@@ -142,43 +99,63 @@ class RethinkDB(BaseService):
     def set_client(self):
 
         from rethinkdb import r
+
         self.client = r
         self.conn = r.connect(
             self.host,
             self.port,
             db=self.config['selected_DB'])
 
-        self.reql_builder = ReQL(self)
+        self.reql = "self.client"
         return self.client,self.conn
+        
+    def table(self,data:dict) -> object:
+        #NOTE: reset self.reql
+        self.data = data
+        self.reql = f"self.client.table('{data['table']}')"
+        return self
+
+    def filter(self,data:dict) -> object:
+        self.reql += f".filter({data['filter']})"
+        return self
+
+    def insert(self,data:dict) -> object:
+        self.reql += f".insert({data['insert']})"
+        return self
+
+    def update(self,data:dict) -> object:
+        self.reql += f".update({data['update']})"
+        return self
+
+    def run(self,data:dict=None):
+        # if given, data must be a dict providing a 'run' key
+        if data: reql = self.reql + f".{data['run']}.run(self.conn)"
+        else: reql = self.reql + ".run(self.conn)"
+        self.reql = "self.client"
+        result = eval(reql)
+        #FIXME: handle result type and return
+        if type(result) in [str,int,float,dict]: return result
+        else: return list(result)
+
+    async def fetch_endpoint(self,request):
+        data = await request.json()
+        return JSONResponse({
+            'target': data['target'],
+            'value': self.run(data) })
     
     def on_receive(self,websocket,data):
         """ used as the websocket receiver """
         
-        r = self.reql_builder
-
-        if data.get('scope') == 'VueModel':
-            return websocket.send_json({
-                'scope': data.get('scope'),
-                'attribute': data.get('attribute'),
-                'value': r.run(data) })
-
-        elif data.get('scope') == 'update|insert':
-            if list(r.table(data).filter(data).run()):
+        if data.get('run') == 'update|insert':
+            if list(self.table(data).filter(data).run()):
                 return websocket.send_json(
-                    r.table(data).filter(data).update(data).run() )
+                    self.table(data).filter(data).update(data).run() )
             else:
                 values = {'insert': {
                     **json.loads(data['filter']),
                     **json.loads(data['update']) }}
                 return websocket.send_json(
-                    r.table(data).insert(values).run() )
-
-    async def fetch_endpoint(self,request):
-        
-        data = await request.json()
-        return JSONResponse({
-            'target': data['target'],
-            'value': self.reql_builder.run(data) })
+                    self.table(data).insert(values).run() )
         
     def __del__(self):
         # close the last RethinkDB connection
@@ -229,17 +206,16 @@ def HTMLTemplate(filename:str,**kwargs):
         template = tpl.read()
 
     for old,new in {
-
       '<python>': """<script type="text/python">
 
 import json
 from browser import window, document
-console,websocket,r = window.console,window.websocket,window.r
+console, r = window.console, window.r
 
 def createVueApp(dict):
-    try: websocket.onupdate = on_update
+    try: r.websocket.onupdate = on_update
     except: pass
-    try: websocket.onmessage = on_message
+    try: r.websocket.onmessage = on_message
     except: pass
     try: window.vuecreated = vue_created
     except: pass
@@ -247,7 +223,6 @@ def createVueApp(dict):
 
       '</python>': "</script>",
       '<!SWEETHEART html>': r'%rebase("HTML")',
-
     }.items(): template = template.replace(old,new)
     template = SimpleTemplate(template)
 
@@ -296,7 +271,7 @@ class HttpServer(BaseService):
         # mount fetch endpoint and websocket
         if hasattr(self,'database'):
             self.data.extend([
-                Route("/reql", self.database.fetch_endpoint, methods=["POST"]),
+                Route("/data", self.database.fetch_endpoint, methods=["POST"]),
                 WebSocketRoute(self.database.WS_route, self.database.WS)])
 
         # mount static files given within config
