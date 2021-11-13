@@ -25,10 +25,9 @@ def vue_created(data):
 
     """ this will be called as soon as the Vue3 instance is created
         it allows you fecthing data using ReQL before html rendering
-        the data argument provides the $data objet of the Vue model """
+        the data argument provides the $data object of the Vue model """
 
-    r.table("grid").count().setVueAttr("row_nbr")
-
+    #r.table("grid").count().setVueAttr("row_nbr")
 
 createVueApp({
     'headers': "ABCDEF",
@@ -48,8 +47,8 @@ createVueApp({
     </thead>
     <tbody>
       <tr v-for="row in row_nbr">
-        <td v-for="col in headers.length" class="border">
-          <input :id="row+':'+col" type="text" v-on:keyup="update">
+        <td v-for="hdr in headers.length" class="border">
+          <input type="text" :id="row+':'+hdr" :value="fromId(row+':'+hdr)" v-on:keyup="update">
         </td>
       </tr>
     </tbody>

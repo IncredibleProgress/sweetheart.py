@@ -48,6 +48,7 @@ dbname = get('dbname',get('__db__','test'))
         this.route = `/data/${dbname}`;
         this.websocket = new WebSocket(`ws://{%__host__%}${this.route}`);
         document.addEventListener("unload",()=>this.websocket.close());
+        this.websocket.onmessage = (event) => this.onmessage(event);
       }
       fetchJSON(scope) {
         return fetch("/data", {
@@ -62,11 +63,17 @@ dbname = get('dbname',get('__db__','test'))
           target: `vmodel.$data.${attr}`
         }).then(data => eval(`${data.target} = data.value`))
       }
-      setElementById(id,run) {
-        if (this.hasOwnProperty("reql")) {run = this.reql};
+      setValueFromId(header) {
+        let id, run
+        if (this.hasOwnProperty("reql")) {
+          run = this.reql; //this = RethinkDB obj
+          id = this.filterarg.id;
+        };
         this.fetchJSON({ run: run,
           target: `document.getElementById("${id}").value`
-        }).then(data => eval(`${data.target} = data.value`))
+        }).then(data => { 
+          if (data.value.length == 1) {
+          eval(`${data.target} = data.value[0].${header}`)} })
       }
     }
     // provide ReQL capabilities
@@ -74,6 +81,7 @@ dbname = get('dbname',get('__db__','test'))
       constructor(dbname) {
         super(dbname);
         this.dbname = dbname;
+        this.onupdate = this.websocket.onupdate;
       }
       table(tablename) {
         // init a new RethinkDB query 
@@ -88,6 +96,7 @@ dbname = get('dbname',get('__db__','test'))
         return this
       }
       filter(json) {
+        this.filterarg = json;
         this.filterJSON = JSON.stringify(json);
         this.reql += `.filter(${this.filterJSON})`;
         return this
@@ -108,7 +117,8 @@ dbname = get('dbname',get('__db__','test'))
     // set default Vue3 utilities
     function createVueApp(vuedata, options={
           vm: "vmodel",
-          id: "VueApp"
+          id: "VueApp",
+          hub: r
         }) {
       if ( typeof(vuedata) == "object" ) {
         // should be a JavaScript function call case
@@ -123,7 +133,8 @@ dbname = get('dbname',get('__db__','test'))
           data() { return JSON.parse(vuedata) },
           created() { vuecreated(this.$data) },
           methods: { 
-            update(event) { r.websocket.onupdate(event) }
+            update(event) { options.hub.onupdate(event) },
+            fromId(id) { r.table("grid").filter({id:id}).setValueFromId("value") }
           }
           }).mount(`#${options.id}`);
         eval(`${options.vm} = vm`);

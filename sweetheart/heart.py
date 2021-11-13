@@ -212,13 +212,14 @@ import json
 from browser import window, document
 console, r = window.console, window.r
 
+def try_exec(code:str):
+    try: exec(code)
+    except: pass
+
 def createVueApp(dict):
-    try: r.websocket.onupdate = on_update
-    except: pass
-    try: r.websocket.onmessage = on_message
-    except: pass
-    try: window.vuecreated = vue_created
-    except: pass
+    try_exec("r.onupdate = on_update")
+    try_exec("r.onmessage = on_message")
+    try_exec("window.vuecreated = vue_created")
     window.createVueApp(json.dumps(dict)) """.strip()+"\n",
 
       '</python>': "</script>",
