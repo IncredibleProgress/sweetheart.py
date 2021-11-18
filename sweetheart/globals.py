@@ -120,6 +120,7 @@ class BaseConfig(UserDict):
             "working_dir": f"{self.root_path}/webpages",
             "notebooks_dir": f"{self.root_path}/documentation/notebooks",
             "templates_dir": "templates",
+            "templates_base": "HTML",
             # editable subprocess settings
             "webbrowser": "default",
             "selected_DB": "test",

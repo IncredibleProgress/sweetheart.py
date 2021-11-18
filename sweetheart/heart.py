@@ -223,7 +223,7 @@ def createVueApp(dict):
     window.createVueApp(json.dumps(dict)) """.strip()+"\n",
 
       '</python>': "</script>",
-      '<!SWEETHEART html>': r'%rebase("HTML")',
+      '<!SWEETHEART html>': f'%rebase("{BaseConfig._["templates_base"]}")',
     }.items(): template = template.replace(old,new)
     template = SimpleTemplate(template)
 

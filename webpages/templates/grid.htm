@@ -10,9 +10,11 @@ def on_update(event):
         it should be called only from html event attributes
         e.g. <input id="row:col" type="text" v-on:keyup="update"> """
 
+    elt = event.target
+    
     r.table("grid")
-    r.filter({"id": event.target.id})
-    r.update({"value": event.target.value})
+    r.filter({"id": elt.tableId})
+    r.update({elt.tableCol: elt.value})
 
 def on_message(event):
 
@@ -27,11 +29,11 @@ def vue_created(data):
         it allows you fecthing data using ReQL before html rendering
         the data argument provides the $data object of the Vue model """
 
-    #r.table("grid").count().setVueAttr("row_nbr")
+    r.table("grid").setVueAttr("table")
 
 createVueApp({
-    'headers': "ABCDEF",
-    'row_nbr': 3,
+    "table": [],
+    "headers": ["col1","col2"]
 })
 </python>
 
@@ -39,16 +41,16 @@ createVueApp({
 <div v-cloak id="VueApp" class="m-2">
   <h1 class="text-xl">Realtime Table</h1>
 
-  <table class="table-auto">
+  <table>
     <thead>
       <tr>
         <th v-for="th in headers" class="border">{{ th }}</th>
       </tr>
     </thead>
     <tbody>
-      <tr v-for="row in row_nbr">
-        <td v-for="hdr in headers.length" class="border">
-          <input type="text" :id="row+':'+hdr" :value="fromId(row+':'+hdr)" v-on:keyup="update">
+      <tr v-for="n in table.length">
+        <td v-for="h in headers" class="border">
+          <input type="text" v-bind:id="tableId(n-1,h)" v-model="table[n-1][h]" v-on:keyup="update">
         </td>
       </tr>
     </tbody>

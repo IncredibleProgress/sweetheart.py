@@ -64,16 +64,15 @@ dbname = get('dbname',get('__db__','test'))
         }).then(data => eval(`${data.target} = data.value`))
       }
       setValueFromId(header) {
-        let id, run
+        //FIXME: only for test
+        let id, run;
         if (this.hasOwnProperty("reql")) {
-          run = this.reql; //this = RethinkDB obj
+          run = this.reql;
           id = this.filterarg.id;
         };
         this.fetchJSON({ run: run,
           target: `document.getElementById("${id}").value`
-        }).then(data => { 
-          if (data.value.length == 1) {
-          eval(`${data.target} = data.value[0].${header}`)} })
+        }).then(data => eval(`${data.target} = data.value[0].${header}`))
       }
     }
     // provide ReQL capabilities
@@ -81,7 +80,6 @@ dbname = get('dbname',get('__db__','test'))
       constructor(dbname) {
         super(dbname);
         this.dbname = dbname;
-        this.onupdate = this.websocket.onupdate;
       }
       table(tablename) {
         // init a new RethinkDB query 
@@ -133,10 +131,18 @@ dbname = get('dbname',get('__db__','test'))
           data() { return JSON.parse(vuedata) },
           created() { vuecreated(this.$data) },
           methods: { 
-            update(event) { options.hub.onupdate(event) },
-            fromId(id) { r.table("grid").filter({id:id}).setValueFromId("value") }
+            update(event) { 
+              const sep = event.target.id.indexOf(":");
+              event.target.tableId = event.target.id.slice(0,sep);
+              event.target.tableCol = event.target.id.slice(sep+1);
+              options.hub.onupdate(event);
+            },
+            tableId(row,header) {
+              const vm = eval(`${options.vm}`);
+              return `${vm.table[row]['id']}:${header}`
+            }
           }
-          }).mount(`#${options.id}`);
+        }).mount(`#${options.id}`);
         eval(`${options.vm} = vm`);
       }
     }
