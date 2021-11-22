@@ -3,6 +3,8 @@
 
 ## A supercharged heart for the non-expert hands
 
+What about safety, big-data, realtime databases, responsive interfaces and AI? Sweetheart comes with the highest quality components widely used by GAFAM and others, also the best coding practices, and makes the hard stuff for you. Start from scratch, and create with ease and efficiency the apps you really need embedding reliable open-source code for processing at full power data which remains yours!
+
 Since Ubuntu 20.04 can be installed as usual softwares within Windows 10, it provides an incredible way for any organization to develop, deploy, and administrate **powerful responsive webapps including AI** on its own local network keeping high capabilities of integration with the already existing tools like databases, MS-Excel, and SAP.
 
 Sweetheart provides a simple Python/Html centric approach leading you implementing best components and best coding practices. Due to the top-rated place of the Python language regarding to data processing, calculations and AI, this makes sweetheart a fast and ideal toolkit to e-volute towards **Industry4.0** precepts and innovative ideas.
@@ -34,7 +36,7 @@ Sweetheart delivers a stock of ready-to-use features:
 - database server: [RethinkDB](https://rethinkdb.com)
 - asynchronous webserver: [Uvicorn](https://www.uvicorn.org/)
 - optionnal webserver for statics: [CherryPy](https://cherrypy.dev/)
-- asgi framework: [Starlette](https://www.starlette.io/), [FastApi](https://fastapi.tiangolo.com/)
+- asgi framework: [Starlette](https://www.starlette.io/)
 - fast documentation builder: [mdBook](https://rust-lang.github.io/mdBook/index.html)
 - responsive user interfaces: [Html](https://www.w3schools.com/), [JupyterLab](https://jupyter.org/)
 - web libs for going fast: [TailwindCss](https://tailwindcss.com/), [Vue](https://v3.vuejs.org/)
@@ -60,24 +62,84 @@ The following *sweetheart development chart* allows to evaluate coding and costs
 | Implement SAP gateway                        | MIDDLE        | MODERATE     |
 | Erect and run a dedicated datacenter         | EXPERT        | HIGH         |
 
-## Code examples
+## Realistic code examples
 
-### your first webpage controller written in Python
+Sweetheart allows you to do all what you need with only 1 Python file and 1 Html file, that's it! Even more, it leads you writting in a natural low-code and minimalistic way. Neithertheless under the hood it integrates the most powerfull and innovative features at the time being like Ubuntu, Rust, RethinkDB, Jupyter, TailwindCss and Vue.
+
+### typical webpage controller written in Python
 
 ``` python
 from sweetheart.sandbox import *
 
-quickstart( Route("/", HTMLResponse("<h1>Welcome!</h1>")) )
+config = set_config({
+    "webbrowser": "brave.exe",
+    "selected_DB": "test" })
+
+webapp = HttpServer(config, set_database=True).mount(
+    Route("/", HTMLTemplate("grid.htm")) )
+
+quickstart(webapp)
 ```
 
-### your first *sweet* Html webpage
+### typical Html webpage template
 
 ``` html
-%rebase("HTML")
+<!SWEETHEART html>
 
-<div class="text-center">
-  <h1>Welcome!</h1>
-  <p>get coding full power at the light speed</p>
+<python>
+# some nice python code can be given here (many thanks to Brython!)
+# SweetHeart preset also RethinkDB/WebSocket/Vue3 capabilities for you
+
+def on_update(event):
+
+    """ this updates in realtime RethinkDB using WebSocket 
+        it should be called only from html event attributes
+        e.g. <input type="text" id="row:col" v-on:keyup="update"> """
+
+    elt = event.target
+    
+    r.table("grid")
+    r.filter({"id": elt.tableId})
+    r.update({elt.tableCol: elt.value})
+
+def on_message(event):
+
+    """ catch here WebSocket messages from the server side 
+        you see, we handle directly the JavaScript event object """
+
+    console.log(event.data)
+
+def vue_created(data):
+
+    """ this will be called as soon as the Vue3 instance is created
+        it allows you fecthing data using ReQL before html rendering
+        the data argument provides the $data object of the Vue model """
+
+    r.table("grid").setVueAttr("table")
+
+createVueApp({
+    "table": [],
+    "headers": ["col1","col2","col3"]
+})
+</python>
+
+<div v-cloak id="VueApp" class="m-2">
+  <h1 class="text-xl">Realtime Table</h1>
+
+  <table>
+    <thead>
+      <tr>
+        <th v-for="th in headers" class="border">{{ th }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="n in table.length">
+        <td v-for="h in headers" class="border">
+          <input type="text" v-bind:id="tableId(n-1,h)" v-model="table[n-1][h]" v-on:keyup="update">
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </div>
 ```
 
