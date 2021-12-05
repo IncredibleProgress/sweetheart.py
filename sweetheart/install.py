@@ -6,8 +6,8 @@ from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
 
-node_source = "curl -sSL https://deb.nodesource.com/setup_14.x | sudo -E bash -"
 raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"# / is needed
+#node_source = "curl -sSL https://deb.nodesource.com/setup_14.x | sudo -E bash -"
 #get_w3css = "curl -sSL https://www.w3schools.com/w3css/4/w3.css -o w3.css"
 #wsl_rustup = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
 #get_poetry = "curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -"
@@ -15,24 +15,22 @@ raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py
 
 # ensure prerequisites
 if os.path.isfile(
-    f"{os.environ['HOME']}/.sweet/{SWEETHEART}/programs/my_python/pyproject.toml"):
+    f"{os.environ['HOME']}/.sweet/sweetheart/programs/my_python/pyproject.toml"):
         verbose("install: existing prerequisites found")
 else:
     sp.shell("curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -")
 
 
-def init(config:BaseConfig):
+def init(config:BaseConfig,add_pylibs:str=None):
     """ set require configuration before sweetheart installation
         and intends to provide minimalistic sweetheart features """
 
-    PKG_INIT = { 
-        'documentation': "sweetbook.zip",
-        'cargolibs': ["mdbook","mdbook-toc"],
-        'aptlibs': ["xterm","rustc","rethinkdb"],
+    PKG_INIT = {'documentation': "sweetbook.zip",'cargolibs': ["mdbook"],
+        'aptlibs': ["xterm","rustc","rethinkdb","nodejs"],
         'npmlibs': ["brython","tailwindcss","postcss","autoprefixer","vue@next"],# Vue3
-        'pylibs': ["rethinkdb","uvicorn[standard]","aiofiles","starlette","jupyter"],
-        'files': ["configuration/packages.json","webpages/HTML","documentation/sweetbook.zip",
-            "webpages/resources/tailwind.config.js","webpages/resources/tailwind.base.css" ] }
+        'pylibs': ["rethinkdb","uvicorn[standard]","aiofiles","starlette"],
+        'files': ["documentation/sweetbook.zip","configuration/packages.json",
+            "webpages/HTML","webpages/resources/tailwind.base.css"] }
 
     # require directories
     for basedir in [
@@ -46,11 +44,13 @@ def init(config:BaseConfig):
         #f"{config.root_path}/webpages/markdown",
     ]: os.makedirs(basedir,exist_ok=True)
 
-    # install default libs
+    # install default libs with extra
+    if add_pylibs: PKG_INIT['pylibs'].extend(add_pylibs.split())
     installer = BaseInstall(config)
     installer.install_libs(PKG_INIT,init=True)
     
     # build default tailwind.css
+    echo("build a generic tailwindcss file")
     sp.shell(config.subproc['.tailwindcss'],
         cwd=f"{config.root_path}/webpages/resources")
 
@@ -66,14 +66,14 @@ def init(config:BaseConfig):
         verbose("INFO:\n an error occured creating symlinks during init process",
             "\n an expected cause could be that links are already existing")
 
-    # set JupyterLab service
-    from sweetheart.heart import Notebook
-    echo("set the JupyerLab ipkernel and required password",blank=True)
-    jupyter = Notebook(config)
-    jupyter.set_ipykernel()
-
-    if config.project == SWEETHEART:
-        jupyter.set_password()
+    if "jupyter" in PKG_INIT['pylibs']:
+        # set JupyterLab service
+        from sweetheart.heart import JupyterLab
+        echo("set the JupyerLab ipkernel and required password",blank=True)
+        JupyterLab(config).set_ipykernel()
+        if config.project == MASTER_MODULE: JupyterLab(config).set_password()
+    
+    echo("installation process completed")
 
     
 class BaseInstall:
@@ -83,10 +83,10 @@ class BaseInstall:
         self.config = config
         self.packages_file = f"{config.root_path}/configuration/packages.json"
 
-        if config.project != SWEETHEART:
+        if config.project != MASTER_MODULE:
 
             sp.poetry("new","my_python",cwd=f"{config.root_path}/programs")
-            sp.poetry("add",SWEETHEART)
+            sp.poetry("add",MASTER_MODULE)
             sp.set_python_env(cwd=f"{config.root_path}/programs/my_python")
 
             with open(f"{config.root_path}/configuration/subproc.json","w") as fi:
@@ -98,11 +98,12 @@ class BaseInstall:
         echo("apt install:",*libs)
         return sp.run("sudo","apt","install",*libs,**kwargs)
 
-    def cargo(self,*libs:str,**kwargs):
+    def cargo(self,*libs:str,init=False,**kwargs):
         """ install rust crates using cargo """
 
         echo("cargo install:",*libs)
         path = self.config.subproc['rustpath']
+        if init: sp.run(f"{path}/rustup","update")
         return sp.run(f"{path}/cargo","install",*libs,**kwargs)
     
     def poetry(self,*libs:str,**kwargs):
@@ -114,10 +115,10 @@ class BaseInstall:
     def npm(self,*libs:str,init=False,**kwargs):
         """ install node modules using npm """
 
-        if init:
-            echo("set node.js:",node_source.split()[2])
-            sp.shell(node_source)
-            sp.shell("sudo apt install -y nodejs")
+        # if init:
+        #     echo("set node.js:",node_source.split()[2])
+        #     sp.shell(node_source)
+        #     sp.shell("sudo apt install -y nodejs")
 
         echo("npm install:",*libs)
         os.chdir(f"{self.config.root_path}/webpages/resources")
@@ -137,7 +138,7 @@ class BaseInstall:
         if aptlibs: self.apt(*aptlibs)
 
         cargolibs = libs.get('cargolibs')
-        if cargolibs: self.cargo(*cargolibs)
+        if cargolibs: self.cargo(*cargolibs,init=init)
 
         pylibs = libs.get('pylibs')
         if pylibs: self.poetry(*pylibs)

@@ -13,6 +13,7 @@ dbname = get('dbname',get('__db__','test'))
 %#
 % if "tailwind" in load:
   <link rel="stylesheet" href="/resources/tailwind.css">
+  {% !get('__style__','') %}
 % elif "bootstrap" in load:
   <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
   <link rel="stylesheet" href="/resources/node_modules/bootstrap/dist/css/bootstrap.min.css">
@@ -133,8 +134,8 @@ dbname = get('dbname',get('__db__','test'))
           methods: { 
             update(event) { 
               const sep = event.target.id.indexOf(":");
-              event.target.tableId = event.target.id.slice(0,sep);
-              event.target.tableCol = event.target.id.slice(sep+1);
+              event.target.tableRowId = event.target.id.slice(0,sep);
+              event.target.tableColHeader = event.target.id.slice(sep+1);
               options.hub.onupdate(event);
             },
             tableId(row,header) {

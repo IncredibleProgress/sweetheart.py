@@ -2,8 +2,9 @@
 import os,subprocess,json,locale
 from collections import UserDict
 
-# default project name 
-SWEETHEART = "sweetheart"
+# default dir/module name of master project
+# allow replacing sweetheart by a fork of it
+MASTER_MODULE = "sweetheart"
 
 
 class sp:
@@ -35,7 +36,7 @@ class sp:
 
     @classmethod
     def python(cls,*args,**kwargs):
-        #NOTE: no python env forbidden here
+        # no python env given is forbidden here
         assert hasattr(BaseConfig,'python_env')
         return cls.run(BaseConfig.python_bin,*args,**kwargs)
 
@@ -85,8 +86,8 @@ class BaseConfig(UserDict):
         # default sandbox settings
         self.is_webapp_open = True
         self.is_rethinkdb_local = True
+        self.is_jupyter_local = True
         self.is_mongodb_local = False
-        self.is_jupyter_local = False
         self.is_cherrypy_local = False
 
         # default productive settings
@@ -111,7 +112,7 @@ class BaseConfig(UserDict):
             '.msedge.exe': f"cmd.exe /c start msedge --app=",
             '.brave.exe': f"cmd.exe /c start brave --app=",
             '.jupyterurl': f"{self.jupyter_host}/tree",
-            '.tailwindcss': "npx tailwindcss build tailwind.base.css -o tailwind.css",
+            '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css",
         }
 
         # default editable settings
@@ -124,8 +125,9 @@ class BaseConfig(UserDict):
             # editable subprocess settings
             "webbrowser": "default",
             "selected_DB": "test",
-            # html rendering settings
+            # editable html rendering settings
             "templates_settings": {
+                # subprocess settings
                 '__host__': self.async_host[7:],
                 '__load__': "tailwind pylibs vue+reql",
                 '__lang__': self.locale_lang,

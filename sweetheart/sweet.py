@@ -8,14 +8,13 @@ from sweetheart.globals import *
 def set_config(
 
     values:dict = {},
-    project:str = SWEETHEART,
+    project:str = MASTER_MODULE,
     sandbox:bool = False,
     config_file:str = None ) -> BaseConfig:
 
     """ set or reset sweetheart configuration 
         allow working with differents projects and configs """
 
-    global config
     config = BaseConfig(project)
     if config_file: config.config_file = config_file
 
@@ -57,13 +56,14 @@ def set_config(
                 config.subproc[key] = value
     except: pass
 
-    # ensure python subprocess
-    if 'argv' in globals(): is_init = argv.init
-    else: is_init = False    
+    try: not_init = not argv.init
+    except: not_init = True
 
-    if not is_init and not hasattr(BaseConfig,'python_env'):
+    # ensure python subprocess setting
+    if not_init and not hasattr(BaseConfig,'python_env'):
         sp.set_python_env()
 
+    verbose("python env:",BaseConfig.python_env)
     BaseConfig._ = config
     return config
 
@@ -74,6 +74,7 @@ def quickstart(*args,_cli_args=None):
     from sweetheart.heart import \
         RethinkDB,MongoDB,JupyterLab,HttpServer,HttpStaticServer
 
+    # allow auto config
     if hasattr(BaseConfig,"_"): config = BaseConfig._
     else: config = set_config(sandbox=True)
 
@@ -106,15 +107,14 @@ def quickstart(*args,_cli_args=None):
         if hasattr(args[0],'data'): args[0].mount(*args[1:])
         args[0].run_local(service=False)
     else:
-        webapp = HttpServer(config)
-        webapp.mount(*args)
+        webapp = HttpServer(config).mount(*args)
         webapp.run_local(service=False)
 
 
 def sws(args):
     """ SWeet Shell command line interface """
 
-    try: assert 'config' in globals()
+    try: config = BaseConfig._
     except: raise Exception("Error, config is missing")
 
     if isinstance(args,str): args = args.split()
@@ -123,21 +123,28 @@ def sws(args):
     vv,py,po = config.python_env,config.python_bin,config.poetry_bin
 
     switch = {
-        'python': [f"{vv}/bin/ipython",*args[1:]],
-        'poetry': [config.poetry_bin,*args[1:]],
-        'mdbook': [f"{sb['rustpath']}/mdbook",*args[1:]],
-        'sweet': [py,"-m","sweetheart.sweet",*args[1:]],
+        # sweet.py commands
+        'new': [*sw,"-p",*args[1:2],"sh","--init",*args[2:]],
+        'run': [py,"-m","sweetheart.sweet",*args[1:]],
         'start': [py,"-m","sweetheart.sweet","start",*args[1:]],
-        'init': [*sw,"-p",*args[1:1],"--init",*args[2:]],
+        'help': [py,"-m","sweetheart.sweet","start","-x"],
         'install': [py,"-m","sweetheart.sweet","install",*args[1:]],
-        'jupyter': [py,"-m","jupyterlab","--no-browser",*args[1:]],
-        'build-css': [*config.subproc['.tailwindcss'].split()],
+        # services commands
         'test': [py,"-m","sweetheart.tests",*args[1:]],
+        'build-css': [*config.subproc['.tailwindcss'].split()],
+        # subprocess commands
+        'poetry': [config.poetry_bin,*args[1:]],
+        'python': [f"{vv}/bin/ipython",*args[1:]],
+        'mdbook': [f"{sb['rustpath']}/mdbook",*args[1:]],
         }
+
+    if args == []:
+        commands = " ".join(list(switch))
+        args = ["echo",f"\nsws available commands:\n  {commands}\n"]
 
     if args[0]=='poetry': cwd= cf.subproc['codepath']
     elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
-    elif args[0]=='build-css': cwd= f"{cf.root_path}/webpages/resources"
+    elif args[0]=='build-css': cwd= f"{cf['working_dir']}/resources"
     else: cwd= config.PWD
     verbose("set current working directory:",cwd)
     
@@ -148,6 +155,7 @@ def sws(args):
 def install(*packages):
     """ an easy way for installing any packages """
 
+    # allow auto config
     if hasattr(BaseConfig,"_"): config = BaseConfig._
     else: config = set_config(sandbox=True)
 
@@ -166,6 +174,7 @@ class CommandLineInterface:
         self.parser= argparse.ArgumentParser()
         self.subparser= self.parser.add_subparsers()
         self.REMAINDER = argparse.REMAINDER
+        self.SUPPRESS = argparse.SUPPRESS
         self.dict= { "_": self.parser }
         self.cur= "_"
     
@@ -185,7 +194,7 @@ class CommandLineInterface:
 
         def func(args):
             exec(f"from sweetheart.heart import {classname}")
-            eval(f"{classname}(config).cli_func(args)")
+            eval(f"{classname}(BaseConfig._).cli_func(args)")
 
         self.dict[self.cur].set_defaults(func=func)
 
@@ -193,13 +202,17 @@ class CommandLineInterface:
         self.args = self.parser.parse_args()
         return self.args
 
+    def apply_function(self):
+        """ apply related function defined with set_function and set_service """
+        self.args.func(self.args)
+
 
 if __name__ == "__main__":
 
     # build sweetheart command iine interface
     cli = CommandLineInterface()
     cli.set_function(lambda args:
-        echo("type 'sws sweet --help' for getting some help"))
+        echo("type 'sws help' for getting some help"))
 
     cli.opt("-v","--verbose",action="count",default=0,
         help="get additional messages about on-going process")
@@ -207,8 +220,16 @@ if __name__ == "__main__":
     cli.opt("-p",dest="project",nargs=1,
         help="set a project name different of sweetheart")
 
-    cli.opt("-i","--init",action="store_true",
-        help="launch init process for building new sweetheart project")
+
+    # create subparser for the 'shell' command:
+    cli.sub("sh",help="the SWeet Shell command line interface")
+    cli.set_function(lambda args: sws(args.subargs))
+
+    cli.opt("--init",action="store_true",
+        help="launch init process for building sweetheart ")
+
+    cli.opt("subargs",nargs=cli.REMAINDER,
+        help="remaining arguments processed by sweet shell")
 
 
     # create subparser for the 'start' command:
@@ -227,13 +248,6 @@ if __name__ == "__main__":
     cli.opt("-s","--server-only",action="store_true",
         help="start Http server without opening webbrowser")
 
-
-    # create subparser for the 'shell' command:
-    cli.sub("shell",help="the SWeet Shell command line interface")
-    cli.set_function(lambda args: sws(args.subargs))
-
-    cli.opt("subargs",nargs=cli.REMAINDER,
-        help="remaining arguments processed by SWeet Shell")
 
     # create subparser for the 'install' command:
     cli.sub("install",help="easy way for installing new components")
@@ -270,8 +284,8 @@ if __name__ == "__main__":
     else:
         set_config()
 
-    if argv.init:
+    if getattr(argv,"init",False):
         from sweetheart.install import init
-        init(config)
-
-    argv.func(argv)
+        init(BaseConfig._,add_pylibs=" ".join(argv.subargs))
+    
+    cli.apply_function()

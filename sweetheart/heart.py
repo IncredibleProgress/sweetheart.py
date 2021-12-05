@@ -158,7 +158,7 @@ class RethinkDB(BaseService):
                     self.table(data).insert(values).run() )
         
     def __del__(self):
-        # close the last RethinkDB connection
+        # close last RethinkDB connection
         if hasattr(self,'conn'): self.conn.close()
 
 
@@ -216,7 +216,7 @@ def try_exec(code:str):
     try: exec(code)
     except: pass
 
-def createVueApp(dict):
+def createVueApp(dict:dict):
     try_exec("r.onupdate = on_update")
     try_exec("r.onmessage = on_message")
     try_exec("window.vuecreated = vue_created")
@@ -235,7 +235,7 @@ def createVueApp(dict):
 
 class HttpServer(BaseService):
 
-    def __init__(self,config:BaseConfig,set_database:bool=False):
+    def __init__(self,config:BaseConfig,set_database=False):
         """ set Starlette web-app as a service """
         
         # auto set url from config
@@ -248,7 +248,7 @@ class HttpServer(BaseService):
             "port": self.port,
             "log_level": "info" }
 
-        if set_database: 
+        if set_database == True: 
             self.database = RethinkDB(config)
             self.database.set_websocket()
             self.database.set_client()

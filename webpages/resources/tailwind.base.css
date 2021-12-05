@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.theme_h {
+    @apply text-pink-500;
+}
+.theme_a {
+    @apply text-pink-300 hover:text-pink-500;
+}
+.theme_btn {
+    @apply bg-pink-400 hover:bg-pink-500;
+}
+.theme_ipt {
+    @apply px-3 py-2 border focus:outline-none focus:border-pink-600;
+}

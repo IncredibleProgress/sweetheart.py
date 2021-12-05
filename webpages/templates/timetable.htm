@@ -1,39 +1,30 @@
-%rebase("HTML",load="tailwind vue websocket")
+<!SWEETHEART html>
 
-<script>
-  // set websocket facilities
-  websocket.onmessage = function(event) {
-    const data = JSON.parse(event.data);
-    document.getElementById(data.grid_id).value = data.select;
-  }
-  websocket.update = function(event) {
-    websocket.send( JSON.stringify({
-      table: 'timetable',
-      filter: {user: this.user, year: this.year, grid_id: event.target.id},
-      update: {select: event.target.value}
-    }) )
-  }
-  createVueApp({
-    year: 2020,
-    user: 'Nicolas Champion',
-    options: ['J','RTT','test'],
-    users: ['Julie Latour','Marcel Dupont'],
-    days_labels: ['Di','Lu','Ma','Me','Je','Ve','Sa'],
-    months_lengths: [31,28,31,30,31,30,31,31,30,31,30,31],
-    months_labels: ['','Jan.','Fév.','Mars','Avr.','Mai','Juin','Juil.','Août','Sept.','Oct.','Nov.','Déc.']
-    })
-</script>
+<python>
+from datetime import datetime
+y = datetime.now().year
 
-<div id="VueApp">
+def vue_created(data):
+
+    r.table("people").filter({"manager":"Tom Leader"}).setVueAtrr("people")
+
+createVueApp({
+    years: [y+1,y,y-1,y-2],
+    user: "",
+    people: [],
+})
+</python>
+
+<div c-cloak id="VueApp">
 
   <select id="year" v-model="year">
-    <option v-for="year in [year-1,year,year+1]">{{ year }}</option>
+    <option v-for="year in years">{{year}}</option>
   </select>
 
   <select id="user" v-model="user">
-    <option>{{ user }}</option>
+    <option>{{user}}</option>
     <optgroup label="Mon équipe">
-      <option v-for="user in users">{{ user }}</option>
+      <option v-for="user in users">{{user}}</option>
     </optgroup>
   </select>
 
@@ -41,14 +32,14 @@
     <table v-for="month in 12" class="col-span-1">
       <thead>
         <tr>
-          <th>{{ months_labels[month] }}</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="day in 31">
           <td>
             <label>{{ days_labels[new Date(year,month,day).getDay()] }}
-              <select v-bind:id="'d'+day+'m'+month" v-on:change="update" >
+              <select v-bind:id="" v-on:change="update" >
                 <option v-for="option in options">{{ option }}</option>
               </select>
             </label>

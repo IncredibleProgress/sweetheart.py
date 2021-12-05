@@ -67,7 +67,7 @@ with open(f"{SWS_PATH}/sws","w") as file_out:
 
 #!/bin/sh
 #NOTE: much faster than 'poetry run'
-{venv}/bin/python3 -m sweetheart.sweet shell $*
+{venv}/bin/python3 -m sweetheart.sweet sh $*
 
     """.strip())
 

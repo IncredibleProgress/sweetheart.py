@@ -8,13 +8,13 @@ def on_update(event):
 
     """ this updates in realtime RethinkDB using WebSocket 
         it should be called only from html event attributes
-        e.g. <input id="row:col" type="text" v-on:keyup="update"> """
+        e.g. <input type="text" id="row:col" v-on:keyup="update"> """
 
     elt = event.target
     
     r.table("grid")
-    r.filter({"id": elt.tableId})
-    r.update({elt.tableCol: elt.value})
+    r.filter({"id": elt.tableRowId})
+    r.update({elt.tableColHeader: elt.value})
 
 def on_message(event):
 
@@ -33,7 +33,7 @@ def vue_created(data):
 
 createVueApp({
     "table": [],
-    "headers": ["col1","col2"]
+    "headers": ["col1","col2","col3"]
 })
 </python>
 
@@ -44,7 +44,7 @@ createVueApp({
   <table>
     <thead>
       <tr>
-        <th v-for="th in headers" class="border">{{ th }}</th>
+        <th v-for="h in headers" class="border">{{ h }}</th>
       </tr>
     </thead>
     <tbody>

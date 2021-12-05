@@ -156,7 +156,9 @@ Discovering what is the WSL, have a look at the [Microsoft documentation](https:
 curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -
 
 # then restart bash and get initial components
-bash sws sweet --init
+# you can add extra python libs you want with --init, here is jupyter
+bash
+sws --init jupyter
 
 # at last run sweetheart enabling JupyterLab 
 sws start --jupyter-lab
