@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "sweetheart"
 version = "0.1.1b2"
-description = "get coding full power from scratch"
+description = "get power with low-code and low-costs python programs"
 authors = ["Nicolas Champion <champion.nicolas@gmail.com>"]
 license = "CECILL-C"
 readme = "README.md"
@@ -9,9 +9,6 @@ repository = "https://github.com/IncredibleProgress/sweetheart.py"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-
-[tool.poetry.dev-dependencies]
-pytest = "^5.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

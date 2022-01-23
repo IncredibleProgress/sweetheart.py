@@ -7,9 +7,7 @@
         "pylibs":["beautifulsoup4","html5lib","lxml","requests","scrapy"]
     },
     "frontend": {
-        "pylibs":["fastapi"],
         "aptlibs":["node-typescript","node-vue"],
-        "npmlibs":["assemblyscript","jquery","bootstrap"],
-        "files": ["webpages/resources/w3.css"]
+        "npmlibs":["assemblyscript","jquery","bootstrap"]
     }
 }

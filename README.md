@@ -152,7 +152,7 @@ Discovering what is the WSL, have a look at the [Microsoft documentation](https:
 ``` bash
 curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 - --rethinkdb
 ```
-You can suppress the `--rethinkdb` option if you don't need to setup the RethinkDB repository within Ubuntu/Debian.
+You can suppress the `--rethinkdb` option if you don't need to setup the RethinkDB repository for Ubuntu/Debian.
 
 2. then restart bash and get initial components
 ``` bash

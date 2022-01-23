@@ -27,8 +27,7 @@ codename = bash_stdout("lsb_release -cs")
 
 # python-poetry is required
 if not os.path.isfile(POETRY_BIN):
-    run("curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -",
-        shell=True)
+    run("curl -sSL https://install.python-poetry.org | python3 -",shell=True)
 
 # create python directories
 os.makedirs(SWS_PATH,exist_ok=True)
