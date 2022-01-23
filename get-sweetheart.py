@@ -13,7 +13,7 @@ from subprocess import run
 __version__  = "0.1.2"
 
 # paths setting
-POETRY_BIN = f"{os.environ['HOME']}/.poetry/bin/poetry"
+POETRY_BIN = f"{os.environ['HOME']}/.local/bin/poetry"
 CONFIG_PATH = f"{os.environ['HOME']}/.sweet/sweetheart/configuration"
 SWS_PATH = f"{os.environ['HOME']}/.sweet/sweetheart/programs/scripts"
 

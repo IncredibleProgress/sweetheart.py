@@ -72,7 +72,7 @@ class BaseConfig(UserDict):
     SWSLVL = os.environ['SWSLVL'] = f"{int(os.getenv('SWSLVL','0'))+1}"
 
     # default path settings
-    poetry_bin = f"{HOME}/.poetry/bin/poetry"
+    poetry_bin = f"{HOME}/.local/bin/poetry"
     python_bin = "python3"# unset python env
 
     def __init__(self,project):
