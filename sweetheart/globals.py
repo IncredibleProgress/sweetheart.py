@@ -87,13 +87,13 @@ class BaseConfig(UserDict):
         self.is_webapp_open = True
         self.is_rethinkdb_local = True
         self.is_jupyter_local = True
-        self.is_mongodb_local = False
-        self.is_cherrypy_local = False
+        # self.is_mongodb_local = False
+        # self.is_cherrypy_local = False
 
         # default productive settings
         #FIXME: port matter should be improved in BaseService
         self.async_host = "http://127.0.0.1:8000"# uvicorn
-        self.static_host = "http://127.0.0.1:8080"# cherrypy
+        # self.static_host = "http://127.0.0.1:8080"# cherrypy
         self.database_host = "rethinkdb://127.0.0.1:28015"
         self.database_admin = "http://127.0.0.1:8180"
         self.jupyter_host = "http://127.0.0.1:8888"
@@ -102,12 +102,13 @@ class BaseConfig(UserDict):
         # subprocess settings
         self.subproc = {
             # can be changed within set_config()
+            'stsyntax': r"<% %> % {% %}",
             'rustpath': f"{self.HOME}/.cargo/bin",
             'codepath': f"{self.root_path}/programs/my_python",# no / at end
-            'mongopath': f"{self.root_path}/database/mongodb",
             'rethinkpath': f"{self.root_path}/database/rethinkdb",
-            'cherryconf': f"{self.root_path}/configuration/cherrypy.conf",
-            'stsyntax': r"<% %> % {% %}",
+            # 'mongopath': f"{self.root_path}/database/mongodb",
+            # 'cherryconf': f"{self.root_path}/configuration/cherrypy.conf",
+            
             # can not be changed within set_config()
             '.msedge.exe': f"cmd.exe /c start msedge --app=",
             '.brave.exe': f"cmd.exe /c start brave --app=",
@@ -137,7 +138,7 @@ class BaseConfig(UserDict):
                 '/favicon.ico': "resources/favicon.ico",
                 '/tailwind.css': "resources/tailwind.css",
                 '/vue.js': "resources/node_modules/vue/dist/vue.global.js",
-                '/alpine.js': "resources/node_modules/alpinejs/dist/alpine.js",
+                # '/alpine.js': "resources/node_modules/alpinejs/dist/alpine.js",
             },
             "static_dirs": {
                 '/resources': f"resources",
@@ -178,12 +179,12 @@ def webbrowser(url:str):
 
 
 _msg_ = []
-def echo(*args,mode="default",blank=False):
-    """ convenient function for printing messages
-        mode = 0|default|stack|release """
+def echo(*args,mode:str="default",blank:bool=False):
+    """ convenient function for printing admin messages
+        mode attribute must be default|stack|0|release|exit """
 
     if blank: print()
-    
+
     if mode.lower() == "stack" or mode == 0:
         global _msg_
         _msg_.append(" ".join(args))
@@ -202,7 +203,7 @@ def echo(*args,mode="default",blank=False):
 
 
 def verbose(*args,level:int=1):
-    """convenient function for verbose messages"""
+    """ convenient function for verbose messages """
 
     if BaseConfig.verbosity >= level:
         print(f"sws:{BaseConfig.SWSLVL}:",*args)

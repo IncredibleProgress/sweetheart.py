@@ -34,14 +34,11 @@ Sweetheart delivers a stock of ready-to-use features:
 
 - backend language: [Python](https://www.python.org/)
 - database server: [RethinkDB](https://rethinkdb.com)
-- asynchronous webserver: [Uvicorn](https://www.uvicorn.org/)
-- optionnal webserver for statics: [CherryPy](https://cherrypy.dev/)
 - asgi framework: [Starlette](https://www.starlette.io/)
+- asynchronous webserver: [Uvicorn](https://www.uvicorn.org/)
 - fast documentation builder: [mdBook](https://rust-lang.github.io/mdBook/index.html)
 - responsive user interfaces: [Html](https://www.w3schools.com/), [JupyterLab](https://jupyter.org/)
 - web libs for going fast: [TailwindCss](https://tailwindcss.com/), [Vue](https://v3.vuejs.org/)
-- optionnal frontend language: [Typescript](https://www.typescriptlang.org/), [WebAssembly](https://www.assemblyscript.org/)
-- optionnal low-level language: [Rust](https://www.rust-lang.org/)
 
 **And all other nice things you wish** using [poetry](https://python-poetry.org/), [npm](https://docs.npmjs.com/about-npm/), [apt](https://en.wikipedia.org/wiki/APT_(software)) and [cargo](https://doc.rust-lang.org/cargo/): Sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting new projects.
 
@@ -129,7 +126,7 @@ createVueApp({
   <table>
     <thead>
       <tr>
-        <th v-for="th in headers" class="border">{{ th }}</th>
+        <th v-for="h in headers" class="border">{{ h }}</th>
       </tr>
     </thead>
     <tbody>
@@ -151,17 +148,29 @@ Discovering what is the WSL, have a look at the [Microsoft documentation](https:
 
 ### first steps with Bash
 
+1. start setting the prerequisites
 ``` bash
-# set prerequisites
-curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -
+curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 - --rethinkdb
+```
+You can suppress the `--rethinkdb` option if you don't need to setup the RethinkDB repository within Ubuntu/Debian.
 
-# then restart bash and get initial components
-# you can add extra python libs you want with --init, here is jupyter
+2. then restart bash and get initial components
+``` bash
 bash
-sws --init jupyter
+sws --init
+```
+Being experienced you can add extra python libs you want with `--init`. Typically you could prefer `fastapi` instead of simply `starlette`. Note too that Jupyter is not set in by default. This is because you could already use it by another way (e.g. within VS Code). If not you should also consider to install it with sweetheart as showed hereafter.
 
-# at last run sweetheart enabling JupyterLab 
-sws start --jupyter-lab
+``` bash
+# alternative examples for initial setting of sweetheart
+sws --init jupyter
+sws --init fastapi
+sws --init fastapi jupyter
+```
+
+3. at last run sweetheart for tests
+``` bash
+sws start
 ```
 
 There is here no heavy installation process which could badly interact with the operating system. Everything goes and runs safely within dedicated */home* directories. [Click-here]() for detailed informations.

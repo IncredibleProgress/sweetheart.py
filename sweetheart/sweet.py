@@ -22,9 +22,9 @@ def set_config(
         # disable sandbox settings
         config.is_webapp_open = False
         config.is_rethinkdb_local = False
-        config.is_mongodb_local = False
         config.is_jupyter_local = False
-        config.is_cherrypy_local = False
+        # config.is_mongodb_local = False
+        # config.is_cherrypy_local = False
 
     try: 
         # update config from given json file
@@ -60,10 +60,10 @@ def set_config(
     except: not_init = True
 
     # ensure python subprocess setting
-    if not_init and not hasattr(BaseConfig,'python_env'):
-        sp.set_python_env()
-
-    verbose("python env:",BaseConfig.python_env)
+    if not_init:
+        if not hasattr(BaseConfig,'python_env'): sp.set_python_env()
+        verbose("python env:",BaseConfig.python_env)
+        
     BaseConfig._ = config
     return config
 
@@ -71,8 +71,7 @@ def set_config(
 def quickstart(*args,_cli_args=None):
     """ build and run webapp for the existing config """
 
-    from sweetheart.heart import \
-        RethinkDB,MongoDB,JupyterLab,HttpServer,HttpStaticServer
+    from sweetheart.heart import RethinkDB,JupyterLab,HttpServer
 
     # allow auto config
     if hasattr(BaseConfig,"_"): config = BaseConfig._
@@ -82,9 +81,9 @@ def quickstart(*args,_cli_args=None):
     if _cli_args:
         config.is_webapp_open = not _cli_args.server_only
         config.is_rethinkdb_local = not _cli_args.db_disabled
-        config.is_mongodb_local = not _cli_args.db_disabled
         config.is_jupyter_local = _cli_args.jupyter_lab
-        config.is_cherrypy_local = _cli_args.cherrypy
+        # config.is_mongodb_local = not _cli_args.db_disabled
+        # config.is_cherrypy_local = _cli_args.cherrypy
     
     # set and run Jupyterlab server
     if config.is_jupyter_local:
@@ -94,13 +93,13 @@ def quickstart(*args,_cli_args=None):
     if config.is_rethinkdb_local:
         RethinkDB(config,run_local=True)
 
-    # run CherryPy server
-    if config.is_cherrypy_local: 
-        HttpStaticServer(config,run_local=True)
+    # # run CherryPy server
+    # if config.is_cherrypy_local: 
+    #     HttpStaticServer(config,run_local=True)
 
-    # run MongoDB server
-    if config.is_mongodb_local:
-        MongoDB(config,run_local=True)
+    # # run MongoDB server
+    # if config.is_mongodb_local:
+    #     MongoDB(config,run_local=True)
 
     # build and start webapp
     if args and isinstance(args[0],HttpServer):
@@ -119,20 +118,25 @@ def sws(args):
 
     if isinstance(args,str): args = args.split()
     cf,sb = config, config.subproc
-    sw = [config.python_bin,"-m","sweetheart.sweet"]
+    sweet = [config.python_bin,"-m","sweetheart.sweet"]
+    if cf.verbosity: sweet.append("-"+"v"*cf.verbosity)
     vv,py,po = config.python_env,config.python_bin,config.poetry_bin
 
     switch = {
-        # sweet.py commands
-        'new': [*sw,"-p",*args[1:2],"sh","--init",*args[2:]],
-        'run': [py,"-m","sweetheart.sweet",*args[1:]],
-        'start': [py,"-m","sweetheart.sweet","start",*args[1:]],
-        'help': [py,"-m","sweetheart.sweet","start","-x"],
-        'install': [py,"-m","sweetheart.sweet","install",*args[1:]],
-        # services commands
-        'test': [py,"-m","sweetheart.tests",*args[1:]],
+        # sweet.py commands within master project
+        'help': [*sweet,"start","-x"],
+        'rethinkdb-server': [*sweet,"rethinkdb-server",*args[1:]],
+        # sweet.py command within any project
+        'start': [*sweet,"-p",cf.project,"start",*args[1:]],
+        'install': [*sweet,"-p",cf.project,"install",*args[1:]],
+        'new': [*sweet,"sh","--init","-p",*args[1:]],
+        #FIXME: services and utilities commands
+        'test': [py,"-m",f"{cf.project}.tests",*args[1:]],
         'build-css': [*config.subproc['.tailwindcss'].split()],
-        # subprocess commands
+        #FIXME: subprocess commands
+        'po': [config.poetry_bin,*args[1:]],
+        'py': [f"{vv}/bin/ipython",*args[1:]],
+        'md': [f"{sb['rustpath']}/mdbook",*args[1:]],
         'poetry': [config.poetry_bin,*args[1:]],
         'python': [f"{vv}/bin/ipython",*args[1:]],
         'mdbook': [f"{sb['rustpath']}/mdbook",*args[1:]],
@@ -142,12 +146,15 @@ def sws(args):
         commands = " ".join(list(switch))
         args = ["echo",f"\nsws available commands:\n  {commands}\n"]
 
-    if args[0]=='poetry': cwd= cf.subproc['codepath']
-    elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
+    #FIXME: autoset relevant working directory
+    if args[0]=='po' or args[0]=='poetry': cwd= cf.subproc['codepath']
+    elif args[0]=='md' or args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
     elif args[0]=='build-css': cwd= f"{cf['working_dir']}/resources"
     else: cwd= config.PWD
-    verbose("set current working directory:",cwd)
-    
+
+    verbose("working directory:",cwd)
+    verbose("invoke shell:"," ".join(switch.get(args[0],args)),level=2)
+
     try: sp.run(*switch.get(args[0],args),cwd=cwd)
     except: echo("sws has been interrupted")
 
@@ -225,8 +232,17 @@ if __name__ == "__main__":
     cli.sub("sh",help="the SWeet Shell command line interface")
     cli.set_function(lambda args: sws(args.subargs))
 
+    cli.opt("-v","--verbose",action="count",default=0,
+        help="get additional messages about on-going process")
+
+    cli.opt("-p",dest="project",nargs=1,
+        help="set a project name different of sweetheart")
+
     cli.opt("--init",action="store_true",
         help="launch init process for building sweetheart ")
+
+    # cli.opt("-a","--add",dest="pylibs",nargs="+",
+    #     help="list extra python modules to install")
 
     cli.opt("subargs",nargs=cli.REMAINDER,
         help="remaining arguments processed by sweet shell")
@@ -242,8 +258,8 @@ if __name__ == "__main__":
     cli.opt("-j","--jupyter-lab",action="store_true",
         help="start JupyterLab Http server for enabling notebooks")
 
-    cli.opt("-c","--cherrypy",action="store_true",
-        help="start CherryPy Http server for static contents")
+    # cli.opt("-c","--cherrypy",action="store_true",
+    #     help="start CherryPy Http server for static contents")
 
     cli.opt("-s","--server-only",action="store_true",
         help="start Http server without opening webbrowser")
@@ -258,34 +274,34 @@ if __name__ == "__main__":
 
 
     # create subparsers for services
+    # available only fot the master project
     cli.sub("rethinkdb-server",help="run the Rethink-Database server")
     cli.opt("-o","--open-terminal",action="store_true")
     cli.set_service("RethinkDB")
-
-    cli.sub("mongodb-server",help="run the Mongo-Database server")
-    cli.opt("-o","--open-terminal",action="store_true")
-    cli.set_service("MongoDB")
 
     cli.sub("jupyter-server",help="run the JupyterLab server")
     cli.opt("-o","--open-terminal",action="store_true")
     cli.set_service("JupyterLab")
 
-    cli.sub("cherrypy-server",help="run cherrypy as http static server")
-    cli.opt("-o","--open-terminal",action="store_true")
-    cli.set_service("HttpStaticServer")
+    # cli.sub("mongodb-server",help="run the Mongo-Database server")
+    # cli.opt("-o","--open-terminal",action="store_true")
+    # cli.set_service("MongoDB")
+
+    # cli.sub("cherrypy-server",help="run cherrypy as http static server")
+    # cli.opt("-o","--open-terminal",action="store_true")
+    # cli.set_service("HttpStaticServer")
 
 
     # execute command line arguments
     argv = cli.set_parser()
-    BaseConfig.verbosity = argv.verbose
+    BaseConfig.verbosity = getattr(argv,"verbose",0)
 
-    if getattr(argv,"project",None):
-        set_config(project=argv.project[0])
-    else:
-        set_config()
+    if getattr(argv,"project",None): set_config(project=argv.project[0])
+    else: set_config()
 
     if getattr(argv,"init",False):
         from sweetheart.install import init
-        init(BaseConfig._,add_pylibs=" ".join(argv.subargs))
+        add_pylibs = getattr(argv,"subargs","")
+        init(BaseConfig._, add_pylibs)
     
     cli.apply_function()

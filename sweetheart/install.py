@@ -21,16 +21,19 @@ else:
     sp.shell("curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -")
 
 
-def init(config:BaseConfig,add_pylibs:str=None):
+def init(config:BaseConfig,add_pylibs:str=""):
     """ set require configuration before sweetheart installation
         and intends to provide minimalistic sweetheart features """
 
     PKG_INIT = {'documentation': "sweetbook.zip",'cargolibs': ["mdbook"],
         'aptlibs': ["xterm","rustc","rethinkdb","nodejs"],
         'npmlibs': ["brython","tailwindcss","postcss","autoprefixer","vue@next"],# Vue3
-        'pylibs': ["rethinkdb","uvicorn[standard]","aiofiles","starlette"],
+        'pylibs': ["rethinkdb","uvicorn[standard]","aiofiles","starlette"],# starlette at end
         'files': ["documentation/sweetbook.zip","configuration/packages.json",
             "webpages/HTML","webpages/resources/tailwind.base.css"] }
+
+    #FIXME: fix starlette version matter using fastapi 
+    if "fastapi" in add_pylibs: del PKG_INIT['pylibs'][-1]
 
     # require directories
     for basedir in [
@@ -44,13 +47,17 @@ def init(config:BaseConfig,add_pylibs:str=None):
         #f"{config.root_path}/webpages/markdown",
     ]: os.makedirs(basedir,exist_ok=True)
 
-    # install default libs with extra
-    if add_pylibs: PKG_INIT['pylibs'].extend(add_pylibs.split())
+    # install default libs with given extra modules
+    if isinstance(add_pylibs,list):
+        PKG_INIT['pylibs'].extend(add_pylibs)
+    elif isinstance(add_pylibs,str):
+        PKG_INIT['pylibs'].extend(add_pylibs.split())
+
     installer = BaseInstall(config)
     installer.install_libs(PKG_INIT,init=True)
     
     # build default tailwind.css
-    echo("build a generic tailwindcss file")
+    echo("build generic tailwindcss file",blank=True)
     sp.shell(config.subproc['.tailwindcss'],
         cwd=f"{config.root_path}/webpages/resources")
 
@@ -73,7 +80,7 @@ def init(config:BaseConfig,add_pylibs:str=None):
         JupyterLab(config).set_ipykernel()
         if config.project == MASTER_MODULE: JupyterLab(config).set_password()
     
-    echo("installation process completed")
+    echo("installation process completed",blank=True)
 
     
 class BaseInstall:
@@ -95,13 +102,13 @@ class BaseInstall:
     def apt(self,*libs:str,**kwargs):
         """ install distro packages using apt """
 
-        echo("apt install:",*libs)
+        echo("apt install:",*libs,blank=True)
         return sp.run("sudo","apt","install",*libs,**kwargs)
 
     def cargo(self,*libs:str,init=False,**kwargs):
         """ install rust crates using cargo """
 
-        echo("cargo install:",*libs)
+        echo("cargo install:",*libs,blank=True)
         path = self.config.subproc['rustpath']
         if init: sp.run(f"{path}/rustup","update")
         return sp.run(f"{path}/cargo","install",*libs,**kwargs)
@@ -109,7 +116,7 @@ class BaseInstall:
     def poetry(self,*libs:str,**kwargs):
         """ install python packages using poetry """
 
-        echo("poetry add:",*libs)
+        echo("poetry add:",*libs,blank=True)
         return sp.poetry("add",*libs,**kwargs)
 
     def npm(self,*libs:str,init=False,**kwargs):
@@ -120,7 +127,7 @@ class BaseInstall:
         #     sp.shell(node_source)
         #     sp.shell("sudo apt install -y nodejs")
 
-        echo("npm install:",*libs)
+        echo("npm install:",*libs,blank=True)
         os.chdir(f"{self.config.root_path}/webpages/resources")
         if init: sp.run("npm","init","--yes")
         return sp.run("npm","install",*libs,**kwargs)

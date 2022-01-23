@@ -115,9 +115,7 @@ dbname = get('dbname',get('__db__','test'))
 
     // set default Vue3 utilities
     function createVueApp(vuedata, options={
-          vm: "vmodel",
-          id: "VueApp",
-          hub: r
+          vm: "vmodel", id: "VueApp", hub: r
         }) {
       if ( typeof(vuedata) == "object" ) {
         // should be a JavaScript function call case

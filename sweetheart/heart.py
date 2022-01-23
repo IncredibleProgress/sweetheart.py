@@ -16,13 +16,13 @@ from starlette.endpoints import WebSocketEndpoint
 from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.responses import HTMLResponse,FileResponse,JSONResponse
 
-try: import cherrypy
-except:
-    class cherrypy:
-        @staticmethod
-        def expose(*args):
-            """ set cherrypy.expose as a ghost method """
-            pass
+# try: import cherrypy
+# except:
+#     class cherrypy:
+#         @staticmethod
+#         def expose(*args):
+#             """ set cherrypy.expose as a ghost method """
+#             pass
 
 
 class BaseService:
@@ -162,46 +162,45 @@ class RethinkDB(BaseService):
         if hasattr(self,'conn'): self.conn.close()
 
 
-class MongoDB(BaseService):
+# class MongoDB(BaseService):
 
-    def __init__(self,config:BaseConfig,run_local:bool=False):
-        """ set Mongo Database as a service """
+#     def __init__(self,config:BaseConfig,run_local:bool=False):
+#         """ set Mongo Database as a service """
 
-        # url auto set from config
-        super().__init__(config.database_host,config)
-        self.command = f"mongod --dbpath={config.subproc['mongopath']}"
-        if run_local: self.run_local(service=True)
+#         # url auto set from config
+#         super().__init__(config.database_host,config)
+#         self.command = f"mongod --dbpath={config.subproc['mongopath']}"
+#         if run_local: self.run_local(service=True)
         
-    def set_client(self):
-        """ set MongoDB client and select database given by config 
-            it provides default messages related to the database 
-            return pymongo.MongoClient, MongoClient.Database tuple """
+#     def set_client(self):
+#         """ set MongoDB client and select database given by config 
+#             it provides default messages related to the database 
+#             return pymongo.MongoClient, MongoClient.Database tuple """
 
-        from pymongo import MongoClient
+#         from pymongo import MongoClient
 
-        self.client = MongoClient(host=self.host,port=self.port)
-        echo("available databases:",self.client.list_database_names()[3:])
+#         self.client = MongoClient(host=self.host,port=self.port)
+#         echo("available databases:",self.client.list_database_names()[3:])
 
-        self.database = self.client[self.config['selected_DB']]
-        echo(f"selected database:",self.config['selected_DB'])
-        echo("existing collections:",self.database.list_collection_names())
+#         self.database = self.client[self.config['selected_DB']]
+#         echo(f"selected database:",self.config['selected_DB'])
+#         echo("existing collections:",self.database.list_collection_names())
 
-        return self.client,self.database
+#         return self.client,self.database
 
-    def on_receive(self,websocket,data):
+#     def on_receive(self,websocket,data):
 
-        # collection.find_one(data['select'],{'_id':0})
-        # collection.update_one(data['select'],{'$set':data['values']})
-        # collection.insert_one(data['values'])
-        raise NotImplementedError
+#         # collection.find_one(data['select'],{'_id':0})
+#         # collection.update_one(data['select'],{'$set':data['values']})
+#         # collection.insert_one(data['values'])
+#         raise NotImplementedError
 
 
 def HTMLTemplate(filename:str,**kwargs):
-    """ set given template and return the rendering 
-        including some configuration and python stuff """
+    """ provide a Starlette-like function for rendering templates
+        including configuration data and some python magic stuff """
 
     os.chdir(BaseConfig._['working_dir'])
-
     with open(f"{BaseConfig._['templates_dir']}/{filename}","r") as tpl:
         template = tpl.read()
 
@@ -326,27 +325,27 @@ class JupyterLab(BaseService):
         sp.python("-m","jupyter","notebook","password","-y")
     
 
-class HttpStaticServer(BaseService):
+# class HttpStaticServer(BaseService):
 
-    def __init__(self,config:BaseConfig,run_local:bool=False):
-        """ set cherrypy as a service for serving static contents
-            should be used for improving server performances if needed """
+#     def __init__(self,config:BaseConfig,run_local:bool=False):
+#         """ set cherrypy as a service for serving static contents
+#             should be used for improving server performances if needed """
 
-        # auto set url from config
-        super().__init__(config.static_host,config)
-        self.command =\
-            f"{config.python_bin} -m sweetheart.sweet cherrypy-server"
-        if run_local: self.run_local(service=True)
+#         # auto set url from config
+#         super().__init__(config.static_host,config)
+#         self.command =\
+#             f"{config.python_bin} -m sweetheart.sweet cherrypy-server"
+#         if run_local: self.run_local(service=True)
 
-    @cherrypy.expose
-    def default(self):
-        return """
-          <div style="text-align:center;">
-            <h1><br><br>I'm Ready<br><br></h1>
-            <h3>cherrypy server is running</h3>
-          </div>"""
+#     @cherrypy.expose
+#     def default(self):
+#         return """
+#           <div style="text-align:center;">
+#             <h1><br><br>I'm Ready<br><br></h1>
+#             <h3>cherrypy server is running</h3>
+#           </div>"""
 
-    def run_local(self,service):
-        """ run CherryPy for serving statics """
-        if service: sp.terminal(self.command,self.terminal)
-        else: cherrypy.quickstart(self,config=self.config.subproc['cherryconf'])
+#     def run_local(self,service):
+#         """ run CherryPy for serving statics """
+#         if service: sp.terminal(self.command,self.terminal)
+#         else: cherrypy.quickstart(self,config=self.config.subproc['cherryconf'])
