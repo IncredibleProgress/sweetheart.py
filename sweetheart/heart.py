@@ -5,9 +5,9 @@ provides services and utilities classes
 from sweetheart.globals import *
 from sweetheart.bottle import SimpleTemplate
 
-# patch running within JupyterLab
-import nest_asyncio
-nest_asyncio.apply()
+# # patch running within JupyterLab
+# import nest_asyncio
+# nest_asyncio.apply()
 
 import uvicorn
 from starlette.applications import Starlette

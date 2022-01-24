@@ -19,7 +19,7 @@ PATHS = {
     'python': f"{os.environ['HOME']}/.sweet/sweetheart/programs/my_python" }
 
 # make required directories
-for basedir in PATHS.items():
+for basedir in PATHS.values():
     os.makedirs(basedir,exist_ok=True)
 
 # for getting bash standard output

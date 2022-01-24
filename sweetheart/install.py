@@ -27,7 +27,7 @@ def init(config:BaseConfig,add_pylibs:str=""):
 
     PKG_INIT = {'documentation': "sweetbook.zip",'cargolibs': ["mdbook"],
         'aptlibs': ["xterm","rustc","rethinkdb","nodejs"],
-        'npmlibs': ["brython","tailwindcss","postcss","autoprefixer","vue@next"],# Vue3
+        'npmlibs': ["brython","tailwindcss","vue@next"],# Vue3
         'pylibs': ["rethinkdb","uvicorn[standard]","aiofiles","starlette"],# starlette at end
         'files': ["documentation/sweetbook.zip","configuration/packages.json",
             "webpages/HTML","webpages/resources/tailwind.base.css"] }
