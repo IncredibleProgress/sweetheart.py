@@ -126,17 +126,15 @@ def sws(args):
         # sweet.py commands within master project
         'help': [*sweet,"start","-x"],
         'rethinkdb-server': [*sweet,"rethinkdb-server",*args[1:]],
+        'jupyter-server': [*sweet,"jupyter-server",*args[1:]],
         # sweet.py command within any project
+        'new': [*sweet,"sh","--init","-p",*args[1:]],
         'start': [*sweet,"-p",cf.project,"start",*args[1:]],
         'install': [*sweet,"-p",cf.project,"install",*args[1:]],
-        'new': [*sweet,"sh","--init","-p",*args[1:]],
         #FIXME: services and utilities commands
         'test': [py,"-m",f"{cf.project}.tests",*args[1:]],
         'build-css': [*config.subproc['.tailwindcss'].split()],
         #FIXME: subprocess commands
-        'po': [config.poetry_bin,*args[1:]],
-        'py': [f"{vv}/bin/ipython",*args[1:]],
-        'md': [f"{sb['rustpath']}/mdbook",*args[1:]],
         'poetry': [config.poetry_bin,*args[1:]],
         'python': [f"{vv}/bin/ipython",*args[1:]],
         'mdbook': [f"{sb['rustpath']}/mdbook",*args[1:]],
@@ -256,7 +254,7 @@ if __name__ == "__main__":
         help="start without local Database server")
 
     cli.opt("-j","--jupyter-lab",action="store_true",
-        help="start JupyterLab Http server for enabling notebooks")
+        help="start Jupyter Http server for enabling notebooks")
 
     # cli.opt("-c","--cherrypy",action="store_true",
     #     help="start CherryPy Http server for static contents")

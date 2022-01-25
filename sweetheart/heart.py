@@ -308,8 +308,9 @@ class JupyterLab(BaseService):
         # auto set url from config
         super().__init__(config.jupyter_host,config)
 
-        self.command = f"{config.python_bin} -m jupyterlab \
-            --no-browser --notebook-dir={config['notebooks_dir']}"
+        self.command = \
+            f"{config.python_bin} -m {config.subproc['.jupytercmd']} "+\
+            f"--no-browser --notebook-dir={config['notebooks_dir']}"
 
         if run_local: self.run_local(service=True)
 
@@ -318,7 +319,8 @@ class JupyterLab(BaseService):
 
         # get path,name of python env
         path,name = os.path.split(BaseConfig.python_env)
-        sp.python("-m","ipykernel","install","--user",f"--name={name}",cwd=path)
+        sp.python("-m","ipykernel","install","--user",
+            "--name",name,"--display-name",self.config.project,cwd=path)
 
     def set_password(self):
         """ required for JupyterLab initialization """

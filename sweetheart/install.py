@@ -29,22 +29,21 @@ def init(config:BaseConfig,add_pylibs:str=""):
         'aptlibs': ["xterm","rustc","rethinkdb","nodejs"],
         'npmlibs': ["brython","tailwindcss","vue@next"],# Vue3
         'pylibs': ["rethinkdb","uvicorn[standard]","aiofiles","starlette"],# starlette at end
-        'files': ["documentation/sweetbook.zip","configuration/packages.json",
-            "webpages/HTML","webpages/resources/tailwind.base.css"] }
+        'files': ["documentation/sweetbook.zip","configuration/packages.json","webpages/HTML",
+            "webpages/resources/tailwind.base.css","webpages/resources/tailwind.config.js"] }
 
     #FIXME: fix starlette version matter using fastapi 
-    if "fastapi" in add_pylibs: del PKG_INIT['pylibs'][-1]
+    if "fastapi" in add_pylibs:
+        del PKG_INIT['pylibs'][-1]
 
     # require directories
     for basedir in [
         f"{config.root_path}/configuration",
         f"{config.root_path}/database",
         f"{config.root_path}/documentation/notebooks",
-        #f"{config.root_path}/documentation/sweetbook",
         f"{config.root_path}/programs/scripts",
         f"{config.root_path}/webpages/templates",
         f"{config.root_path}/webpages/resources",
-        #f"{config.root_path}/webpages/markdown",
     ]: os.makedirs(basedir,exist_ok=True)
 
     # install default libs with given extra modules
@@ -92,8 +91,9 @@ class BaseInstall:
 
         if config.project != MASTER_MODULE:
 
+            #FIXME: set a new python sub-project
             sp.poetry("new","my_python",cwd=f"{config.root_path}/programs")
-            sp.poetry("add",MASTER_MODULE)
+            sp.poetry("add",MASTER_MODULE)#NOTE: this can be a fork of sweetheart
             sp.set_python_env(cwd=f"{config.root_path}/programs/my_python")
 
             with open(f"{config.root_path}/configuration/subproc.json","w") as fi:

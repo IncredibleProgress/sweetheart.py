@@ -159,13 +159,13 @@ You can suppress the `--rethinkdb` option if you don't need to setup the Rethink
 bash
 sws --init
 ```
-Being experienced you can add extra python libs you want with `--init`. Typically you could prefer `fastapi` instead of simply `starlette`. Note too that Jupyter is not set in by default. This is because you could already use it by another way (e.g. within VS Code). If not you should also consider to install it with sweetheart as showed hereafter.
+Being experienced you can add extra python libs you want with `--init`. Typically you could prefer `fastapi` instead of simply `starlette`. Note too that JupyterLab is not set in too by default. This is because you could already use it by another way (e.g. within VS Code). If not you should also consider to install it with sweetheart as showed hereafter.
 
 ``` bash
 # alternative examples for initial setting of sweetheart
-sws --init jupyter
+sws --init jupyterlab
 sws --init fastapi
-sws --init fastapi jupyter
+sws --init fastapi jupyterlab
 ```
 
 3. at last run sweetheart for tests

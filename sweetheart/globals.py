@@ -3,7 +3,7 @@ import os,subprocess,json,locale
 from collections import UserDict
 
 # default dir/module name of master project
-# allow replacing sweetheart by a fork of it
+#FIXME: allow replacing sweetheart by a fork of it
 MASTER_MODULE = "sweetheart"
 
 
@@ -93,11 +93,11 @@ class BaseConfig(UserDict):
         # default productive settings
         #FIXME: port matter should be improved in BaseService
         self.async_host = "http://127.0.0.1:8000"# uvicorn
-        # self.static_host = "http://127.0.0.1:8080"# cherrypy
         self.database_host = "rethinkdb://127.0.0.1:28015"
         self.database_admin = "http://127.0.0.1:8180"
         self.jupyter_host = "http://127.0.0.1:8888"
-        self.mdbook_host = "http://127.0.0.1:3000"
+        # self.static_host = "http://127.0.0.1:8080"# cherrypy
+        # self.mdbook_host = "http://127.0.0.1:3000"
 
         # subprocess settings
         self.subproc = {
@@ -113,7 +113,8 @@ class BaseConfig(UserDict):
             '.msedge.exe': f"cmd.exe /c start msedge --app=",
             '.brave.exe': f"cmd.exe /c start brave --app=",
             '.jupyterurl': f"{self.jupyter_host}/tree",
-            '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css",
+            '.jupytercmd': f"jupyterlab",
+            '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css -m",
         }
 
         # default editable settings
