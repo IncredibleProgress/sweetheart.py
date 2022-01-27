@@ -59,8 +59,8 @@ def set_config(
     try: not_init = not argv.init
     except: not_init = True
 
-    # ensure python subprocess setting
     if not_init:
+        # ensure python subprocess setting
         if not hasattr(BaseConfig,'python_env'): sp.set_python_env()
         verbose("python env:",BaseConfig.python_env)
         
@@ -69,9 +69,11 @@ def set_config(
 
 
 def quickstart(*args,_cli_args=None):
-    """ build and run webapp for the existing config """
+    """ build and run webapp for config (autoset if not given)
+        args can be Route objects or a HttpServer instance """
 
-    from sweetheart.heart import RethinkDB,JupyterLab,HttpServer
+    from sweetheart.heart import \
+        RethinkDB,JupyterLab,HttpServer
 
     # allow auto config
     if hasattr(BaseConfig,"_"): config = BaseConfig._
@@ -91,7 +93,9 @@ def quickstart(*args,_cli_args=None):
 
     # set and run RethinkDB server
     if config.is_rethinkdb_local:
-        RethinkDB(config,run_local=True)
+        rdb = RethinkDB(config,run_local=True)
+        rdb.set_websocket()
+        rdb.set_client()
 
     # # run CherryPy server
     # if config.is_cherrypy_local: 
@@ -104,9 +108,11 @@ def quickstart(*args,_cli_args=None):
     # build and start webapp
     if args and isinstance(args[0],HttpServer):
         if hasattr(args[0],'data'): args[0].mount(*args[1:])
+        if 'rdb' in locals(): args[0].database = rdb
         args[0].run_local(service=False)
     else:
         webapp = HttpServer(config).mount(*args)
+        if 'rdb' in locals(): webapp.database = rdb
         webapp.run_local(service=False)
 
 
@@ -144,9 +150,9 @@ def sws(args):
         commands = " ".join(list(switch))
         args = ["echo",f"\nsws available commands:\n  {commands}\n"]
 
-    #FIXME: autoset relevant working directory
-    if args[0]=='po' or args[0]=='poetry': cwd= cf.subproc['codepath']
-    elif args[0]=='md' or args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
+    #FIXME: autoset the relevant working directory
+    if args[0]=='poetry': cwd= cf.subproc['codepath']
+    elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
     elif args[0]=='build-css': cwd= f"{cf['working_dir']}/resources"
     else: cwd= config.PWD
 
@@ -158,7 +164,8 @@ def sws(args):
 
 
 def install(*packages):
-    """ an easy way for installing any packages """
+    """ easy way for installing whole packages with documentation,
+        apt libs, rust libs, node libs, python libs, and files """
 
     # allow auto config
     if hasattr(BaseConfig,"_"): config = BaseConfig._
@@ -239,11 +246,8 @@ if __name__ == "__main__":
     cli.opt("--init",action="store_true",
         help="launch init process for building sweetheart ")
 
-    # cli.opt("-a","--add",dest="pylibs",nargs="+",
-    #     help="list extra python modules to install")
-
     cli.opt("subargs",nargs=cli.REMAINDER,
-        help="remaining arguments processed by sweet shell")
+        help="remaining arguments processed by SWeet Shell")
 
 
     # create subparser for the 'start' command:

@@ -5,36 +5,29 @@ from zipfile import ZipFile
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
-
+master_pyproject = f"{BaseConfig.HOME}/.sweet/{MASTER_MODULE}/programs/my_python/pyproject.toml"
 raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"# / is needed
-#node_source = "curl -sSL https://deb.nodesource.com/setup_14.x | sudo -E bash -"
-#get_w3css = "curl -sSL https://www.w3schools.com/w3css/4/w3.css -o w3.css"
-#wsl_rustup = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-#get_poetry = "curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -"
-
 
 # ensure prerequisites
-if os.path.isfile(
-    f"{os.environ['HOME']}/.sweet/sweetheart/programs/my_python/pyproject.toml"):
-        verbose("install: existing prerequisites found")
-else:
-    sp.shell("curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -")
+if not os.path.isfile(master_pyproject):
+    sp.shell(f"curl -sSL {raw_github}get-sweetheart.py | python3 - --rethinkdb")
 
 
 def init(config:BaseConfig,add_pylibs:str=""):
-    """ set require configuration before sweetheart installation
-        and intends to provide minimalistic sweetheart features """
+    """ set require minimal features for working with sweetheart """
 
-    PKG_INIT = {'documentation': "sweetbook.zip",'cargolibs': ["mdbook"],
+    PKG_INIT = {
+        'cargolibs': ["mdbook"],
         'aptlibs': ["xterm","rustc","rethinkdb","nodejs"],
         'npmlibs': ["brython","tailwindcss","vue@next"],# Vue3
         'pylibs': ["rethinkdb","uvicorn[standard]","aiofiles","starlette"],# starlette at end
-        'files': ["documentation/sweetbook.zip","configuration/packages.json","webpages/HTML",
-            "webpages/resources/tailwind.base.css","webpages/resources/tailwind.config.js"] }
 
-    #FIXME: fix starlette version matter using fastapi 
-    if "fastapi" in add_pylibs:
-        del PKG_INIT['pylibs'][-1]
+        'files': ["documentation/sweetbook.zip","configuration/packages.json","webpages/HTML",
+            "webpages/resources/tailwind.base.css","webpages/resources/tailwind.config.js",
+            "webpages/resources/favicon.ico"],'documentation': "sweetbook.zip" }
+
+    #FIXME: starlette version matter installing fastapi 
+    if "fastapi" in add_pylibs: del PKG_INIT['pylibs'][-1]
 
     # require directories
     for basedir in [
@@ -61,23 +54,26 @@ def init(config:BaseConfig,add_pylibs:str=""):
         cwd=f"{config.root_path}/webpages/resources")
 
     try:
-        # provide installed javascript libs (Ubuntu)
-        os.symlink("/usr/share/javascript",
-            f"{config.root_path}/webpages/resources/javascript")
-
         # provide sweetheart html documentation    
         os.symlink(f"{config.root_path}/documentation/sweetbook/book",
             f"{config.root_path}/webpages/sweetbook")
+
+        # provide installed javascript libs within Ubuntu/Debian
+        os.symlink("/usr/share/javascript",
+            f"{config.root_path}/webpages/resources/javascript")
     except:
         verbose("INFO:\n an error occured creating symlinks during init process",
             "\n an expected cause could be that links are already existing")
 
-    if "jupyter" in PKG_INIT['pylibs']:
-        # set JupyterLab service
+    if "jupyter" in PKG_INIT['pylibs'] or "jupyterlab" in PKG_INIT['pylibs']:
+        # set Jupyter service if needed
         from sweetheart.heart import JupyterLab
         echo("set the JupyerLab ipkernel and required password",blank=True)
         JupyterLab(config).set_ipykernel()
         if config.project == MASTER_MODULE: JupyterLab(config).set_password()
+    else:
+        # install at least ipython for convenience
+        installer.poetry("ipython")
     
     echo("installation process completed",blank=True)
 
@@ -123,6 +119,7 @@ class BaseInstall:
         """ install node modules using npm """
 
         # if init:
+        #     # for installing a specific version of nodejs
         #     echo("set node.js:",node_source.split()[2])
         #     sp.shell(node_source)
         #     sp.shell("sudo apt install -y nodejs")
@@ -137,15 +134,14 @@ class BaseInstall:
             and download listed files from github if given
             no libs arg will set init process for new project """
 
-        # init nodejs/npm before apt install
-        npmlibs = libs.get('npmlibs')
-        if npmlibs: self.npm(*npmlibs,init=init)
-
         aptlibs = libs.get('aptlibs')
         if aptlibs: self.apt(*aptlibs)
 
         cargolibs = libs.get('cargolibs')
         if cargolibs: self.cargo(*cargolibs,init=init)
+
+        npmlibs = libs.get('npmlibs')
+        if npmlibs: self.npm(*npmlibs,init=init)
 
         pylibs = libs.get('pylibs')
         if pylibs: self.poetry(*pylibs)

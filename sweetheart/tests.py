@@ -19,6 +19,7 @@ def test_objects():
         JupyterLab(config)
         HttpServer(config)
         return True
+
     except:
         return False
 
@@ -26,20 +27,23 @@ def test_template(template:str):
     
     BaseConfig.verbosity = 1
     config = set_config(sandbox=False)
+    path = f"{config['working_dir']}/{config['templates_dir']}"
     #config.is_webapp_open = True
 
-    webapp = HttpServer(config,set_database=True)
-    quickstart( webapp.mount(
-        Route("/",HTMLTemplate(template)) ))
+    if not os.path.isfile(path) and not os.path.islink(path):
+        print("Error, the given template is not existing")
+        return False
 
+    webapp = HttpServer(config,set_database=True)
+    quickstart( webapp.mount( Route("/",HTMLTemplate(template)) ))
     return True
 
 
 def _set__links_for_dev_():
 
-    import os, shutil
-    src = f"{BaseConfig.HOME}/sweetheart.py"# source dir
-    pjt = f"{BaseConfig.HOME}/.sweet/sweetheart"# project dir
+    import os,shutil
+    src = f"{BaseConfig.HOME}/{MASTER_MODULE}.py"# source dir
+    pjt = f"{BaseConfig.HOME}/.sweet/{MASTER_MODULE}"# project dir
 
     def symlink(source,dest):
         if os.path.islink(dest): print(f"Warning, existing link {dest}")
@@ -62,11 +66,15 @@ def _set__links_for_dev_():
 
 if __name__ == '__main__':
 
-    # test routines 
-    assert test_objects()
-
-    # sws cli test options
     from sys import argv
-    if '--init' in argv: test_init()
-    elif '--set-dev-links' in argv: _set__links_for_dev_()
+
+    if '--init' in argv:
+        test_init()
+        echo("sws test --init: all done",mode='exit')
+
+    elif '--dev-links' in argv: 
+        _set__links_for_dev_()
+        echo("sws test --dev-links: all done",mode='exit')
+    
+    assert test_objects()
     assert test_template(argv[-1])

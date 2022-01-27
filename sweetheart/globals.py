@@ -60,7 +60,7 @@ class BaseConfig(UserDict):
 
     # set messages to stdout
     verbosity = 0
-    label = "sweetheart"
+    label = "sweetheart"# used for print with echo()
     locale_lang = locale.getlocale()[0][0:2]
 
     # get environment settings
@@ -149,16 +149,22 @@ class BaseConfig(UserDict):
     def welcome(self) -> str:
         """ return default Html welcome message """
 
+        if self.is_jupyter_local:
+            # enable html link to running Jypyter local server
+            jupyter_link = f"""<p><br>or code immediately using 
+                <a href="{self.subproc['.jupyterurl']}">JupyterLab</a></p>"""
+        else:
+            jupyter_link = ""
+
         return f"""
           <div style="text-align:center;font-size:1.1em;">
             <h1><br><br>Welcome {self.USER} !<br><br></h1>
             <h2>sweetheart</h2>
             <p>a supercharged heart for the non-expert hands</p>
-            <p>which will give you coding full power at the speedlight</p>
+            <p>which will give you coding full power at the light speed</p>
             <p><a href="/documentation/index.html">
                 Get Started Now!</a></p>
-            <p><br>or code immediately using 
-                <a href="{self.subproc['.jupyterurl']}">JupyterLab</a></p>
+            {jupyter_link}
             <p><br><br><em>this message appears because there
             was nothing else to render here</em></p>
           </div>"""

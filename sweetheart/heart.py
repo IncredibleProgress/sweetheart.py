@@ -2,19 +2,20 @@
 heart.py is ... the heart of sweetheart!
 provides services and utilities classes 
 """
+import time
 from sweetheart.globals import *
 from sweetheart.bottle import SimpleTemplate
-
-# # patch running within JupyterLab
-# import nest_asyncio
-# nest_asyncio.apply()
 
 import uvicorn
 from starlette.applications import Starlette
 from starlette.staticfiles import StaticFiles
 from starlette.endpoints import WebSocketEndpoint
-from starlette.routing import Route, Mount, WebSocketRoute
+from starlette.routing import Route,Mount,WebSocketRoute
 from starlette.responses import HTMLResponse,FileResponse,JSONResponse
+
+# # patch running within JupyterLab
+# import nest_asyncio
+# nest_asyncio.apply()
 
 # try: import cherrypy
 # except:
@@ -48,9 +49,13 @@ class BaseService:
         """ start and run the command attribute locally
             the 'command' attribute must be set previously """
 
-        if service: sp.terminal(self.command,self.terminal)
-        else: sp.shell(self.command)
+        if service:
+            sp.terminal(self.command,self.terminal)
+            time.sleep(0.5)#FIXME: waiting time needed
+        else:
+            sp.shell(self.command)
 
+        
     def cli_func(self,args):
         """ provided default function for command line interface """
 
