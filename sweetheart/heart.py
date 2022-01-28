@@ -225,7 +225,7 @@ def createVueApp(dict:dict):
     try_exec("r.onmessage = on_message")
     try_exec("window.vuecreated = vue_created")
     window.createVueApp(json.dumps(dict)) """.strip()+"\n",
-
+    
       '</python>': "</script>",
       '<!SWEETHEART html>': f'%rebase("{BaseConfig._["templates_base"]}")',
     }.items(): template = template.replace(old,new)

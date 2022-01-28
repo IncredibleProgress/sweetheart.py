@@ -128,7 +128,7 @@ dbname = get('dbname',get('__db__','test'))
         // should be a Brython function call case
         let vm = Vue.createApp({
           data() { return JSON.parse(vuedata) },
-          created() { vuecreated(this.$data) },
+          created() { try {vuecreated(this.$data)} catch(err){} },
           methods: { 
             update(event) { 
               const sep = event.target.id.indexOf(":");

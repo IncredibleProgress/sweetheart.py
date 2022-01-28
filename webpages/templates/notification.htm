@@ -1,9 +1,31 @@
 <!SWEETHEART html>
 
-<div id="VueApp">
+<python>
+createVueApp({
+  "equipements": ["438-SP-INDU"],
+  "owners": ["S/MEC","S/ERA","S/CHA","S/GEN","RS2I"],
+  "priorities": [0,1,2,3,4] })
+</python>
 
-  <h1 class="text-3xl">Avis de maintenance</h1>
-  <input id="" type="text" placeholder="description courte" required/>
-  <textarea id="" type="text" placeholder="texte long"></textarea>
+<div id="VueApp" class="container max-w-2xl mx-auto p-2">
 
+  <h1 class="text-4xl text-center mt-10">Demande d'intervention</h1>
+  %  style ="border p-0.5 focus:outline-none focus:border-pink-600"
+
+  <div class="flex mt-12">
+    % txt ="saisir ici l'intitulé de la problématique"
+    <input id="" type="text" class="flex-1 rounded-tl-md mr-1 {%style%}" placeholder="{%txt%}"/>
+    <select id="" class="flex-none rounded-tr-md {%style%}"><option v-for="prior in priorities">{{prior}}</option></select>
+  </div>
+
+  <div class="flex mt-2">
+    <select id="" class="flex-auto mr-1 {%style%}"><option v-for="eqpmt in equipements">{{eqpmt}}</option></select>
+    <select id="" class="flex-initial w-24 mr-1 {%style%}"><option v-for="owner in owners">{{owner}}</option></select>
+    <input id="" type="text" class="flex-initial w-24 text-center {%style%}" placeholder="criticité"/>
+  </div>
+
+  % txt ="décrire ici le sujet, apporter les premiers élements de diagnostiques, préciser les actions déjà réalisées"
+  <textarea id="" class="flex rounded-b-md mt-2 h-48 w-full {%style%}" placeholder="{%txt%}"></textarea>
+
+  <p class="mt-6 text-sm font-extralight text-center text-gray-300"><em>made with Sweetheart</em></p>
 </div>
