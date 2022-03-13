@@ -84,6 +84,7 @@ class BaseConfig(UserDict):
         self.subproc_file = f"{self.root_path}/configuration/subproc.json"
 
         # default sandbox settings
+        self.sandbox = False
         self.is_webapp_open = True
         self.is_rethinkdb_local = True
         self.is_jupyter_local = True
@@ -114,7 +115,7 @@ class BaseConfig(UserDict):
             '.brave.exe': f"cmd.exe /c start brave --app=",
             '.jupyterurl': f"{self.jupyter_host}/tree",
             '.jupytercmd': f"jupyterlab",
-            '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css -m",
+            '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css",
         }
 
         # default editable settings

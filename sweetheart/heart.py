@@ -2,6 +2,8 @@
 heart.py is ... the heart of sweetheart!
 provides services and utilities classes 
 """
+from argparse import ArgumentError
+from ctypes import Union
 import time
 from sweetheart.globals import *
 from sweetheart.bottle import SimpleTemplate
@@ -13,10 +15,6 @@ from starlette.endpoints import WebSocketEndpoint
 from starlette.routing import Route,Mount,WebSocketRoute
 from starlette.responses import HTMLResponse,FileResponse,JSONResponse
 
-# # patch running within JupyterLab
-# import nest_asyncio
-# nest_asyncio.apply()
-
 # try: import cherrypy
 # except:
 #     class cherrypy:
@@ -27,6 +25,9 @@ from starlette.responses import HTMLResponse,FileResponse,JSONResponse
 
 
 class BaseService:
+
+    # ports numbers tracker
+    ports_register = set()
 
     def __init__(self,url:str,config:BaseConfig):
         """ set basic features of sweeheart service objects
@@ -44,6 +45,20 @@ class BaseService:
         self.protocol = url_split[0].lower()
         self.host = url_split[1].strip("/")
         self.port = int(url_split[2])
+        BaseService.ports_register.add(self.port)
+
+    def switch_port_to(self,port_number:int):
+        """ allow changing port number afterwards which can avoid conflicts
+            typically testing all services and servers on localhost
+            it will raise exception if port_number is already in use """
+
+        # ensure that port_number is not in use
+        assert port_number not in BaseService.ports_register
+
+        self.port = self.uargs['port'] = port_number
+        self.url = f"http://{self.host}:{self.port}"
+        BaseService.ports_register.add(port_number)
+        verbose("ports in use:",repr(BaseService.ports_register))
 
     def run_local(self,service:bool=True):
         """ start and run the command attribute locally
@@ -51,11 +66,10 @@ class BaseService:
 
         if service:
             sp.terminal(self.command,self.terminal)
-            time.sleep(0.5)#FIXME: waiting time needed
+            time.sleep(0.75)#FIXME: waiting time needed
         else:
             sp.shell(self.command)
 
-        
     def cli_func(self,args):
         """ provided default function for command line interface """
 
@@ -206,8 +220,17 @@ def HTMLTemplate(filename:str,**kwargs):
         including configuration data and some python magic stuff """
 
     os.chdir(BaseConfig._['working_dir'])
-    with open(f"{BaseConfig._['templates_dir']}/{filename}","r") as tpl:
-        template = tpl.read()
+
+    if os.path.isfile(f"{BaseConfig._['templates_dir']}/{filename}"):
+        # load template from filename if exists
+        with open(f"{BaseConfig._['templates_dir']}/{filename}","r") as tpl:
+            template = tpl.read()
+
+    elif isinstance(filename,str):
+        # alternatively test the given string as template
+        template = filename
+
+    else: raise ArgumentError
 
     for old,new in {
       '<python>': """<script type="text/python">
@@ -253,31 +276,41 @@ class HttpServer(BaseService):
             "log_level": "info" }
 
         if set_database == True: 
-            self.database = RethinkDB(config)
+            run_local = self.config.is_rethinkdb_local
+            self.database = RethinkDB(config,run_local)
             self.database.set_websocket()
-            self.database.set_client()
+            try: self.database.set_client()
+            except: raise Exception("RethinkDB server not found")
 
     def mount(self,*args:Route):
         """ mount given Route(s) and set facilities from config """
 
+        # ensure mount() call only once
         assert hasattr(self,'data')
+
         os.chdir(self.config['working_dir'])
         echo("mount webapp:",self.config['working_dir'])
 
         if not args:
-            # change port to 8181 (keep free 8000)
-            self.port = self.uargs['port'] = 8181
-            self.url = f"http://{self.host}:{self.port}"
-            # route welcome message
+            # switch port to 8181 and keep free 8000
+            # allow looking documentation and testing webapp
+            self.switch_port_to(8181)
+            # auto route the default welcome message
+            self.config.is_webapp_open = True
             self.data.append(Route("/",HTMLResponse(self.config.welcome())))
-        else:
-            self.data.extend(args)
 
-        # mount fetch endpoint and websocket
+        elif len(args)==1 and isinstance(args[0],str):
+            # route given html as a simple page for tests
+            self.config.is_webapp_open = True
+            self.data.append(Route("/",HTMLTemplate(args[0])))
+
+        else: self.data.extend(args)
+
         if hasattr(self,'database'):
+            # mount fetch endpoint and websocket
             self.data.extend([
                 Route("/data", self.database.fetch_endpoint, methods=["POST"]),
-                WebSocketRoute(self.database.WS_route, self.database.WS)])
+                WebSocketRoute(self.database.WS_route, self.database.WS) ])
 
         # mount static files given within config
         self.data.extend([Route(relpath,FileResponse(srcpath))\

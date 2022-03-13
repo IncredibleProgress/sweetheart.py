@@ -72,8 +72,8 @@ def init(config:BaseConfig,add_pylibs:str=""):
         JupyterLab(config).set_ipykernel()
         if config.project == MASTER_MODULE: JupyterLab(config).set_password()
     else:
-        # install at least ipython for convenience
-        installer.poetry("ipython")
+        # install at least ipython and ipykernel for convenience
+        installer.poetry("ipython","ipykernel")
     
     echo("installation process completed",blank=True)
 

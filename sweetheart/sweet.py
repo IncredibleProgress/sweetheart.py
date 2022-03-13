@@ -3,13 +3,12 @@ sweet.py is the multi-purpose controller of sweetheart
 it provides cli, install process, sandbox and services
 """
 from sweetheart.globals import *
+from sweetheart.heart import HttpServer
 
 
 def set_config(
-
     values:dict = {},
     project:str = MASTER_MODULE,
-    sandbox:bool = False,
     config_file:str = None ) -> BaseConfig:
 
     """ set or reset sweetheart configuration 
@@ -17,14 +16,6 @@ def set_config(
 
     config = BaseConfig(project)
     if config_file: config.config_file = config_file
-
-    if sandbox is False:
-        # disable sandbox settings
-        config.is_webapp_open = False
-        config.is_rethinkdb_local = False
-        config.is_jupyter_local = False
-        # config.is_mongodb_local = False
-        # config.is_cherrypy_local = False
 
     try: 
         # update config from given json file
@@ -35,6 +26,15 @@ def set_config(
 
     # allow altered config
     config.update(values)
+    config.is_local = config.get('run_local',False)
+
+    if config.is_local is False:
+        # disable sandbox settings
+        config.is_webapp_open = False
+        config.is_rethinkdb_local = False
+        config.is_jupyter_local = False
+        # config.is_mongodb_local = False
+        # config.is_cherrypy_local = False
 
     try: 
         # get subproc settings from given json file
@@ -68,52 +68,48 @@ def set_config(
     return config
 
 
-def quickstart(*args,_cli_args=None):
-    """ build and run webapp for config (autoset if not given)
-        args can be Route objects or a HttpServer instance """
+def quickstart(*args:HttpServer,_cli_args=None):
+    """ build and run webapp for the current config (autoset if not given)
+        usually args should be a HttpServer instance or Route|Mount objects
+        however for tests it can be a template or even html code directly
+        Note: this flexibility is provided by mount() method of HttpServer """
 
     from sweetheart.heart import \
         RethinkDB,JupyterLab,HttpServer
 
-    # allow auto config
+    # allow auto config if missing
     if hasattr(BaseConfig,"_"): config = BaseConfig._
-    else: config = set_config(sandbox=True)
+    else: config = set_config()
 
-    # set config from cli if given
     if _cli_args:
+        # update config from cli
         config.is_webapp_open = not _cli_args.server_only
         config.is_rethinkdb_local = not _cli_args.db_disabled
         config.is_jupyter_local = _cli_args.jupyter_lab
         # config.is_mongodb_local = not _cli_args.db_disabled
         # config.is_cherrypy_local = _cli_args.cherrypy
     
-    # set and run Jupyterlab server
     if config.is_jupyter_local:
+        # set and run Jupyterlab server
         JupyterLab(config,run_local=True)
 
-    # set and run RethinkDB server
-    if config.is_rethinkdb_local:
-        rdb = RethinkDB(config,run_local=True)
-        rdb.set_websocket()
-        rdb.set_client()
-
-    # # run CherryPy server
-    # if config.is_cherrypy_local: 
-    #     HttpStaticServer(config,run_local=True)
-
-    # # run MongoDB server
-    # if config.is_mongodb_local:
-    #     MongoDB(config,run_local=True)
-
-    # build and start webapp
     if args and isinstance(args[0],HttpServer):
+        # set webapp from given HttpServer instance
+        webapp = args[0]
         if hasattr(args[0],'data'): args[0].mount(*args[1:])
-        if 'rdb' in locals(): args[0].database = rdb
-        args[0].run_local(service=False)
     else:
+        # build new webapp from Route|Mount objects,html code or template
         webapp = HttpServer(config).mount(*args)
-        if 'rdb' in locals(): webapp.database = rdb
-        webapp.run_local(service=False)
+    
+    if config.is_rethinkdb_local:
+        # set and run RethinkDB server
+        if not hasattr(webapp,'database'):
+            webapp.database = RethinkDB(config,run_local=True)
+            webapp.database.set_websocket()
+            webapp.database.set_client()
+        
+    # start webapp within current bash
+    webapp.run_local(service=False)
 
 
 def sws(args):

@@ -26,16 +26,19 @@ def test_objects():
 def test_template(template:str):
     
     BaseConfig.verbosity = 1
-    config = set_config(sandbox=False)
-    path = f"{config['working_dir']}/{config['templates_dir']}"
-    #config.is_webapp_open = True
+    config = set_config({'webbrowser':"brave.exe"})
+    config.is_rethinkdb_local = True
+    config.is_webapp_open = True
 
+    path = f"{config['working_dir']}/{config['templates_dir']}"
     if not os.path.isfile(path) and not os.path.islink(path):
         print("Error, the given template is not existing")
         return False
 
-    webapp = HttpServer(config,set_database=True)
-    quickstart( webapp.mount( Route("/",HTMLTemplate(template)) ))
+    webapp = HttpServer(config).mount(
+        Route("/",HTMLTemplate(template)) )
+
+    quickstart(webapp)
     return True
 
 
@@ -76,5 +79,5 @@ if __name__ == '__main__':
         _set__links_for_dev_()
         echo("sws test --dev-links: all done",mode='exit')
     
-    assert test_objects()
+    #assert test_objects()
     assert test_template(argv[-1])

@@ -2,30 +2,29 @@
 
 <python>
 createVueApp({
-  "equipements": ["438-SP-INDU"],
-  "owners": ["S/MEC","S/ERA","S/CHA","S/GEN","RS2I"],
+  "equipements": ["Compresseur principal"],
+  "owners": ["Méca","Eléc.","Chaudro.","Voirie","Automat."],
   "priorities": [0,1,2,3,4] })
 </python>
 
-<div id="VueApp" class="container max-w-2xl mx-auto p-2">
-
-  <h1 class="text-4xl text-center mt-10">Demande d'intervention</h1>
-  %  style ="border p-0.5 focus:outline-none focus:border-pink-600"
+<div id="VueApp" class="max-w-2xl mx-auto p-2">
+  <h1 class="text-center mt-10">Demande d'intervention</h1>
 
   <div class="flex mt-12">
-    % txt ="saisir ici l'intitulé de la problématique"
-    <input id="" type="text" class="flex-1 rounded-tl-md mr-1 {%style%}" placeholder="{%txt%}"/>
-    <select id="" class="flex-none rounded-tr-md {%style%}"><option v-for="prior in priorities">{{prior}}</option></select>
+    % txt ="saisir ici l'intitulé de la problématique à traiter"
+    <input id="" type="text" class="sw flex-auto rounded-tl-md mr-1" placeholder="{%txt%}"/>
+    <select id="" class="sw flex-none rounded-tr-md"><option v-for="prior in priorities">{{prior}}</option></select>
   </div>
 
   <div class="flex mt-2">
-    <select id="" class="flex-auto mr-1 {%style%}"><option v-for="eqpmt in equipements">{{eqpmt}}</option></select>
-    <select id="" class="flex-initial w-24 mr-1 {%style%}"><option v-for="owner in owners">{{owner}}</option></select>
-    <input id="" type="text" class="flex-initial w-24 text-center {%style%}" placeholder="criticité"/>
+    <select id="" class="sw flex-auto mr-1"><option v-for="eqpmt in equipements">{{eqpmt}}</option></select>
+    <select id="" class="sw flex-initial w-24 mr-1"><option v-for="owner in owners">{{owner}}</option></select>
+    <input id="" type="text" class="sw flex-initial w-24 text-center" placeholder="criticité"/>
   </div>
 
-  % txt ="décrire ici le sujet, apporter les premiers élements de diagnostiques, préciser les actions déjà réalisées"
-  <textarea id="" class="flex rounded-b-md mt-2 h-48 w-full {%style%}" placeholder="{%txt%}"></textarea>
-
-  <p class="mt-6 text-sm font-extralight text-center text-gray-300"><em>made with Sweetheart</em></p>
+  <% txt ="""
+    fournir ici tous les éléments utiles à la bonne compréhension du problème
+    apporter les premiers élements de diagnostiques ou à défaut vos observations
+    indiquer également les actions déjà réalisées ainsi que les premières conclusions""" %>
+  <textarea id="" class="sw flex rounded-b-md mt-2 h-48 w-full" placeholder="{%txt%}"></textarea>
 </div>
