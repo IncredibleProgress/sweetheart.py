@@ -84,7 +84,6 @@ class BaseConfig(UserDict):
         self.subproc_file = f"{self.root_path}/configuration/subproc.json"
 
         # default sandbox settings
-        self.sandbox = False
         self.is_webapp_open = True
         self.is_rethinkdb_local = True
         self.is_jupyter_local = True
@@ -140,7 +139,6 @@ class BaseConfig(UserDict):
                 '/favicon.ico': "resources/favicon.ico",
                 '/tailwind.css': "resources/tailwind.css",
                 '/vue.js': "resources/node_modules/vue/dist/vue.global.js",
-                # '/alpine.js': "resources/node_modules/alpinejs/dist/alpine.js",
             },
             "static_dirs": {
                 '/resources': f"resources",
@@ -154,8 +152,7 @@ class BaseConfig(UserDict):
             # enable html link to running Jypyter local server
             jupyter_link = f"""<p><br>or code immediately using 
                 <a href="{self.subproc['.jupyterurl']}">JupyterLab</a></p>"""
-        else:
-            jupyter_link = ""
+        else: jupyter_link = ""
 
         return f"""
           <div style="text-align:center;font-size:1.1em;">

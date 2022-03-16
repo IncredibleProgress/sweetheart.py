@@ -69,10 +69,11 @@ def set_config(
 
 
 def quickstart(*args:HttpServer,_cli_args=None):
+
     """ build and run webapp for the current config (autoset if not given)
         usually args should be a HttpServer instance or Route|Mount objects
-        however for tests it can be a template or even html code directly
-        Note: this flexibility is provided by mount() method of HttpServer """
+        however for tests it can be a template or even Html code directly
+        Note: this flexibility is provided through mount() method of HttpServer """
 
     from sweetheart.heart import \
         RethinkDB,JupyterLab,HttpServer
@@ -165,7 +166,7 @@ def install(*packages):
 
     # allow auto config
     if hasattr(BaseConfig,"_"): config = BaseConfig._
-    else: config = set_config(sandbox=True)
+    else: config = set_config()
 
     from sweetheart.install import BaseInstall
     BaseInstall(config).install_packages(*packages)

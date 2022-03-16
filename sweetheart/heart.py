@@ -26,7 +26,7 @@ from starlette.responses import HTMLResponse,FileResponse,JSONResponse
 
 class BaseService:
 
-    # ports numbers tracker
+    # tracker for avoiding localhost conflicts
     ports_register = set()
 
     def __init__(self,url:str,config:BaseConfig):
@@ -45,6 +45,9 @@ class BaseService:
         self.protocol = url_split[0].lower()
         self.host = url_split[1].strip("/")
         self.port = int(url_split[2])
+
+        # ensure that self.port is not in use
+        assert self.port not in BaseService.ports_register
         BaseService.ports_register.add(self.port)
 
     def switch_port_to(self,port_number:int):
@@ -52,13 +55,12 @@ class BaseService:
             typically testing all services and servers on localhost
             it will raise exception if port_number is already in use """
 
-        # ensure that port_number is not in use
-        assert port_number not in BaseService.ports_register
-
         self.port = self.uargs['port'] = port_number
         self.url = f"http://{self.host}:{self.port}"
+
+        # ensure that port_number is not in use
+        assert port_number not in BaseService.ports_register
         BaseService.ports_register.add(port_number)
-        verbose("ports in use:",repr(BaseService.ports_register))
 
     def run_local(self,service:bool=True):
         """ start and run the command attribute locally
@@ -233,6 +235,7 @@ def HTMLTemplate(filename:str,**kwargs):
     else: raise ArgumentError
 
     for old,new in {
+      # provide magic <python></python> syntax
       '<python>': """<script type="text/python">
 
 import json
@@ -247,13 +250,18 @@ def createVueApp(dict:dict):
     try_exec("r.onupdate = on_update")
     try_exec("r.onmessage = on_message")
     try_exec("window.vuecreated = vue_created")
-    window.createVueApp(json.dumps(dict)) """.strip()+"\n",
-    
-      '</python>': "</script>",
-      '<!SWEETHEART html>': f'%rebase("{BaseConfig._["templates_base"]}")',
-    }.items(): template = template.replace(old,new)
-    template = SimpleTemplate(template)
+    window.createVueApp(json.dumps(dict))\n""",
 
+      '</python>': "</script>",
+
+      # provide magic html rebase() syntax <!SWEETHEART html>
+      f'<!{MASTER_MODULE.upper()} html>': \
+          f'%rebase("{BaseConfig._["templates_base"]}")',
+
+    }.items(): template = template.replace(old,new)
+    
+    # render html from template and config
+    template = SimpleTemplate(template)
     return HTMLResponse(template.render(
         __db__ = BaseConfig._['selected_DB'],
         **BaseConfig._['templates_settings'],
@@ -265,7 +273,7 @@ class HttpServer(BaseService):
     def __init__(self,config:BaseConfig,set_database=False):
         """ set Starlette web-app as a service """
         
-        # auto set url from config
+        # autoset url from config
         super().__init__(config.async_host,config)
         self.data = []
 
@@ -276,9 +284,11 @@ class HttpServer(BaseService):
             "log_level": "info" }
 
         if set_database == True: 
+            # set RethinkDB enabling websocket
             run_local = self.config.is_rethinkdb_local
             self.database = RethinkDB(config,run_local)
             self.database.set_websocket()
+            # explicit error message calling set_client()
             try: self.database.set_client()
             except: raise Exception("RethinkDB server not found")
 
