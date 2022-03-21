@@ -1,26 +1,49 @@
 """
 get-sweetheart.py: the Github sweetheart installer
 allows installation of SWeetheart Shell (sws) basic features
-NOTE: this script has been tested on Ubuntu 20.04 only
 
-2 optionnal arguments requiring sudo permissions are provided:
+optionnal arguments requiring sudo permissions are provided:
     --rethinkdb :   set the official deb repository for getting RethinkDB
     --local-bin :   set symbolic link to sws within /usr/local/bin
+    --init-sws  :   run 'sws --init' for getting sweetheart base components
+    --init-jpy  :   run 'sws --init jupyterlab' for base components with JupyterLab
+
+NOTE: this script has been tested on Ubuntu 20.04
 """
+
+from enum import Enum
 import os,sys,stat,json
 from subprocess import run
 
-__version__  = "0.1.3"
+__version__  = "0.1.4"
+__author__ = "champion.nicolas@gmail.com"
+__licence__ = "CeCILL-C FREE SOFTWARE LICENSE AGREEMENT"
 
-# paths setting
-PATHS = {
-    'config': f"{os.environ['HOME']}/.sweet/sweetheart/configuration",
-    'scripts': f"{os.environ['HOME']}/.sweet/sweetheart/programs/scripts",
-    'python': f"{os.environ['HOME']}/.sweet/sweetheart/programs/my_python" }
+class Path(Enum):
+
+    # basedirs paths settings
+    CONFIG = f"{os.environ['HOME']}/.sweet/sweetheart/configuration"
+    SCRIPTS = f"{os.environ['HOME']}/.sweet/sweetheart/programs/scripts"
+    PYTHON = f"{os.environ['HOME']}/.sweet/sweetheart/programs/my_python"
+
+    # files paths settings
+    SWS = f"{SCRIPTS}/sws"
+    SUBPROC = f"{CONFIG}/subproc.json"
+    BASHRC = f"{os.environ['HOME']}/.bashrc"
 
 # make required directories
-for basedir in PATHS.values():
-    os.makedirs(basedir,exist_ok=True)
+os.makedirs(Path.CONFIG,exist_ok=True)
+os.makedirs(Path.SCRIPTS,exist_ok=True)
+os.makedirs(Path.PYTHON,exist_ok=True)
+
+class Poetry(Enum):
+
+    # poetry commands settings
+    BIN = f"{os.environ['HOME']}/.local/bin/poetry"
+    INIT = f"{os.environ['HOME']}/.local/bin/poetry init -n"
+    ADD = f"{os.environ['HOME']}/.local/bin/poetry add sweetheart"
+    INSTALL = "curl -sSL https://install.python-poetry.org | python3 -"
+    ENV_PATH = f"{BIN} env info --path"
 
 # for getting bash standard output
 bash_stdout = lambda cmd:\
@@ -30,28 +53,21 @@ bash_stdout = lambda cmd:\
 distrib = bash_stdout("lsb_release -is").lower()
 codename = bash_stdout("lsb_release -cs").lower()
 
-# poetry commands
-POETRY_BIN = f"{os.environ['HOME']}/.local/bin/poetry"
-POETRY_INSTALL = "curl -sSL https://install.python-poetry.org | python3 -"
-POETRY_INIT = f"{os.environ['HOME']}/.local/bin/poetry init -n"
-POETRY_ADD = f"{os.environ['HOME']}/.local/bin/poetry add sweetheart"
-
 # python-poetry is required
-if not os.path.isfile(POETRY_BIN):
-    run(POETRY_INSTALL,shell=True)
+if not os.path.isfile(Poetry.BIN):
+    run(Poetry.INSTALL,shell=True)
 
-# create python directories
-os.makedirs(PATHS["python"],exist_ok=True)
-os.chdir(PATHS["python"])
-run(POETRY_INIT,shell=True)
-run(POETRY_ADD,shell=True)
+# build python directory
+os.chdir(Path.PYTHON)
+run(Poetry.INIT,shell=True)
+run(Poetry.ADD,shell=True)
 
 # set python env
-venv = bash_stdout(f"{POETRY_BIN} env info --path")
-if venv == "": raise Exception("Error, no python env found")
+venv = bash_stdout(Poetry.ENV_PATH)
+if venv=="": raise Exception("Error, no python env found")
 
 # set subroc.conf
-with open(f"{PATHS['config']}/subproc.json","w") as file_out:
+with open(Path.SUBPROC,"w") as file_out:
     json.dump({'pyenv':venv},file_out)
 
 # set RethinkDB repository
@@ -66,7 +82,7 @@ sudo apt-get update
     """.splitlines(): run(instruc.strip(),shell=True)
 
 # set SWeetheart Shell command -> sws
-with open(f"{PATHS['scripts']}/sws","w") as file_out:
+with open(Path.SWS,"w") as file_out:
     file_out.write(f"""
 
 #!/bin/sh
@@ -75,20 +91,29 @@ with open(f"{PATHS['scripts']}/sws","w") as file_out:
 
     """.strip())
 
-os.chmod(f"{PATHS['scripts']}/sws",stat.S_IRWXU|stat.S_IRGRP|stat.S_IROTH)
-print(f"\n[SWEETHEART] Welcome {os.environ['USER'].capitalize()} !",
-    f"\nthe 'sws' command is now available for {distrib} {codename}")
+os.chmod(Path.SWS,stat.S_IRWXU|stat.S_IRGRP|stat.S_IROTH)
+print(f"""\n[SWEETHEART] Welcome {os.environ['USER'].capitalize()} !
+the 'sws' command is now available for {distrib} {codename}""")
+
+# export path within .bashrc
+with open(Path.BASHRC,"r") as file_in:
+    bashrc = file_in.read()
 
 if '--local-bin' in sys.argv:
-    run(f"sudo ln -s {PATHS['scripts']}/sws /usr/local/bin/",shell=True)
+    run(f"sudo ln -s {Path.SWS} /usr/local/bin/",shell=True)
 
-elif not PATHS['scripts'] in os.environ['PATH']:
-    with open(f"{os.environ['HOME']}/.bashrc","a") as fi:
-        fi.write(f"\nexport PATH={PATHS['scripts']}:$PATH")
-        print(f"{PATHS['scripts']} added to $PATH within ~./bashrc")
+elif Path.SCRIPTS not in bashrc:
+    with open(Path.BASHRC,"a") as file_out:
+        file_out.write(f"\nexport PATH={Path.SCRIPTS}:$PATH")
+        print(f"{Path.SCRIPTS} added to $PATH within ~./bashrc")
 
 # exit message
-print("\n[SWEETHEART] all done setting Sweetheart requirements",
-    "\nif needed set 'config.json' and 'subproc.json' within configuration directory",
-    "\nthen restart bash and type 'sws --init' for installing usual components",
-    end="\n\n")
+print("""\n[SWEETHEART] all done setting Sweetheart requirements
+if needed set 'config.json' and 'subproc.json' within configuration directory\n\n""")
+
+# install sweetheart components
+if "--init-sws" in sys.argv:
+    run("bash sws --init; sws help",shell=True)
+
+elif "--init-jpy" in sys.argv:
+    run("bash sws --init jupyterlab; sws help",shell=True)

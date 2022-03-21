@@ -2,8 +2,6 @@
 heart.py is ... the heart of sweetheart!
 provides services and utilities classes 
 """
-from argparse import ArgumentError
-from ctypes import Union
 import time
 from sweetheart.globals import *
 from sweetheart.bottle import SimpleTemplate
@@ -232,7 +230,7 @@ def HTMLTemplate(filename:str,**kwargs):
         # alternatively test the given string as template
         template = filename
 
-    else: raise ArgumentError
+    else: raise TypeError
 
     for old,new in {
       # provide magic <python></python> syntax
