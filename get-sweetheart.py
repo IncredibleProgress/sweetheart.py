@@ -3,6 +3,7 @@ get-sweetheart.py: the Github sweetheart installer
 allows installation of SWeetheart Shell (sws) basic features
 
 optionnal arguments requiring sudo permissions are provided:
+    --python-venv : install python3-venv package which is required
     --rethinkdb :   set the official deb repository for getting RethinkDB
     --local-bin :   set symbolic link to sws within /usr/local/bin
     --init-sws  :   run 'sws --init' for getting sweetheart base components
@@ -11,7 +12,6 @@ optionnal arguments requiring sudo permissions are provided:
 NOTE: this script has been tested on Ubuntu 20.04
 """
 
-from enum import Enum
 import os,sys,stat,json
 from subprocess import run
 
@@ -19,7 +19,7 @@ __version__  = "0.1.4"
 __author__ = "champion.nicolas@gmail.com"
 __licence__ = "CeCILL-C FREE SOFTWARE LICENSE AGREEMENT"
 
-class Path(Enum):
+class Path:
 
     # basedirs paths settings
     CONFIG = f"{os.environ['HOME']}/.sweet/sweetheart/configuration"
@@ -36,13 +36,14 @@ os.makedirs(Path.CONFIG,exist_ok=True)
 os.makedirs(Path.SCRIPTS,exist_ok=True)
 os.makedirs(Path.PYTHON,exist_ok=True)
 
-class Poetry(Enum):
+class Poetry:
 
     # poetry commands settings
     BIN = f"{os.environ['HOME']}/.local/bin/poetry"
     INIT = f"{os.environ['HOME']}/.local/bin/poetry init -n"
     ADD = f"{os.environ['HOME']}/.local/bin/poetry add sweetheart"
     INSTALL = "curl -sSL https://install.python-poetry.org | python3 -"
+    GET_VENV = "sudo apt install python3-venv"
     ENV_PATH = f"{BIN} env info --path"
 
 # for getting bash standard output
@@ -54,6 +55,8 @@ distrib = bash_stdout("lsb_release -is").lower()
 codename = bash_stdout("lsb_release -cs").lower()
 
 # python-poetry is required
+if "--python-venv" in sys.argv:
+    run(Poetry.GET_VENV,shell=True)
 if not os.path.isfile(Poetry.BIN):
     run(Poetry.INSTALL,shell=True)
 
