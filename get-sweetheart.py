@@ -11,7 +11,6 @@ optionnal arguments requiring sudo permissions are provided:
 NOTE: this script has been tested on Ubuntu 20.04
 """
 
-from enum import Enum
 import os,sys,stat,json
 from subprocess import run
 
@@ -19,7 +18,7 @@ __version__  = "0.1.4"
 __author__ = "champion.nicolas@gmail.com"
 __licence__ = "CeCILL-C FREE SOFTWARE LICENSE AGREEMENT"
 
-class Path(Enum):
+class Path:
 
     # basedirs paths settings
     CONFIG = f"{os.environ['HOME']}/.sweet/sweetheart/configuration"
@@ -36,7 +35,7 @@ os.makedirs(Path.CONFIG,exist_ok=True)
 os.makedirs(Path.SCRIPTS,exist_ok=True)
 os.makedirs(Path.PYTHON,exist_ok=True)
 
-class Poetry(Enum):
+class Poetry:
 
     # poetry commands settings
     BIN = f"{os.environ['HOME']}/.local/bin/poetry"
