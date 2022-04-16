@@ -3,6 +3,7 @@ get-sweetheart.py: the Github sweetheart installer
 allows installation of SWeetheart Shell (sws) basic features
 
 optionnal arguments requiring sudo permissions are provided:
+    --python-venv : install python3-venv package which is required
     --rethinkdb :   set the official deb repository for getting RethinkDB
     --local-bin :   set symbolic link to sws within /usr/local/bin
     --init-sws  :   run 'sws --init' for getting sweetheart base components
@@ -42,6 +43,7 @@ class Poetry:
     INIT = f"{os.environ['HOME']}/.local/bin/poetry init -n"
     ADD = f"{os.environ['HOME']}/.local/bin/poetry add sweetheart"
     INSTALL = "curl -sSL https://install.python-poetry.org | python3 -"
+    GET_VENV = "sudo apt install python3-venv"
     ENV_PATH = f"{BIN} env info --path"
 
 # for getting bash standard output
@@ -53,6 +55,8 @@ distrib = bash_stdout("lsb_release -is").lower()
 codename = bash_stdout("lsb_release -cs").lower()
 
 # python-poetry is required
+if "--python-venv" in sys.argv:
+    run(Poetry.GET_VENV,shell=True)
 if not os.path.isfile(Poetry.BIN):
     run(Poetry.INSTALL,shell=True)
 
