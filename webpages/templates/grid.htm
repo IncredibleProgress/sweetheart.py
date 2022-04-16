@@ -37,22 +37,20 @@ createVueApp({
 })
 </python>
 
-
-<div v-cloak id="VueApp" class="m-2">
-  <h1 class="text-xl">Realtime Table</h1>
-
+<vue t-style="m-2">
+  <h1 t-style="text-xl">Realtime Table</h1>
   <table>
     <thead>
       <tr>
-        <th v-for="h in headers" class="border">{{ h }}</th>
+        <th v-for="h in headers" t-style="border">{{ h }}</th>
       </tr>
     </thead>
     <tbody>
       <tr v-for="n in table.length">
-        <td v-for="h in headers" class="border">
+        <td v-for="h in headers" t-style="border">
           <input type="text" v-bind:id="tableId(n-1,h)" v-model="table[n-1][h]" v-on:keyup="update">
         </td>
       </tr>
     </tbody>
   </table>
-</div>
+</vue>

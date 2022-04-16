@@ -233,30 +233,32 @@ def HTMLTemplate(filename:str,**kwargs):
     else: raise TypeError
 
     for old,new in {
-      # provide magic <python></python> syntax
-      '<python>': """<script type="text/python">
+      # provide magic html rebase() syntax <!SWEETHEART html>
+      f'<!{MASTER_MODULE.upper()} html>': \
+          f'%rebase("{BaseConfig._["templates_base"]}")',
 
+      # provide magic html facilities
+      't-style': 'class', # switch for tailwindcss
+      '<vue': '<div v-cloak id="VueApp"',
+      '</vue>': '</div>',
+
+      # provide magic <python></python> syntax
+      '</python>': "</script>",
+      '<python>': """<script type="text/python">
 import json
 from browser import window, document
 console, r = window.console, window.r
-
 def try_exec(code:str):
     try: exec(code)
     except: pass
-
 def createVueApp(dict:dict):
     try_exec("r.onupdate = on_update")
     try_exec("r.onmessage = on_message")
     try_exec("window.vuecreated = vue_created")
     window.createVueApp(json.dumps(dict))\n""",
 
-      '</python>': "</script>",
-
-      # provide magic html rebase() syntax <!SWEETHEART html>
-      f'<!{MASTER_MODULE.upper()} html>': \
-          f'%rebase("{BaseConfig._["templates_base"]}")',
-
-    }.items(): template = template.replace(old,new)
+      }.items():
+        template = template.replace(old,new)
     
     # render html from template and config
     template = SimpleTemplate(template)

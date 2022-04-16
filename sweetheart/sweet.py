@@ -17,6 +17,11 @@ def set_config(
     config = BaseConfig(project)
     if config_file: config.config_file = config_file
 
+    elif isinstance(values,str):
+        #FIXME: allow setting config_file instead of values
+        if os.path.isfile(values) and values[:-5]==".json":
+            config.config_file = config_file = values
+
     try: 
         # update config from given json file
         with open(config.config_file) as fi:
