@@ -3,7 +3,6 @@ sweet.py is the multi-purpose controller of sweetheart
 it provides cli, install process, sandbox and services
 """
 from sweetheart.globals import *
-from sweetheart.heart import HttpServer
 
 
 def set_config(
@@ -73,7 +72,7 @@ def set_config(
     return config
 
 
-def quickstart(*args:HttpServer,_cli_args=None):
+def quickstart(*args,_cli_args=None):
 
     """ build and run webapp for the current config (autoset if not given)
         usually args should be a HttpServer instance or Route|Mount objects

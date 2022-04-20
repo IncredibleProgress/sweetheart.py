@@ -1,18 +1,18 @@
 """
-get-sweetheart.py: the Github sweetheart installer
-allows installation of SWeetheart Shell (sws) basic features
+get-sweetheart.py: the Sweetheart installer on Github
+for installing the SWeetheart Shell (sws) basic features
 
 optionnal arguments requiring sudo permissions are provided:
-    --python-venv : install python3-venv package which is required
-    --rethinkdb :   set the official deb repository for getting RethinkDB
+
+    --rethinkdb :   set the official deb repository of RethinkDB
     --local-bin :   set symbolic link to sws within /usr/local/bin
     --init-sws  :   run 'sws --init' for getting sweetheart base components
-    --init-jpy  :   run 'sws --init jupyterlab' for base components with JupyterLab
 
-NOTE: this script has been tested on Ubuntu 20.04
+NOTE: this script has been tested on Ubuntu 20.04 (LTS) which is recommended
 """
 
 import os,sys,stat,json
+from typing import List
 from subprocess import run
 
 __version__  = "0.1.4"
@@ -31,36 +31,64 @@ class Path:
     SUBPROC = f"{CONFIG}/subproc.json"
     BASHRC = f"{os.environ['HOME']}/.bashrc"
 
-# make required directories
-os.makedirs(Path.CONFIG,exist_ok=True)
-os.makedirs(Path.SCRIPTS,exist_ok=True)
-os.makedirs(Path.PYTHON,exist_ok=True)
+    # bin paths settings
+    BIN = (f"{os.environ['HOME']}/.local/bin","/usr/local/bin","/usr/bin","/bin")
+    PTH = [path for path in BIN if path in os.environ["PATH"]]
+    EXECUTABLES = {} # fetched by list_executables()
+    MISSING = [] # fetched by list_executables()
+
+    # make required directories
+    os.makedirs(CONFIG,exist_ok=True)
+    os.makedirs(SCRIPTS,exist_ok=True)
+    os.makedirs(PYTHON,exist_ok=True)
+
+    @staticmethod
+    def list_executables(executables:str) -> List[str]:
+        # check executables availability 
+        for cmd in executables.split():
+            paths= [p for p in Path.PTH if os.path.isfile(f"{p}/{cmd}")]
+            if paths: Path.EXECUTABLES.update({cmd:paths})
+        # build the missing list
+        Path.MISSING = [m for m in executables.split() if m not in Path.EXECUTABLES]
+        # return list of execuatbles
+        return list(Path.EXECUTABLES)
 
 class Poetry:
 
     # poetry commands settings
-    BIN = f"{os.environ['HOME']}/.local/bin/poetry"
-    INIT = f"{os.environ['HOME']}/.local/bin/poetry init -n"
-    ADD = f"{os.environ['HOME']}/.local/bin/poetry add sweetheart"
+    INIT = "poetry init -n"
+    ADD = "poetry add sweetheart"
+    ENV_PATH = f"poetry env info --path"
     INSTALL = "curl -sSL https://install.python-poetry.org | python3 -"
-    GET_VENV = "sudo apt install python3-venv"
-    ENV_PATH = f"{BIN} env info --path"
 
-# for getting bash standard output
-bash_stdout = lambda cmd:\
+# facility for getting bash standard output
+bash_stdout = lambda cmd: \
     run(cmd,text=True,capture_output=True,shell=True).stdout.strip()
 
 # get distrib infos on debian/ubuntu
 distrib = bash_stdout("lsb_release -is").lower()
 codename = bash_stdout("lsb_release -cs").lower()
+executables = Path.list_executables("apt curl python3 poetry cargo npm")
 
-# python-poetry is required
-if "--python-venv" in sys.argv:
-    run(Poetry.GET_VENV,shell=True)
-if not os.path.isfile(Poetry.BIN):
+if "apt" not in executables:
+    print("\n  WARNING you are not running on Ubuntu/Debian system",
+    "\n  which is not supported by this script for installing OS requirements")
+    sys.exit(1)
+
+if "Installed: (none)" in bash_stdout("apt policy python3-venv"):
+    print("\'python3-venv' is needed and it requires 'sudo' for installation")
+    run("sudo apt install python3-venv",shell=True)
+
+# operating system diagnosis
+print("\n[SWEETHEART] checking prerequisites",
+"\ncurrent running system :",distrib.capitalize(),codename.capitalize(),
+"\nexecutables :",executables,"\nmissing :",Path.MISSING,"\n" )
+
+if "poetry" in Path.MISSING:
+    print("poetry has to be installed for managing Python's envs and libs")
     run(Poetry.INSTALL,shell=True)
 
-# build python directory
+# build my_python directory
 os.chdir(Path.PYTHON)
 run(Poetry.INIT,shell=True)
 run(Poetry.ADD,shell=True)
@@ -71,7 +99,10 @@ if venv=="": raise Exception("Error, no python env found")
 
 # set subroc.conf
 with open(Path.SUBPROC,"w") as file_out:
-    json.dump({'pyenv':venv},file_out)
+    json.dump({
+        'pyenv': venv,
+        'executables': Path.EXECUTABLES
+    },file_out)
 
 # set RethinkDB repository
 if '--rethinkdb' in sys.argv and distrib in ('ubuntu','debian'):
@@ -96,7 +127,7 @@ with open(Path.SWS,"w") as file_out:
 
 os.chmod(Path.SWS,stat.S_IRWXU|stat.S_IRGRP|stat.S_IROTH)
 print(f"""\n[SWEETHEART] Welcome {os.environ['USER'].capitalize()} !
-the 'sws' command is now available for {distrib} {codename}""")
+the 'sws --init' command is now available after restarting bash""")
 
 # export path within .bashrc
 with open(Path.BASHRC,"r") as file_in:
@@ -111,12 +142,8 @@ elif Path.SCRIPTS not in bashrc:
         print(f"{Path.SCRIPTS} added to $PATH within ~./bashrc")
 
 # exit message
-print("""\n[SWEETHEART] all done setting Sweetheart requirements
-if needed set 'config.json' and 'subproc.json' within configuration directory\n\n""")
+print("all done setting Sweetheart requirements\n")
 
 # install sweetheart components
 if "--init-sws" in sys.argv:
     run("bash sws --init; sws help",shell=True)
-
-elif "--init-jpy" in sys.argv:
-    run("bash sws --init jupyterlab; sws help",shell=True)
