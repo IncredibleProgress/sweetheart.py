@@ -1,0 +1,10 @@
+__pycache__
+.vscode
+build
+dist
+sweetheart.egg-info
+poetry.lock
+documentation/sweetbook/book
+*.Identifier
+*-checkpoint.ipynb
+node_modules
