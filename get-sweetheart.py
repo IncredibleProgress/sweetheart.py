@@ -4,9 +4,10 @@ for installing the SWeetheart Shell (sws) basic features
 
 optionnal arguments requiring sudo permissions are provided:
 
+    --init      :   run 'sws --init' for getting Sweetheart base components
+    --jupyter   :   run 'sws -p jupyter --init jupyterlab' for getting JupyterLab
     --rethinkdb :   set the official deb repository of RethinkDB
     --local-bin :   set symbolic link to sws within /usr/local/bin
-    --init-sws  :   run 'sws --init' for getting sweetheart base components
 
 NOTE: this script has been tested on Ubuntu 20.04 (LTS) which is recommended
 """
@@ -145,5 +146,8 @@ elif Path.SCRIPTS not in bashrc:
 print("all done setting Sweetheart requirements\n")
 
 # install sweetheart components
-if "--init-sws" in sys.argv:
-    run("bash sws --init; sws help",shell=True)
+if "--init" in sys.argv:
+    run("bash sws --init",shell=True)
+
+if "--jupyter" in sys.argv:
+    run("sws -p jupyter --init jupyterlab",shell=True)
