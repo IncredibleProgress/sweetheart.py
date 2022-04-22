@@ -158,7 +158,7 @@ def sws(args):
     else: cwd= config.PWD
 
     verbose("working directory:",cwd)
-    verbose("invoke shell:"," ".join(switch.get(args[0],args)),level=2)
+    verbose("invoke shell:"," ".join(switch.get(args[0],args)))
 
     try: sp.run(*switch.get(args[0],args),cwd=cwd)
     except: echo("sws has been interrupted")

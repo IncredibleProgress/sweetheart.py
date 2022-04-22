@@ -13,6 +13,7 @@ class sp:
 
     run = lambda *args,**kwargs: subprocess.run(args,**kwargs)
     shell = lambda str,**kwargs: subprocess.run(str,**kwargs,shell=True)
+    stdout = lambda str: subprocess.run(str,text=True,capture_output=True,shell=True).stdout.strip()
 
     @classmethod
     def terminal(cls,cmd:str,select:str,**kwargs):

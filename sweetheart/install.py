@@ -27,7 +27,8 @@ def init(config:BaseConfig,add_pylibs:str=""):
             "webpages/resources/favicon.ico"],'documentation': "sweetbook.zip" }
 
     #FIXME: starlette version matter installing fastapi 
-    if "fastapi" in add_pylibs: del PKG_INIT['pylibs'][-1]
+    if "fastapi" in add_pylibs:
+        del PKG_INIT['pylibs'][-1]
 
     # require directories
     for basedir in [
