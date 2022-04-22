@@ -10,7 +10,7 @@ raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py
 
 # ensure prerequisites
 if not os.path.isfile(master_pyproject):
-    sp.shell(f"curl -sSL {raw_github}get-sweetheart.py | python3 -")
+    sp.shell(f"curl -sSL {raw_github}get-sweetheart.py | python3 - --rethinkdb")
 
 
 def init(config:BaseConfig,add_pylibs:str=""):
@@ -18,7 +18,7 @@ def init(config:BaseConfig,add_pylibs:str=""):
 
     PKG_INIT = {
         'cargolibs': ["mdbook"],
-        'aptlibs': ["cargo","npm","rethinkdb","xterm"],
+        'aptlibs': ["xterm","rustc","rethinkdb","nodejs"],
         'npmlibs': ["brython","tailwindcss","vue@next"],# Vue3
         'pylibs': ["rethinkdb","uvicorn[standard]","aiofiles","starlette"],# starlette at end
 
@@ -72,9 +72,9 @@ def init(config:BaseConfig,add_pylibs:str=""):
         echo("set the JupyerLab ipkernel and required password",blank=True)
         JupyterLab(config).set_ipykernel()
         if config.project == MASTER_MODULE: JupyterLab(config).set_password()
-    # else:
-    #     # install at least ipython and ipykernel for convenience
-    #     installer.poetry("ipython","ipykernel")
+    else:
+        # install at least ipython and ipykernel for convenience
+        installer.poetry("ipython","ipykernel")
     
     echo("installation process completed",blank=True)
 
@@ -102,11 +102,13 @@ class BaseInstall:
         echo("apt install:",*libs,blank=True)
         return sp.run("sudo","apt","install",*libs,**kwargs)
 
-    def cargo(self,*libs:str,**kwargs):
+    def cargo(self,*libs:str,init=False,**kwargs):
         """ install rust crates using cargo """
 
         echo("cargo install:",*libs,blank=True)
-        return sp.run(f"cargo","install",*libs,**kwargs)
+        path = self.config.subproc['rustpath']
+        if init: sp.run(f"{path}/rustup","update")
+        return sp.run(f"{path}/cargo","install",*libs,**kwargs)
     
     def poetry(self,*libs:str,**kwargs):
         """ install python packages using poetry """
@@ -137,7 +139,7 @@ class BaseInstall:
         if aptlibs: self.apt(*aptlibs)
 
         cargolibs = libs.get('cargolibs')
-        if cargolibs: self.cargo(*cargolibs)
+        if cargolibs: self.cargo(*cargolibs,init=init)
 
         npmlibs = libs.get('npmlibs')
         if npmlibs: self.npm(*npmlibs,init=init)
