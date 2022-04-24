@@ -3,14 +3,15 @@
 @tailwind utilities;
 
 @layer base {
-    h1 { @apply text-4xl; }
-    h2 { @apply text-3xl; }
-    h3 { @apply text-2xl; }
-    h4 { @apply text-xl; }
-    h5 { @apply text-lg; }
+    body {@apply m-2;}
+    h1 {@apply text-4xl;}
+    h2 {@apply text-3xl mt-8 mb-4;}
+    h3 {@apply text-2xl mt-6 mb-3;}
+    h4 {@apply text-xl;}
+    h5 {@apply text-lg;}
 }
 @layer components {
-    input.sw, select.sw, textarea.sw {
-        @apply border p-0.5 focus:outline-none focus:border-pink-600;
-    }
+    h1.sw {@apply text-pink-500;}
+    input.sw, select.sw, textarea.sw {@apply border p-0.5 focus:outline-none focus:border-pink-500;}
+    button.sw {@apply py-2 px-14 rounded-md bg-pink-400 hover:bg-pink-500 text-white;}
 }

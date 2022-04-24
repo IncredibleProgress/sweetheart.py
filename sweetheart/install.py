@@ -6,29 +6,38 @@ from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
 master_pyproject = f"{BaseConfig.HOME}/.sweet/{MASTER_MODULE}/programs/my_python/pyproject.toml"
-raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"# / is needed
+raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py"
 
 # ensure prerequisites
 if not os.path.isfile(master_pyproject):
-    sp.shell(f"curl -sSL {raw_github}get-sweetheart.py | python3 - --rethinkdb")
+    sp.shell(f"curl -sSL {raw_github} | python3 -")
 
 
-def init(config:BaseConfig,add_pylibs:str=""):
+def init(config:BaseConfig,add_pylibs=""):
     """ set require minimal features for working with sweetheart """
 
     PKG_INIT = {
         'cargolibs': ["mdbook"],
-        'aptlibs': ["xterm","rustc","rethinkdb","nodejs"],
+        'documentation': "sweetbook.zip",
+        'aptlibs': ["xterm","rustc","rethinkdb","npm"],
         'npmlibs': ["brython","tailwindcss","vue@next"],# Vue3
-        'pylibs': ["rethinkdb","uvicorn[standard]","aiofiles","starlette"],# starlette at end
+        'pylibs': ["rethinkdb","uvicorn[standard]","aiofiles"],
+        'files': [
+            "documentation/sweetbook.zip",
+            "configuration/packages.json",
+            "webpages/HTML",
+            "webpages/resources/favicon.ico",
+            "webpages/resources/tailwind.base.css",
+            "webpages/resources/tailwind.config.js" ]}
+    
+    if "fastapi" in add_pylibs: pass
+    else: PKG_INIT['pylibs'].extend(["starlette"])
 
-        'files': ["documentation/sweetbook.zip","configuration/packages.json","webpages/HTML",
-            "webpages/resources/tailwind.base.css","webpages/resources/tailwind.config.js",
-            "webpages/resources/favicon.ico"],'documentation': "sweetbook.zip" }
-
-    #FIXME: starlette version matter installing fastapi 
-    if "fastapi" in add_pylibs:
-        del PKG_INIT['pylibs'][-1]
+    # set given python extra modules
+    if isinstance(add_pylibs,list):
+        PKG_INIT['pylibs'].extend(add_pylibs)
+    elif isinstance(add_pylibs,str):
+        PKG_INIT['pylibs'].extend(add_pylibs.split())
 
     # require directories
     for basedir in [
@@ -40,25 +49,18 @@ def init(config:BaseConfig,add_pylibs:str=""):
         f"{config.root_path}/webpages/resources",
     ]: os.makedirs(basedir,exist_ok=True)
 
-    # install default libs with given extra modules
-    if isinstance(add_pylibs,list):
-        PKG_INIT['pylibs'].extend(add_pylibs)
-    elif isinstance(add_pylibs,str):
-        PKG_INIT['pylibs'].extend(add_pylibs.split())
-
+    # install default libs with extra modules
     installer = BaseInstall(config)
     installer.install_libs(PKG_INIT,init=True)
     
     # build default tailwind.css
     echo("build generic tailwindcss file",blank=True)
-    sp.shell(config.subproc['.tailwindcss'],
-        cwd=f"{config.root_path}/webpages/resources")
+    sp.shell(config.subproc['.tailwindcss'],cwd=f"{config.root_path}/webpages/resources")
 
     try:
         # provide sweetheart html documentation    
         os.symlink(f"{config.root_path}/documentation/sweetbook/book",
             f"{config.root_path}/webpages/sweetbook")
-
         # provide installed javascript libs within Ubuntu/Debian
         os.symlink("/usr/share/javascript",
             f"{config.root_path}/webpages/resources/javascript")
@@ -66,15 +68,16 @@ def init(config:BaseConfig,add_pylibs:str=""):
         verbose("INFO:\n an error occured creating symlinks during init process",
             "\n an expected cause could be that links are already existing")
 
-    if "jupyter" in PKG_INIT['pylibs'] or "jupyterlab" in PKG_INIT['pylibs']:
-        # set Jupyter service if needed
+    is_in_pylibs= lambda *args:\
+         [a for a in args if a in PKG_INIT['pylibs']]
+    
+    if is_in_pylibs("jupyter","jupyterlab","ipykernel"):
+
         from sweetheart.heart import JupyterLab
-        echo("set the JupyerLab ipkernel and required password",blank=True)
+        echo("set ipykernel for Jupyter: initial password is required",blank=True)
         JupyterLab(config).set_ipykernel()
-        if config.project == MASTER_MODULE: JupyterLab(config).set_password()
-    else:
-        # install at least ipython and ipykernel for convenience
-        installer.poetry("ipython","ipykernel")
+        if config.project == MASTER_MODULE:
+            JupyterLab(config).set_password()
     
     echo("installation process completed",blank=True)
 
@@ -88,7 +91,7 @@ class BaseInstall:
 
         if config.project != MASTER_MODULE:
 
-            #FIXME: set a new python sub-project
+            # init a new python project
             sp.poetry("new","my_python",cwd=f"{config.root_path}/programs")
             sp.poetry("add",MASTER_MODULE)#NOTE: this can be a fork of sweetheart
             sp.set_python_env(cwd=f"{config.root_path}/programs/my_python")
@@ -118,12 +121,6 @@ class BaseInstall:
 
     def npm(self,*libs:str,init=False,**kwargs):
         """ install node modules using npm """
-
-        # if init:
-        #     # for installing a specific version of nodejs
-        #     echo("set node.js:",node_source.split()[2])
-        #     sp.shell(node_source)
-        #     sp.shell("sudo apt install -y nodejs")
 
         echo("npm install:",*libs,blank=True)
         os.chdir(f"{self.config.root_path}/webpages/resources")

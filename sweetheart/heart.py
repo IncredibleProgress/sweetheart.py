@@ -1,7 +1,16 @@
 """
 heart.py is ... the heart of sweetheart!
-provides services and utilities classes 
+this provides ready-to-use utilities and services :
+
+ HttpServer       : enabled
+ JupyterLab       : enabled
+ RethinkDB        : enabled
+ HTMLTemplate     : enabled
+
+ HttpStaticServer : disabled
+ MongoDB          : disabled
 """
+
 import time
 from sweetheart.globals import *
 from sweetheart.bottle import SimpleTemplate
@@ -24,7 +33,7 @@ from starlette.responses import HTMLResponse,FileResponse,JSONResponse
 
 class BaseService:
 
-    # tracker for avoiding localhost conflicts
+    # ports tracker for avoiding localhost conflicts
     ports_register = set()
 
     def __init__(self,url:str,config:BaseConfig):
@@ -66,12 +75,13 @@ class BaseService:
 
         if service:
             sp.terminal(self.command,self.terminal)
-            time.sleep(0.75)#FIXME: waiting time needed
+            time.sleep(1)#FIXME: waiting time needed
         else:
             sp.shell(self.command)
 
     def cli_func(self,args):
-        """ provided default function for command line interface """
+        """ this provides default function available from command line interface 
+            e.g. called within sweet.py as follow: cli.set_service("RethinkDB") """
 
         echo(f"run service:\n{self.command}")
         if getattr(args,"open_terminal",None): self.run_local(service=True)
@@ -181,40 +191,6 @@ class RethinkDB(BaseService):
         if hasattr(self,'conn'): self.conn.close()
 
 
-# class MongoDB(BaseService):
-
-#     def __init__(self,config:BaseConfig,run_local:bool=False):
-#         """ set Mongo Database as a service """
-
-#         # url auto set from config
-#         super().__init__(config.database_host,config)
-#         self.command = f"mongod --dbpath={config.subproc['mongopath']}"
-#         if run_local: self.run_local(service=True)
-        
-#     def set_client(self):
-#         """ set MongoDB client and select database given by config 
-#             it provides default messages related to the database 
-#             return pymongo.MongoClient, MongoClient.Database tuple """
-
-#         from pymongo import MongoClient
-
-#         self.client = MongoClient(host=self.host,port=self.port)
-#         echo("available databases:",self.client.list_database_names()[3:])
-
-#         self.database = self.client[self.config['selected_DB']]
-#         echo(f"selected database:",self.config['selected_DB'])
-#         echo("existing collections:",self.database.list_collection_names())
-
-#         return self.client,self.database
-
-#     def on_receive(self,websocket,data):
-
-#         # collection.find_one(data['select'],{'_id':0})
-#         # collection.update_one(data['select'],{'$set':data['values']})
-#         # collection.insert_one(data['values'])
-#         raise NotImplementedError
-
-
 def HTMLTemplate(filename:str,**kwargs):
     """ provide a Starlette-like function for rendering templates
         including configuration data and some python magic stuff """
@@ -238,7 +214,8 @@ def HTMLTemplate(filename:str,**kwargs):
           f'%rebase("{BaseConfig._["templates_base"]}")',
 
       # provide magic html facilities
-      't-style': 'class', # switch for tailwindcss
+      ' s-style>': ' class="sw">',
+      ' s-style="': ' class="sw ', # switch for tailwindcss
       '<vue': '<div v-cloak id="VueApp"',
       '</vue>': '</div>',
 
@@ -251,7 +228,7 @@ console, r = window.console, window.r
 def try_exec(code:str):
     try: exec(code)
     except: pass
-def createVueApp(dict:dict):
+def createVueApp(**dict):
     try_exec("r.onupdate = on_update")
     try_exec("r.onmessage = on_message")
     try_exec("window.vuecreated = vue_created")
@@ -306,11 +283,10 @@ class HttpServer(BaseService):
             # allow looking documentation and testing webapp
             self.switch_port_to(8181)
             # auto route the default welcome message
-            self.config.is_webapp_open = True
             self.data.append(Route("/",HTMLResponse(self.config.welcome())))
 
         elif len(args)==1 and isinstance(args[0],str):
-            # route given html as a simple page for tests
+            # route given template as a simple page for tests
             self.config.is_webapp_open = True
             self.data.append(Route("/",HTMLTemplate(args[0])))
 
@@ -373,7 +349,41 @@ class JupyterLab(BaseService):
     def set_password(self):
         """ required for JupyterLab initialization """
         sp.python("-m","jupyter","notebook","password","-y")
-    
+
+
+# class MongoDB(BaseService):
+
+#     def __init__(self,config:BaseConfig,run_local:bool=False):
+#         """ set Mongo Database as a service """
+
+#         # url auto set from config
+#         super().__init__(config.database_host,config)
+#         self.command = f"mongod --dbpath={config.subproc['mongopath']}"
+#         if run_local: self.run_local(service=True)
+        
+#     def set_client(self):
+#         """ set MongoDB client and select database given by config 
+#             it provides default messages related to the database 
+#             return pymongo.MongoClient, MongoClient.Database tuple """
+
+#         from pymongo import MongoClient
+
+#         self.client = MongoClient(host=self.host,port=self.port)
+#         echo("available databases:",self.client.list_database_names()[3:])
+
+#         self.database = self.client[self.config['selected_DB']]
+#         echo(f"selected database:",self.config['selected_DB'])
+#         echo("existing collections:",self.database.list_collection_names())
+
+#         return self.client,self.database
+
+#     def on_receive(self,websocket,data):
+
+#         # collection.find_one(data['select'],{'_id':0})
+#         # collection.update_one(data['select'],{'$set':data['values']})
+#         # collection.insert_one(data['values'])
+#         raise NotImplementedError
+
 
 # class HttpStaticServer(BaseService):
 

@@ -14,21 +14,24 @@ def test_init():
 def test_objects():
 
     try:
-        config = set_config(sandbox=False)
+        config = set_config()
         RethinkDB(config)
         JupyterLab(config)
         HttpServer(config)
         return True
-
     except:
         return False
 
 def test_template(template:str):
     
     BaseConfig.verbosity = 1
-    config = set_config({'webbrowser':"brave.exe"})
+    config = set_config({})
     config.is_rethinkdb_local = True
     config.is_webapp_open = True
+
+    # force re-building tailwind.css
+    echo("build generic tailwindcss file",blank=True)
+    sp.shell(config.subproc['.tailwindcss'],cwd=f"{config.root_path}/webpages/resources")
 
     path = f"{config['working_dir']}/{config['templates_dir']}"
     if not os.path.isfile(path) and not os.path.islink(path):

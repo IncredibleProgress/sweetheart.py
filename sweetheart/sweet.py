@@ -129,29 +129,29 @@ def sws(args):
     if cf.verbosity: sweet.append("-"+"v"*cf.verbosity)
     vv,py,po = config.python_env,config.python_bin,config.poetry_bin
 
-    switch = {
+    switch = {#FIXME:
         # sweet.py commands within master project
         'help': [*sweet,"start","-x"],
         'rethinkdb-server': [*sweet,"rethinkdb-server",*args[1:]],
-        'jupyter-server': [*sweet,"jupyter-server",*args[1:]],
         # sweet.py command within any project
         'new': [*sweet,"sh","--init","-p",*args[1:]],
         'start': [*sweet,"-p",cf.project,"start",*args[1:]],
         'install': [*sweet,"-p",cf.project,"install",*args[1:]],
-        #FIXME: services and utilities commands
+        'jupyter-server': [*sweet,"-p",cf.project,"jupyter-server",*args[1:]],
+        # services and utilities commands
         'test': [py,"-m",f"{cf.project}.tests",*args[1:]],
         'build-css': [*config.subproc['.tailwindcss'].split()],
-        #FIXME: subprocess commands
+        # subprocess commands
         'poetry': [config.poetry_bin,*args[1:]],
         'python': [f"{vv}/bin/ipython",*args[1:]],
         'mdbook': [f"{sb['rustpath']}/mdbook",*args[1:]],
         }
 
     if args == []:
-        commands = " ".join(list(switch))
-        args = ["echo",f"\nsws available commands:\n  {commands}\n"]
+        edit_cmd = '\n  '.join(list(switch))
+        args = ["echo",f"sws available commands:\n\n  {edit_cmd}\n\ntype 'sws help' for getting some help"]
 
-    #FIXME: autoset the relevant working directory
+    # autoset the relevant working directory
     if args[0]=='poetry': cwd= cf.subproc['codepath']
     elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
     elif args[0]=='build-css': cwd= f"{cf['working_dir']}/resources"

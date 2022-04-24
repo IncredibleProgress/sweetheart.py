@@ -1,33 +1,39 @@
-<%
-rebase("HTML",load="tailwind")
-cls_btn_colors = "bg-pink-400 hover:bg-pink-500"
-cls_input = "px-1 py-1 border focus:outline-none focus:border-pink-600"
-%>
+<!SWEETHEART html>
 
-<form class="p-14 max-w-screen-sm m-auto" method="POST">
+<python>
+createVueApp(
+  gestionnaires = ["maintenance mécanique","mainenance élec. instrum.","service informatique"],
+  priorité = ["immédiate","dans les 24hr","dans les 48hr","prochain arrêt","à planifier"] )
+</python>
+
+<vue class="p-14 max-w-screen-sm m-auto">
+
   <h1 class="text-3xl">Quelle est votre problématique ?</h1>
   <hr class="mt-1" />
+
   <div class="grid grid-cols-4 mt-9">
-    <input class="col-span-full {%cls_input%}" placeholder="description de la demande" />
-    <select class="col-span-2 my-1 {%cls_input%}" >
+
+    <input class="sw col-span-full" placeholder="description de la demande" />
+
+    <select class="sw col-span-2 my-1" >
       <option disabled selected hidden>gestionnaire</option>
-      <option>maintenance mécanique</option>
-      <option>mainenance élec. instrum.</option>
-      <option>servicee informatique</option>
+      <option v-for="g in gestionnaires">{{g}}</option>
     </select>
-    <select class="col-span-1 my-1 ml-1 {%cls_input%}"></select>
-    <select class="col-span-1 my-1 ml-1 {%cls_input%}">
+
+    <select class="sw col-span-1 my-1 ml-1"></select>
+
+    <select class="sw col-span-1 my-1 ml-1">
       <option disabled selected hidden>priorité</option>
-      <option>immédiate</option>
-      <option>dans les 24hr</option>
-      <option>dans les 48hr</option>
-      <option>à planifier</option>
+      <option v-for="p in priorité">{{p}}</option>
     </select>
-    <textarea class="col-span-4 h-36 mt-3 mb-5 {%cls_input%}"
+
+    <textarea class="sw col-span-4 h-36 mt-3 mb-5"
       placeholder="précisions et détail de la demande"></textarea>
   </div>
-  <div class="text-center">
-    <input type="submit" value="OK"
-      class="mt-7 py-2 px-14 rounded-md text-white {%cls_btn_colors%}"/>
+
+  <div class="text-center nb-6">
+    <button class="sw">OK</button>
+
   </div>
-</form>
+
+<vue>

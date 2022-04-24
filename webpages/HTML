@@ -1,6 +1,6 @@
 <%
 # PYTHON optionnal args:
-# load = "tailwind|bootstrap|w3 py|pylibs alpine|vue reql d3"
+# load = "py|pylibs tailwind vue reql d3"
 load = get('load',get('__load__',''))
 lang = get('lang',get('__lang__','en'))
 dbname = get('dbname',get('__db__','test'))
@@ -13,13 +13,6 @@ dbname = get('dbname',get('__db__','test'))
 %#
 % if "tailwind" in load:
   <link rel="stylesheet" href="/resources/tailwind.css">
-% elif "bootstrap" in load:
-  <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
-  <link rel="stylesheet" href="/resources/node_modules/bootstrap/dist/css/bootstrap.min.css">
-  <script src="/resources/node_modules/jquery/dist/jquery.slim.min.js"></script>
-  <script src="/resources/node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-% elif "w3" in load:
-  <link rel="stylesheet" href="/resources/w3.css">
 % end
 %#
 % if "pylibs" in load:
@@ -36,8 +29,6 @@ dbname = get('dbname',get('__db__','test'))
 % if "vue" in load:
   <style>[v-cloak]{display:none;}</style>
   <script src="/resources/node_modules/vue/dist/vue.global.js"></script>
-% elif "alpine" in load:
-  <script src="/resources/node_modules/alpinejs/dist/alpine.js"></script>
 % end
 %#
 % if "vue" in load and "reql" in load:
@@ -155,7 +146,7 @@ dbname = get('dbname',get('__db__','test'))
 % end
 {% !base %}
 <p style="margin-top:1.5rem;font-size:0.875rem;line-height:1.25rem;font-weight:200;text-align:center;--tw-text-opacity:1;color:rgb(185, 185, 185);">
-  <em>made with Sweetheart</em></p>
+  <em>- made with Sweetheart -</em></p>
 <script>
   // set title from first <h1> element
   const heading = document.getElementsByTagName("h1")[0];
