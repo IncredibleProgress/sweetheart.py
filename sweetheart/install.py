@@ -109,9 +109,8 @@ class BaseInstall:
         """ install rust crates using cargo """
 
         echo("cargo install:",*libs,blank=True)
-        path = self.config.subproc['rustpath']
-        if init: sp.run(f"{path}/rustup","update")
-        return sp.run(f"{path}/cargo","install",*libs,**kwargs)
+        # path = self.config.subproc['rustpath']
+        return sp.run(f"cargo","install",*libs,**kwargs)
     
     def poetry(self,*libs:str,**kwargs):
         """ install python packages using poetry """
