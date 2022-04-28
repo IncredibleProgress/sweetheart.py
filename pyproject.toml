@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "sweetheart"
 version = "0.1.1b6"
-description = "get power with low-code and low-costs python programs"
+description = "for creating python/html programs with ease"
 authors = ["Nicolas Champion <champion.nicolas@gmail.com>"]
 license = "CECILL-C"
 readme = "README.md"
