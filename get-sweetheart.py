@@ -105,7 +105,7 @@ with open(Path.SUBPROC,"w") as file_out:
     },file_out)
 
 # set RethinkDB repository
-if "Unable to locate package" in bash_stdout("apt policy rethinkdb"):
+if not bash_stdout("apt policy rethinkdb"):
     for instruc in f"""
 
 echo WARNING: sudo permission is required for installing the RethinkDB repository
