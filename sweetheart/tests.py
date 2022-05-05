@@ -69,6 +69,11 @@ def _set__links_for_dev_():
     symlink(f"{src}/documentation/sweetbook",f"{pjt}/documentation/sweetbook")
     symlink(f"{src}/documentation/notebooks",f"{pjt}/documentation/notebooks")
 
+    # link ~/sweetheart.py as python package
+    set_config()
+    sp.poetry("remove","sweetheart")
+    symlink(src,f"{BaseConfig._.python_env}/lib/python*/site-packages/sweetheart")
+
 
 if __name__ == '__main__':
 
@@ -80,7 +85,7 @@ if __name__ == '__main__':
 
     elif '--dev-links' in argv: 
         _set__links_for_dev_()
-        echo("sws test --dev-links: all done",mode='exit')
+        echo("create symbolic links for dev: all done",mode='exit')
     
     #assert test_objects()
     assert test_template(argv[-1])

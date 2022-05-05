@@ -70,7 +70,7 @@ from sweetheart.sandbox import *
 
 config = set_config({
     "webbrowser": "brave.exe",
-    "selected_DB": "test" })
+    "selected_db": "test" })
 
 webapp = HttpServer(config, set_database=True).mount(
     Route("/", HTMLTemplate("grid.htm")) )

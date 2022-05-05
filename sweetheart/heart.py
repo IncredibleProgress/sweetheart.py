@@ -31,16 +31,78 @@ from starlette.responses import HTMLResponse,FileResponse,JSONResponse
 #             pass
 
 
+class BaseAPI:
+
+    model = {
+        "info": {
+            "title": "sweetAPI",
+            "version": "0.1.0",
+        },
+        "header": {
+            "service": str,
+            "expected": JSONResponse,
+            "error": None,
+        },
+        "data": dict }
+
+    def __init__(self,json):
+
+        assert json.get('info')
+        assert json.get('header')
+        assert json['info']['title'] == self.model['info']['title']
+        assert json['info']['version'] == self.model['info']['version']
+
+        BaseAPI.json = json
+        BaseAPI.error = None
+        BaseAPI.service = json['header']['service']
+        BaseAPI.expected = json['header']['expected']
+    
+    @classmethod
+    def ensure(cls,dic):
+
+        assert dic['header']['service'] == BaseAPI.service        
+        for key in dic['data']:
+            assert isinstance(BaseAPI.json['data'][key],dic['data'][key])
+
+    @classmethod
+    def JSONResponse(cls,data:str,local:dict) -> JSONResponse:
+        """ set data for given service within api """
+
+        if isinstance(data,str) is False:
+            raise NotImplementedError
+
+        _GET_ = cls.json['data']
+        assert cls.expected == JSONResponse
+
+        locals().update(local)
+        try: data = eval("{"+data+"}")
+        except: cls.error = "Server Error: invalid data within BaseAPI"
+        
+        api = dict(cls.base_model)
+        api['header']['service'] = cls.service
+        api['header']['error'] = cls.error
+        api.update({"data":data})
+        return JSONResponse(api)
+
+
 class BaseService:
 
     # ports tracker for avoiding localhost conflicts
     ports_register = set()
 
     def __init__(self,url:str,config:BaseConfig):
-        """ set basic features of sweeheart service objects
-            the given url should follow http://host:port pattern
-            the child class must set self.command attribute """
+        """ set basic features of Sweeheart service objects :
 
+             - start server for both testing or production
+             - set capabilities from cli, python script, juypter notebooks
+             - ensure ports unicity for tests on localhost
+             - allow setting websocket protocol in simple way
+             - provide default API for exchanging data through http
+
+            the given url should follow the http://host:port pattern
+            sub-classes must set self.command attribute for running service """
+
+        self.Api = BaseAPI
         self.config = config
         self.command = "echo Error, no command attribute given"
 
@@ -87,26 +149,44 @@ class BaseService:
         if getattr(args,"open_terminal",None): self.run_local(service=True)
         else: self.run_local(service=False)
 
-    def set_websocket(self,dbname=None,encoding='json'):
-        if not dbname: dbname = self.config['selected_DB']
-        self.WS_dbname = dbname
-        self.WS_route = f"/data/{dbname}"
-        self.WS = get_WebSocketEndpoint(self,encoding)
-        return self.WS_route, self.WS
+    def set_websocket(self,dbname=None,set_encoding='json'):
+        """ factory function for implementing starlette WebSocketEndpoint
+            the parent class 'self' must provide an 'on_receive' method
+            which is not implemented directly into BaseService """
+        
+        parent:BaseService = self
+        if dbname is None: dbname=self.config['selected_db']
+
+        class WebSocket(WebSocketEndpoint):
+            encoding = set_encoding
+            service_config = {
+                "encoding": encoding,
+                "selected_db": dbname,
+                "route": f"/data/{dbname}",
+                "receiver": parent.on_receive,
+                }
+            async def on_receive(self,websocket,data):
+                receiver = self.service_config['receiver']
+                await receiver(websocket,data)
+
+        self.ws_config:dict = WebSocket.service_config
+        self.WebSocketEndpoint:type = WebSocket
+        verbose("new websocket endpoint: ",WebSocket.service_config['route'])
+        return WebSocket.service_config['route'], WebSocket
     
     def on_receive(self,websocket,data):
         raise NotImplementedError
 
-def get_WebSocketEndpoint(parent:object,encoding:str):
-    """ factory function for implementing WebSocketEndpoint 
-        the object 'parent' must provide an 'on_receive' method """
+# def get_WebSocketEndpoint(parent:object,encoding:str):
+#     """ factory function for implementing WebSocketEndpoint 
+#         the object 'parent' must provide an 'on_receive' method """
 
-    class WebSocket(WebSocketEndpoint):
-        async def on_receive(self,websocket,data):
-            await parent.on_receive(websocket,data)
+#     class WebSocket(WebSocketEndpoint):
+#         async def on_receive(self,websocket,data):
+#             await parent.on_receive(websocket,data)
 
-    WebSocket.encoding = encoding
-    return WebSocket
+#     WebSocket.encoding = encoding
+#     return WebSocket
 
 
 class RethinkDB(BaseService):
@@ -120,10 +200,10 @@ class RethinkDB(BaseService):
         self.command = f"rethinkdb --http-port 8180 -d {config.subproc['rethinkpath']}"
         if run_local: self.run_local(service=True)
     
-    def connect(self,db:str=None):
-        if hasattr(self,'conn'): self.conn.close()
-        if db is None: db = self.config['selected_DB']
-        self.conn = self.client.connect(self.host,self.port,db=db)
+    # def connect(self,dbname:str=None):
+    #     if hasattr(self,'conn'): self.conn.close()
+    #     if dbname is None: dbname = self.config['selected_db']
+    #     self.conn = self.client.connect(self.host,self.port,db=dbname)
 
     def set_client(self):
 
@@ -133,44 +213,50 @@ class RethinkDB(BaseService):
         self.conn = r.connect(
             self.host,
             self.port,
-            db=self.config['selected_DB'])
+            db=self.config['selected_db'])
 
         self.reql = "self.client"
         return self.client,self.conn
         
-    def table(self,data:dict) -> object:
-        #NOTE: reset self.reql
-        self.data = data
-        self.reql = f"self.client.table('{data['table']}')"
-        return self
+    # def table(self,data:dict) -> object:
+    #     #NOTE: reset self.reql
+    #     self.data = data
+    #     self.reql = f"self.client.table('{data['table']}')"
+    #     return self
 
-    def filter(self,data:dict) -> object:
-        self.reql += f".filter({data['filter']})"
-        return self
+    # def filter(self,data:dict) -> object:
+    #     self.reql += f".filter({data['filter']})"
+    #     return self
 
-    def insert(self,data:dict) -> object:
-        self.reql += f".insert({data['insert']})"
-        return self
+    # def insert(self,data:dict) -> object:
+    #     self.reql += f".insert({data['insert']})"
+    #     return self
 
-    def update(self,data:dict) -> object:
-        self.reql += f".update({data['update']})"
-        return self
+    # def update(self,data:dict) -> object:
+    #     self.reql += f".update({data['update']})"
+    #     return self
 
-    def run(self,data:dict=None):
-        # if given, data must be a dict providing a 'run' key
-        if data: reql = self.reql + f".{data['run']}.run(self.conn)"
-        else: reql = self.reql + ".run(self.conn)"
-        self.reql = "self.client"
-        result = eval(reql)
-        #FIXME: handle result type and return
-        if type(result) in [str,int,float,dict]: return result
-        else: return list(result)
+    # def run(self,data:dict=None):
+    #     # if given, data must be a dict providing a 'run' key
+    #     if data: reql = self.reql + f".{data['run']}.run(self.conn)"
+    #     else: reql = self.reql + ".run(self.conn)"
+    #     self.reql = "self.client"
+    #     result = eval(reql)
+    #     #FIXME: handle result type and return
+    #     if type(result) in [str,int,float,dict]: return result
+    #     else: return list(result)
 
     async def fetch_endpoint(self,request):
-        data = await request.json()
-        return JSONResponse({
-            'target': data['target'],
-            'value': self.run(data) })
+
+        json = await request.json()
+        BaseAPI(json).ensure({
+            "header": {"service":"fetch<ELEMENT>"},
+            "data": {"target":str,"reql":str } })
+
+        return BaseAPI.JSONResponse("""
+            "target": _GET_['target'],
+            "value": run(_GET_['reql']),
+        """,dict(run=self.run))
     
     def on_receive(self,websocket,data):
         """ used as the websocket receiver """
@@ -240,7 +326,7 @@ def createVueApp(**dict):
     # render html from template and config
     template = SimpleTemplate(template)
     return HTMLResponse(template.render(
-        __db__ = BaseConfig._['selected_DB'],
+        __db__ = BaseConfig._['selected_db'],
         **BaseConfig._['templates_settings'],
         **kwargs ))
 
@@ -264,10 +350,9 @@ class HttpServer(BaseService):
             # set RethinkDB enabling websocket
             run_local = self.config.is_rethinkdb_local
             self.database = RethinkDB(config,run_local)
-            self.database.set_websocket()
             # explicit error message calling set_client()
             try: self.database.set_client()
-            except: raise Exception("RethinkDB server not found")
+            except: raise Exception("Error, RethinkDB server not found")
 
     def mount(self,*args:Route):
         """ mount given Route(s) and set facilities from config """
@@ -290,13 +375,18 @@ class HttpServer(BaseService):
             self.config.is_webapp_open = True
             self.data.append(Route("/",HTMLTemplate(args[0])))
 
-        else: self.data.extend(args)
+        else:
+            # assumes that args are Route objects
+            self.data.extend(args)
 
         if hasattr(self,'database'):
-            # mount fetch endpoint and websocket
+            # set websocket if not already done
+            if not hasattr(self.database,'WebSocketEndpoint'):
+                self.database.set_websocket()
+            # mount fetch and websocket endpoints
             self.data.extend([
-                Route("/data", self.database.fetch_endpoint, methods=["POST"]),
-                WebSocketRoute(self.database.WS_route, self.database.WS) ])
+                Route("/data",self.database.fetch_endpoint,methods=["POST"]),
+                WebSocketRoute(self.database.ws_config['route'],self.database.WebSocketEndpoint) ])
 
         # mount static files given within config
         self.data.extend([Route(relpath,FileResponse(srcpath))\
@@ -371,8 +461,8 @@ class JupyterLab(BaseService):
 #         self.client = MongoClient(host=self.host,port=self.port)
 #         echo("available databases:",self.client.list_database_names()[3:])
 
-#         self.database = self.client[self.config['selected_DB']]
-#         echo(f"selected database:",self.config['selected_DB'])
+#         self.database = self.client[self.config['selected_db']]
+#         echo(f"selected database:",self.config['selected_db'])
 #         echo("existing collections:",self.database.list_collection_names())
 
 #         return self.client,self.database

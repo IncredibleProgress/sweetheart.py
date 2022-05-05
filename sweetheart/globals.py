@@ -126,12 +126,12 @@ class BaseConfig(UserDict):
             "templates_base": "HTML",
             # editable subprocess settings
             "webbrowser": "default",
-            "selected_DB": "test",
+            "selected_db": "test",
             # editable html rendering settings
             "templates_settings": {
                 # subprocess settings
                 '__host__': self.async_host[7:],
-                '__load__': "tailwind pylibs vue+reql",
+                '__load__': "pylibs tailwind vue+reql",
                 '__lang__': self.locale_lang,
                 '__debug__': 1,# brython() debug argument
             },

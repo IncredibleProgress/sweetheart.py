@@ -143,7 +143,7 @@ def sws(args):
         'build-css': [*config.subproc['.tailwindcss'].split()],
         # subprocess commands
         'poetry': [config.poetry_bin,*args[1:]],
-        'python': [f"{vv}/bin/ipython",*args[1:]],
+        'python': [f"{vv}/bin/python",*args[1:]],
         'mdbook': [f"{sb['rustpath']}/mdbook",*args[1:]],
         }
 
