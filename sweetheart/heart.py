@@ -60,9 +60,20 @@ class BaseAPI(UserDict):
     
     def ensure(self,dic):
 
-        for key in dic['data']: assert isinstance(self.json['data'][key],dic['data'][key])
         assert dic['header']['service'] == self.service 
+        for key in dic['data']:
+            assert isinstance(self.json['data'][key],dic['data'][key])
         return self
+
+    def eval(self,str,type):
+
+        try:
+            value= eval(str)
+            assert type(value) == type
+            return value
+        except:
+            self.error = "data value error"
+            return "!Err"
 
     def JSONResponse(self,data:dict):
         """ set data for given service within api """
@@ -244,13 +255,13 @@ class RethinkDB(BaseService):
         json = await request.json()
         api = self.Api(json).ensure({
             "header": {"service":"fetchJSON|<ELEMENT>"},
-            "data": {"target":str,"reql":str } })
+            "data": {"target":str,"reql":str} })
 
         reql = "self.client."+api['reql']+".run(self.conn)"
 
         return api.JSONResponse({
             "target": api['target'],
-            "value": str(eval(reql)) })
+            "value": api.eval(reql,str) })
     
     def on_receive(self,websocket,data):
         """ used as the websocket receiver """
