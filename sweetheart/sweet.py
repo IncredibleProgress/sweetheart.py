@@ -98,6 +98,13 @@ def quickstart(*args,_cli_args=None):
         # set and run Jupyterlab server
         JupyterLab(config,run_local=True)
 
+    # if config.is_rethinkdb_local:
+    #     # set and run RethinkDB server
+    #     if not hasattr(webapp,'database'):
+    #         webapp.database = RethinkDB(config,run_local=True)
+    #         webapp.database.set_websocket()
+    #         webapp.database.set_client()
+
     if args and isinstance(args[0],HttpServer):
         # set webapp from given HttpServer instance
         webapp = args[0]
@@ -105,13 +112,6 @@ def quickstart(*args,_cli_args=None):
     else:
         # build new webapp from Route|Mount objects,html code or template
         webapp = HttpServer(config).mount(*args)
-    
-    if config.is_rethinkdb_local:
-        # set and run RethinkDB server
-        if not hasattr(webapp,'database'):
-            webapp.database = RethinkDB(config,run_local=True)
-            webapp.database.set_websocket()
-            webapp.database.set_client()
         
     # start webapp within current bash
     webapp.run_local(service=False)

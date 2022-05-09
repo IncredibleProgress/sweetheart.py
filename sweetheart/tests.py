@@ -26,8 +26,8 @@ def test_template(template:str):
     
     BaseConfig.verbosity = 1
     config = set_config({})
-    config.is_rethinkdb_local = True
     config.is_webapp_open = True
+    config.is_rethinkdb_local = True
 
     # force re-building tailwind.css
     echo("build generic tailwindcss file",blank=True)
@@ -38,7 +38,7 @@ def test_template(template:str):
         print("Error, the given template is not existing")
         return False
 
-    webapp = HttpServer(config).mount(
+    webapp = HttpServer(config,set_database=True).mount(
         Route("/",HTMLTemplate(template)) )
 
     quickstart(webapp)

@@ -75,12 +75,13 @@ if "apt" not in executables:
     "\n  which is not supported by this script for installing OS requirements")
     sys.exit(1)
 
-if "node" not in executables and "npm" not in executables:
+if "node" not in executables:
+    print("install NodeJS 16.x LTS from nodesource.com ...")
     run("curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -",shell=True)
     run("sudo apt-get install -y nodejs",shell=True)
 
 if "Installed: (none)" in bash_stdout("apt policy python3-venv"):
-    print("\'python3-venv' is needed and this requires 'sudo' for installation")
+    print("'python3-venv' is needed and this requires 'sudo' for installation ...")
     run("sudo apt install python3-venv",shell=True)
 
 # operating system diagnosis

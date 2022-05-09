@@ -1,0 +1,15 @@
+<!SWEETHEART html>
+
+<python>
+def vue_created(data):
+
+    r.table("test").filter({"id":"test"}).setVueAttr("input")
+
+createVueApp({
+    "input": "should not be visible",
+})
+</python>
+
+<vue>
+  <input v-model="input" />
+</vue>

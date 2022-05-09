@@ -31,7 +31,7 @@ from starlette.responses import HTMLResponse,FileResponse,JSONResponse
 #             pass
 
 
-class BaseAPI:
+class BaseAPI(UserDict):
 
     model = {
         "info": {
@@ -40,7 +40,7 @@ class BaseAPI:
         },
         "header": {
             "service": str,
-            "expected": JSONResponse,
+            "expected": "JSONResponse",
             "error": None,
         },
         "data": dict }
@@ -52,35 +52,27 @@ class BaseAPI:
         assert json['info']['title'] == self.model['info']['title']
         assert json['info']['version'] == self.model['info']['version']
 
-        BaseAPI.json = json
-        BaseAPI.error = None
-        BaseAPI.service = json['header']['service']
-        BaseAPI.expected = json['header']['expected']
+        self.json = json
+        self.data = json.get('data',{})
+        self.service = json['header']['service']
+        self.expected = json['header']['expected']
+        self.error = self.model['header']['error']
     
-    @classmethod
-    def ensure(cls,dic):
+    def ensure(self,dic):
 
-        assert dic['header']['service'] == BaseAPI.service        
-        for key in dic['data']:
-            assert isinstance(BaseAPI.json['data'][key],dic['data'][key])
+        for key in dic['data']: assert isinstance(self.json['data'][key],dic['data'][key])
+        assert dic['header']['service'] == self.service 
+        return self
 
-    @classmethod
-    def JSONResponse(cls,data:str,local:dict) -> JSONResponse:
+    def JSONResponse(self,data:dict):
         """ set data for given service within api """
 
-        if isinstance(data,str) is False:
-            raise NotImplementedError
-
-        _GET_ = cls.json['data']
-        assert cls.expected == JSONResponse
-
-        locals().update(local)
-        try: data = eval("{"+data+"}")
-        except: cls.error = "Server Error: invalid data within BaseAPI"
-        
-        api = dict(cls.base_model)
-        api['header']['service'] = cls.service
-        api['header']['error'] = cls.error
+        # ensure service consistency
+        assert eval(self.expected) == JSONResponse
+        # set and return JSONResponse from API
+        api = dict(self.model)
+        api['header']['service'] = self.service
+        api['header']['error'] = self.error
         api.update({"data":data})
         return JSONResponse(api)
 
@@ -137,7 +129,7 @@ class BaseService:
 
         if service:
             sp.terminal(self.command,self.terminal)
-            time.sleep(1)#FIXME: waiting time needed
+            time.sleep(2)#FIXME: waiting time needed
         else:
             sp.shell(self.command)
 
@@ -236,12 +228,13 @@ class RethinkDB(BaseService):
     #     self.reql += f".update({data['update']})"
     #     return self
 
-    # def run(self,data:dict=None):
+    # def run(self,reql:str):
     #     # if given, data must be a dict providing a 'run' key
-    #     if data: reql = self.reql + f".{data['run']}.run(self.conn)"
+    #     if reql: reql = self.reql + f".{reql}.run(self.conn)"
     #     else: reql = self.reql + ".run(self.conn)"
-    #     self.reql = "self.client"
     #     result = eval(reql)
+    #     # reset self.reql
+    #     self.reql = "self.client"
     #     #FIXME: handle result type and return
     #     if type(result) in [str,int,float,dict]: return result
     #     else: return list(result)
@@ -249,14 +242,15 @@ class RethinkDB(BaseService):
     async def fetch_endpoint(self,request):
 
         json = await request.json()
-        BaseAPI(json).ensure({
-            "header": {"service":"fetch<ELEMENT>"},
+        api = self.Api(json).ensure({
+            "header": {"service":"fetchJSON|<ELEMENT>"},
             "data": {"target":str,"reql":str } })
 
-        return BaseAPI.JSONResponse("""
-            "target": _GET_['target'],
-            "value": run(_GET_['reql']),
-        """,dict(run=self.run))
+        reql = "self.client."+api['reql']+".run(self.conn)"
+
+        return api.JSONResponse({
+            "target": api['target'],
+            "value": str(eval(reql)) })
     
     def on_receive(self,websocket,data):
         """ used as the websocket receiver """
@@ -314,7 +308,7 @@ console, r = window.console, window.r
 def try_exec(code:str):
     try: exec(code)
     except: pass
-def createVueApp(**dict):
+def createVueApp(dict):
     try_exec("r.onupdate = on_update")
     try_exec("r.onmessage = on_message")
     try_exec("window.vuecreated = vue_created")

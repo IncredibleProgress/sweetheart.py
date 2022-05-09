@@ -36,11 +36,7 @@ dbname = get('dbname',get('__db__','test'))
     // provide data exchange capabilities
     class DataHub {
       constructor(dbname) {
-        this.api = {
-          info: {title:"sweetAPI",version:"0.1.0"},
-          header: undefined,
-          data: undefined,
-        };
+        this.apiversion = "0.1.0";
         this.route = `/data/${dbname}`;
         this.websocket = new WebSocket(`ws://{%__host__%}${this.route}`);
         document.addEventListener("unload",()=>this.websocket.close());
@@ -49,28 +45,36 @@ dbname = get('dbname',get('__db__','test'))
       fetchJSON(scope) {
         return fetch("/data", {
           method: "POST",
-          headers: {"Content-Type": "application/json"},
+          headers: {
+            "Content-Type": "application/json" },
           body: JSON.stringify({
-            info: this.api.info,
-            header: {service:"fetch.ELEMENT",expected:"json"},
+            info: {
+              "title": "sweetAPI",
+              "version": this.apiversion },
+            header: {
+              "service": "fetchJSON|<ELEMENT>",
+              "expected": "JSONResponse" },
             data: {
               //sql: scope.sql,
               //find: scope.find,
-              reql: this.reql,
-              target: scope.target,
-            },
+              "reql": this.reql,
+              "target": scope.target },
           })
         }).then(response => response.json())
       }
       setVueAttr(attr) {
-        this.fetchJSON({ target: `vmodel.$data.${attr}` })
+        this.fetchJSON({ "target": `vmodel.$data.${attr}` })
           .then(json => eval(`${json.data.target} = json.data.value`))
       }
-      sendReQL(service,json) {
+      sendJSON(service,data) {
         this.websocket.send(JSON.stringify({
-          info: this.api.info,
-          header: {service:service,expected:"json"},
-          data: json,
+          info: {
+              "title": "sweetAPI",
+              "version": this.apiversion },
+          header: {
+              "service": service,
+              "expected": "JSONResponse" },
+          data: data,
         }))
       }
     }
@@ -102,21 +106,18 @@ dbname = get('dbname',get('__db__','test'))
       update(json) {
         this.updateJSON = JSON.stringify(json);
         this.reql += `.update(${this.updateJSON})`;
-        if ( this.updateAndSend == true ) {
-          this.sendReQL(
-            "ReQL.UPDATE",{
-            database: this.dbname,
-            table: this.tablename,
-            filter: this.filterJSON,
-            update: this.updateJSON,
-          })
-        }
+        if ( this.updateAndSend == true ) {this.sendJSON(
+          "wsReQL|update|<CONSOLE.LOG>",{
+            "database": this.dbname,
+            "table": this.tablename,
+            "filter": this.filterJSON,
+            "update": this.updateJSON })
+        };
       }
       send() {
-        this.sendReQL(
-          "ReQL.RUN",{
-          reql: this.reql
-        })
+        this.sendJSON(
+          "wsReQL|run|<CONSOLE.LOG>",{
+            "reql": this.reql })
       }
     }
     r = new RethinkDB("{% dbname %}");
