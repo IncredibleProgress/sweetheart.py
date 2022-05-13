@@ -52,8 +52,9 @@ dbname = get('dbname',get('__db__','test'))
               "title": "sweetAPI",
               "version": this.apiversion },
             header: {
-              "service": "fetchJSON|<ELEMENT>",
-              "expected": "JSONResponse" },
+              "service": "fetch|JSON|<ELEMENT>",
+              "database": this.dbname,
+              "expected": "JSON" },
             data: {
               //sql: scope.sql,
               //find: scope.find,
@@ -73,7 +74,8 @@ dbname = get('dbname',get('__db__','test'))
               "version": this.apiversion },
           header: {
               "service": service,
-              "expected": "JSONResponse" },
+              "database": this.dbname,
+              "expected": "JSON" },
           data: data,
         }))
       }
@@ -106,18 +108,12 @@ dbname = get('dbname',get('__db__','test'))
       update(json) {
         this.updateJSON = JSON.stringify(json);
         this.reql += `.update(${this.updateJSON})`;
-        if ( this.updateAndSend == true ) {this.sendJSON(
-          "wsReQL|update|<CONSOLE.LOG>",{
-            "database": this.dbname,
+        if ( this.updateAndSend == true ) { this.sendJSON(
+          "ws|ReQL.UPDATE|<LOG>",{
             "table": this.tablename,
             "filter": this.filterJSON,
             "update": this.updateJSON })
         };
-      }
-      send() {
-        this.sendJSON(
-          "wsReQL|run|<CONSOLE.LOG>",{
-            "reql": this.reql })
       }
     }
     r = new RethinkDB("{% dbname %}");

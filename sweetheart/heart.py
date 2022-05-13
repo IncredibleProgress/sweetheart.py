@@ -40,10 +40,11 @@ class BaseAPI(UserDict):
         },
         "header": {
             "service": str,
-            "expected": "JSONResponse",
-            "error": None,
+            "expected": "JSON",
+            "database": None,
+            "error": "",
         },
-        "data": dict }
+        "data": {} }
 
     def __init__(self,json):
 
@@ -56,36 +57,35 @@ class BaseAPI(UserDict):
         self.data = json.get('data',{})
         self.service = json['header']['service']
         self.expected = json['header']['expected']
-        self.error = self.model['header']['error']
+        self.response = dict(self.model)
     
-    def ensure(self,dic):
+    def ensure(self,dict):
+        """ ensure service and data types consistency """
 
-        assert dic['header']['service'] == self.service 
-        for key in dic['data']:
-            assert isinstance(self.json['data'][key],dic['data'][key])
+        assert dict['header']['service'] == self.service 
+        self.response['header']['service'] = self.service
+        assert dict['header'].get('database') == self.json['header'].get('database')
+        self.response['header']['database'] = dict['header'].get('database')
+        for k in dict['data']: assert isinstance(self[k],dict['data'][k])
         return self
 
-    def eval(self,str,type):
+    def eval(self,str,type_):
 
+        if hasattr(self,'locals'):
+            locals().update(self.locals)
         try:
-            value= eval(str)
-            assert type(value) == type
+            value = eval(str)
+            assert isinstance(value,type_)
             return value
         except:
-            self.error = "data value error"
+            self.response['header']['error'] = "data value error"
             return "!Err"
 
     def JSONResponse(self,data:dict):
-        """ set data for given service within api """
 
-        # ensure service consistency
-        assert eval(self.expected) == JSONResponse
-        # set and return JSONResponse from API
-        api = dict(self.model)
-        api['header']['service'] = self.service
-        api['header']['error'] = self.error
-        api.update({"data":data})
-        return JSONResponse(api)
+        assert self.expected == "JSON"
+        self.response['data'].update(data)
+        return JSONResponse(self.response)
 
 
 class BaseService:
@@ -105,7 +105,7 @@ class BaseService:
             the given url should follow the http://host:port pattern
             sub-classes must set self.command attribute for running service """
 
-        self.Api = BaseAPI
+        self.API = BaseAPI
         self.config = config
         self.command = "echo Error, no command attribute given"
 
@@ -202,81 +202,71 @@ class RethinkDB(BaseService):
         assert self.protocol == 'rethinkdb'
         self.command = f"rethinkdb --http-port 8180 -d {config.subproc['rethinkpath']}"
         if run_local: self.run_local(service=True)
-    
-    # def connect(self,dbname:str=None):
-    #     if hasattr(self,'conn'): self.conn.close()
-    #     if dbname is None: dbname = self.config['selected_db']
-    #     self.conn = self.client.connect(self.host,self.port,db=dbname)
 
-    def set_client(self):
+    def set_client(self,dbname:str=None):
 
+        # import rethinkdb only if needed
         from rethinkdb import r
 
-        self.client = r
-        self.conn = r.connect(
-            self.host,
-            self.port,
-            db=self.config['selected_db'])
-
-        self.reql = "self.client"
+        if dbname is None: dbname=self.config['selected_db']
+        self.conn = r.connect(self.host,self.port,db=dbname)
+        self.client, self.dbname = r, dbname
         return self.client,self.conn
+
+    def connect(self,dbname:str=None):
+
+        if hasattr(self,'conn'): self.conn.close()
+        if dbname is None: dbname=self.config['selected_db']
+        self.conn = self.client.connect(self.host,self.port,db=dbname)
+        self.dbname = dbname
+        return self.conn,self.dbname
         
-    # def table(self,data:dict) -> object:
-    #     #NOTE: reset self.reql
-    #     self.data = data
-    #     self.reql = f"self.client.table('{data['table']}')"
-    #     return self
-
-    # def filter(self,data:dict) -> object:
-    #     self.reql += f".filter({data['filter']})"
-    #     return self
-
-    # def insert(self,data:dict) -> object:
-    #     self.reql += f".insert({data['insert']})"
-    #     return self
-
-    # def update(self,data:dict) -> object:
-    #     self.reql += f".update({data['update']})"
-    #     return self
-
-    # def run(self,reql:str):
-    #     # if given, data must be a dict providing a 'run' key
-    #     if reql: reql = self.reql + f".{reql}.run(self.conn)"
-    #     else: reql = self.reql + ".run(self.conn)"
-    #     result = eval(reql)
-    #     # reset self.reql
-    #     self.reql = "self.client"
-    #     #FIXME: handle result type and return
-    #     if type(result) in [str,int,float,dict]: return result
-    #     else: return list(result)
-
     async def fetch_endpoint(self,request):
+        """ #FIXME: unsecure, only for tests """
 
-        json = await request.json()
-        api = self.Api(json).ensure({
-            "header": {"service":"fetchJSON|<ELEMENT>"},
-            "data": {"target":str,"reql":str} })
+        api = self.API(await request.json()).ensure({
+            "header": { 
+                "service": "fetch|JSON|<ELEMENT>",
+                "database": self.dbname },
+            "data": {
+                "target": str,
+                "reql": str } })
 
-        reql = "self.client."+api['reql']+".run(self.conn)"
-
+        api.locals = dict(r=self.client,conn=self.conn)
         return api.JSONResponse({
             "target": api['target'],
-            "value": api.eval(reql,str) })
+            "value": api.eval(f"r.{api['reql']}.run(conn)",str) })
     
     def on_receive(self,websocket,data):
-        """ used as the websocket receiver """
+        """ provide a RethinkDB websocket receiver 
+            allow update or insert data into a table """
+
+        print(type(data))
+        api = self.API(json.loads(data)).ensure({
+            "header": { 
+                "service": "ws|ReQL.UPDATE|<LOG>",
+                "database": self.dbname },
+            "data": {
+                "table": str,
+                "filter": dict,
+                "update": dict } })
         
-        if data.get('run') == 'update|insert':
-            if list(self.table(data).filter(data).run()):
-                return websocket.send_json(
-                    self.table(data).filter(data).update(data).run() )
-            else:
-                values = {'insert': {
-                    **json.loads(data['filter']),
-                    **json.loads(data['update']) }}
-                return websocket.send_json(
-                    self.table(data).insert(values).run() )
+        _table = f"table({api['table']})"
+        _filter = f"filter({api['filter']})"
+        _update = f"update({api['update']})"
+
+        if eval(f"self.client.{_table}.{_filter}.run(self.conn)"): 
+            # Update data within database
+            reql = f"r.{_table}.{_filter}.{_update}.run(conn)"
+        else:
+            # Insert data within database
+            _values = { **api['filter'], **api['update'] }
+            reql = f"r.{_table}.insert({_values}).run(conn)"
         
+        api.locals = dict(r=self.client,conn=self.conn)
+        api.update({ "log": api.eval(reql) })
+        return websocket.send_json(api.response)
+
     def __del__(self):
         # close last RethinkDB connection
         if hasattr(self,'conn'): self.conn.close()
