@@ -17,16 +17,16 @@ def set_config(
     if config_file: config.config_file = config_file
 
     elif isinstance(values,str):
-        #FIXME: allow setting config_file instead of values
+        # allow setting config_file instead of values
         if os.path.isfile(values) and values[:-5]==".json":
             config.config_file = config_file = values
-
     try: 
         # update config from given json file
         with open(config.config_file) as fi:
             config.update(json.load(fi))
             verbose("config file:",config.config_file)
-    except: pass
+    except:
+        pass
 
     # allow altered config
     config.update(values)
@@ -98,20 +98,19 @@ def quickstart(*args,_cli_args=None):
         # set and run Jupyterlab server
         JupyterLab(config,run_local=True)
 
-    # if config.is_rethinkdb_local:
-    #     # set and run RethinkDB server
-    #     if not hasattr(webapp,'database'):
-    #         webapp.database = RethinkDB(config,run_local=True)
-    #         webapp.database.set_websocket()
-    #         webapp.database.set_client()
-
     if args and isinstance(args[0],HttpServer):
         # set webapp from given HttpServer instance
         webapp = args[0]
         if hasattr(args[0],'data'): args[0].mount(*args[1:])
     else:
         # build new webapp from Route|Mount objects,html code or template
-        webapp = HttpServer(config).mount(*args)
+        webapp = HttpServer(config)
+        if config.is_rethinkdb_local:
+            # set and run RethinkDB server
+            webapp.database = RethinkDB(config,run_local=True)
+            webapp.database.set_websocket()
+            webapp.database.set_client()
+        webapp.mount(*args)
         
     # start webapp within current bash
     webapp.run_local(service=False)
@@ -129,7 +128,7 @@ def sws(args):
     if cf.verbosity: sweet.append("-"+"v"*cf.verbosity)
     vv,py,po = config.python_env,config.python_bin,config.poetry_bin
 
-    switch = {#FIXME:
+    switch = {
         # sweet.py commands within master project
         'help': [*sweet,"start","-x"],
         'rethinkdb-server': [*sweet,"rethinkdb-server",*args[1:]],

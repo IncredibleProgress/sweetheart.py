@@ -61,7 +61,7 @@ class BaseConfig(UserDict):
 
     # set messages to stdout
     verbosity = 0
-    label = "sweetheart"# used for print with echo()
+    label = "sweetheart"# used within echo()
     locale_lang = locale.getlocale()[0][0:2]
 
     # get environment settings

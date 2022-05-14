@@ -1,14 +1,7 @@
 <!SWEETHEART html>
 
 <python>
-# some nice python code can be given here (many thanks to Brython!)
-# SweetHeart preset also RethinkDB/WebSocket/Vue3 capabilities for you
-
 def on_update(event):
-
-    """ this updates in realtime RethinkDB using WebSocket 
-        it should be called only from html event attributes
-        e.g. <input type="text" id="row:col" v-on:keyup="update"> """
 
     elt = event.target
     
@@ -18,36 +11,28 @@ def on_update(event):
 
 def on_message(event):
 
-    """ catch here WebSocket messages from the server side 
-        you see, we handle directly the JavaScript event object """
-
     console.log(event.data)
 
 def vue_created(data):
-
-    """ this will be called as soon as the Vue3 instance is created
-        it allows you fecthing data using ReQL before html rendering
-        the data argument provides the $data object of the Vue model """
 
     r.table("grid").setVueAttr("table")
 
 createVueApp({
     "table": [],
-    "headers": ["col1","col2","col3"]
-})
+    "headers": ["col1","col2","col3"] })
 </python>
 
-<vue t-style="m-2">
-  <h1 t-style="text-xl">Realtime Table</h1>
+<vue>
+  <h1 s-style>Realtime Table</h1>
   <table>
     <thead>
       <tr>
-        <th v-for="h in headers" t-style="border">{{ h }}</th>
+        <th v-for="h in headers" s-style="border">{{ h }}</th>
       </tr>
     </thead>
     <tbody>
       <tr v-for="n in table.length">
-        <td v-for="h in headers" t-style="border">
+        <td v-for="h in headers" s-style="border">
           <input type="text" v-bind:id="tableId(n-1,h)" v-model="table[n-1][h]" v-on:keyup="update">
         </td>
       </tr>

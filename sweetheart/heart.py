@@ -20,7 +20,7 @@ from starlette.applications import Starlette
 from starlette.staticfiles import StaticFiles
 from starlette.endpoints import WebSocketEndpoint
 from starlette.routing import Route,Mount,WebSocketRoute
-from starlette.responses import HTMLResponse,FileResponse,JSONResponse
+from starlette.responses import HTMLResponse,FileResponse,JSONResponse,RedirectResponse
 
 # try: import cherrypy
 # except:
@@ -42,7 +42,7 @@ class BaseAPI(UserDict):
             "service": str,
             "expected": "JSON",
             "database": None,
-            "error": "",
+            "error": None,
         },
         "data": {} }
 
@@ -83,7 +83,7 @@ class BaseAPI(UserDict):
 
     def JSONResponse(self,data:dict):
 
-        assert self.expected == "JSON"
+        assert self.expected.upper() == "JSON"
         self.response['data'].update(data)
         return JSONResponse(self.response)
 
@@ -260,8 +260,8 @@ class RethinkDB(BaseService):
             reql = f"r.{_table}.{_filter}.{_update}.run(conn)"
         else:
             # Insert data within database
-            _values = { **api['filter'], **api['update'] }
-            reql = f"r.{_table}.insert({_values}).run(conn)"
+            values = { **api['filter'], **api['update'] }
+            reql = f"r.{_table}.insert({values}).run(conn)"
         
         api.locals = dict(r=self.client,conn=self.conn)
         api.update({ "log": api.eval(reql) })
@@ -362,8 +362,10 @@ class HttpServer(BaseService):
             # switch port to 8181 and keep free 8000
             # allow looking documentation and testing webapp
             self.switch_port_to(8181)
-            # auto route the default welcome message
-            self.data.append(Route("/",HTMLResponse(self.config.welcome())))
+            # auto route the default welcome 
+            if self.config.is_rethinkdb_local: response= HTMLResponse(self.config.welcome())
+            else: response= RedirectResponse("documentation/welcome.html")
+            self.data.append(Route("/",response))
 
         elif len(args)==1 and isinstance(args[0],str):
             # route given template as a simple page for tests
