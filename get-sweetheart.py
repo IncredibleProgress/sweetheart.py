@@ -1,16 +1,12 @@
 """
 get-sweetheart.py: the Sweetheart installer via Github
 this will provide the SWeetheart Shell (sws) basic features
-and require sudo permissions with 'node','poetry' or 'rethinkdb' missing
-
-optionnal arguments :
-  --local-bin :   set symbolic link to 'sws' within /usr/local/bin
+and require sudo permissions with 'nodejs','poetry' or 'rethinkdb' missing
 
 this script has been tested on 'Ubuntu 22.04 LTS' which is recommended
 """
 
 import os,sys,stat,json
-from pprint import pprint
 from typing import List
 from subprocess import run
 
@@ -41,7 +37,8 @@ class Path:
         # check executables availability 
         for cmd in executables.split():
             paths= [p for p in Path.PTH if os.path.isfile(f"{p}/{cmd}")]
-            if paths: Path.EXECUTABLES.update({cmd:paths})
+            if paths: Path.EXECUTABLES.update({
+                cmd: (paths[0],bash_stdout(f"{cmd} --version")) })
         # build the missing list
         Path.MISSING = [m for m in executables.split() if m not in Path.EXECUTABLES]
         # return list of executables
@@ -64,23 +61,26 @@ distrib = bash_stdout("lsb_release -is").lower()
 codename = bash_stdout("lsb_release -cs").lower()
 executables = Path.list_executables("apt curl cargo node npm python3 poetry")
 
-# diagnose and set operating system
-if "apt" not in executables:
-    print("\n  WARNING you are not running on Ubuntu/Debian system",
-    "\n  which is not supported by this script for installing OS requirements")
-    sys.exit(1)
-
-if "node" not in executables:
-    print("install NodeJS 16.x LTS from nodesource.com ...")
-    run("curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -",shell=True)
-    run("sudo apt-get install -y nodejs",shell=True)
-
 print(
     "\n[SWEETHEART] checking prerequisites :",
     "\n current running system :",distrib.capitalize(),codename.capitalize(),
     "\n missing executables:",Path.MISSING,"\n")
 
-if not os.path.isfile(f"{Path.BIN[0]}/poetry"):
+# diagnose and set operating system
+if "apt" not in executables:
+    print("\n  WARNING you are not running on Ubuntu/Debian derivated system",
+    "\n  which is not supported by this script for installing OS requirements")
+    sys.exit(1)
+
+if "curl" not in executables: run("sudo apt install curl",shell=True)
+if "cargo" not in executables: run("sudo apt install cargo",shell=True)
+
+if "node" not in executables and "npm" not in executables:
+    print("install NodeJS 16.x LTS from nodesource.com ...")
+    run("curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -",shell=True)
+    run("sudo apt install -y nodejs",shell=True)
+
+if "poetry" not in executables:
     print("poetry has to be installed for managing Python's envs and libs")
     run("sudo apt install python3-venv",shell=True)
     run(Poetry.INSTALL,shell=True)
@@ -99,10 +99,12 @@ run(Poetry.ADD,shell=True)
 venv = bash_stdout(Poetry.ENV_PATH)
 if venv=="": raise Exception("Error, no Python env found")
 
-# update executables
-Path.list_executables("python3 poetry npm")
+# check and update executables
+Path.EXECUTABLES.pop('curl')
+Path.list_executables("python3 poetry cargo npm")
 print("\n[SWEETHEART] show executables :")
-pprint(Path.EXECUTABLES)
+for exe,info in Path.EXECUTABLES.items():
+    print("",exe,"::",info[0],"::",info[1])
 
 # set subroc.conf
 with open(Path.SUBPROC,"w") as file_out:
@@ -117,22 +119,15 @@ if not bash_stdout("apt policy rethinkdb"):
 echo WARNING: sudo permission is required for installing the RethinkDB repository
 echo "deb https://download.rethinkdb.com/repository/{distrib}-{codename} {codename} main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
 wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-key add -
-sudo apt-get update
+sudo apt-get update """.splitlines(): run(instruc.strip(),shell=True)
 
-    """.splitlines(): run(instruc.strip(),shell=True)
-
-# set SWeetheart Shell command -> sws
-#NOTE: much faster than 'poetry run'
+# set the sws command (faster than 'poetry run')
 with open(Path.SWS,"w") as file_out:
     file_out.write(f"""
 
 #!/bin/sh
-{venv}/bin/python3 -m sweetheart.sweet sh $*
-
-    """.strip())
-
+{venv}/bin/python3 -m sweetheart.sweet sh $* """.strip())
 os.chmod(Path.SWS,stat.S_IRWXU|stat.S_IRGRP|stat.S_IROTH)
-print(f"\n[SWEETHEART] Welcome {os.environ['USER'].capitalize()} !")
 
 # export path within .bashrc
 with open(Path.BASHRC,"r") as file_in:
@@ -148,5 +143,6 @@ elif Path.SCRIPTS not in bashrc:
 
 # exit message
 print(
-    "the 'sws --init' command is now available after restarting bash",
-    "all done setting Sweetheart requirements",sep="\n")
+    f"\n[SWEETHEART] Welcome {os.environ['USER'].capitalize()} !",
+    " the 'sws --init' command is now available after restarting bash",
+    " all done setting Sweetheart requirements",sep="\n")
