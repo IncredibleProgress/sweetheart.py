@@ -59,7 +59,7 @@ def _set__links_for_dev_():
         except: pass
 
     # make links for testing dev files
-    symlink(f"{src}/configuration/packages.js",f"{pjt}/configuration/packages.js")
+    symlink(f"{src}/configuration/packages.json",f"{pjt}/configuration/packages.js")
     symlink(f"{src}/webpages/resources/tailwind.base.css",f"{pjt}/webpages/resources/tailwind.base.css")
     symlink(f"{src}/webpages/resources/tailwind.config.js",f"{pjt}/webpages/resources/tailwind.config.js")
     symlink(f"{src}/webpages/HTML",f"{pjt}/webpages/HTML")

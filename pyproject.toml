@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sweetheart"
-version = "0.1.1b6"
+version = "0.1.1b"
 description = "for creating python/html programs with ease"
 authors = ["Nicolas Champion <champion.nicolas@gmail.com>"]
 license = "CECILL-C"
