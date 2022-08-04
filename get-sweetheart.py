@@ -1,9 +1,6 @@
 """
-get-sweetheart.py: the Sweetheart installer via Github
-this will provide the SWeetheart Shell (sws) basic features
-and require sudo permissions with 'nodejs','poetry' or 'rethinkdb' missing
-
-this script has been tested on 'Ubuntu 22.04 LTS' which is recommended
+get-sweetheart.py: the Sweetheart Shell installer via Github
+this requires sudo permissions to provide the 'sws' basic features
 """
 
 import os,sys,stat,json
@@ -37,8 +34,12 @@ class Path:
         # check executables availability 
         for cmd in executables.split():
             paths= [p for p in Path.PTH if os.path.isfile(f"{p}/{cmd}")]
+            version = bash_stdout(f"{cmd} --version")
+
             if paths: Path.EXECUTABLES.update({
-                cmd: (paths[0],bash_stdout(f"{cmd} --version")) })
+                # str pattern -> "cdm::path::version"
+                cmd: f"{cmd}::{paths[0]}::{version}" })
+
         # build the missing list
         Path.MISSING = [m for m in executables.split() if m not in Path.EXECUTABLES]
         # return list of executables
@@ -68,12 +69,15 @@ print(
 
 # diagnose and set operating system
 if "apt" not in executables:
-    print("\n  WARNING you are not running on Ubuntu/Debian derivated system",
-    "\n  which is not supported by this script for installing OS requirements")
+    print("WARNING you are not running on Ubuntu/Debian derivated system",
+    "which is not supported by this script for installing OS requirements")
     sys.exit(1)
 
-if "curl" not in executables: run("sudo apt install curl",shell=True)
-if "cargo" not in executables: run("sudo apt install cargo",shell=True)
+if "curl" not in executables:
+    run("sudo apt install curl",shell=True)
+
+if "cargo" not in executables:
+    run("sudo apt install cargo",shell=True)
 
 if "node" not in executables and "npm" not in executables:
     print("install NodeJS 16.x LTS from nodesource.com ...")
@@ -102,9 +106,9 @@ if venv=="": raise Exception("Error, no Python env found")
 # check and update executables
 Path.EXECUTABLES.pop('curl')
 Path.list_executables("python3 poetry cargo npm")
-print("\n[SWEETHEART] show executables :")
-for exe,info in Path.EXECUTABLES.items():
-    print("",exe,"::",info[0],"::",info[1])
+print(
+    "\n[SWEETHEART] show executables :",
+    *Path.EXECUTABLES.values(), sep="\n ")
 
 # set subroc.conf
 with open(Path.SUBPROC,"w") as file_out:
@@ -145,4 +149,4 @@ elif Path.SCRIPTS not in bashrc:
 print(
     f"\n[SWEETHEART] Welcome {os.environ['USER'].capitalize()} !",
     " the 'sws --init' command is now available after restarting bash",
-    " all done setting Sweetheart requirements",sep="\n")
+    " all done setting Sweetheart requirements\n",sep="\n")
