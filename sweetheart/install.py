@@ -21,7 +21,7 @@ def init(config:BaseConfig,add_pylibs=""):
         'documentation': "sweetbook.zip",
         'aptlibs': ["xterm","rethinkdb"],
         'npmlibs': ["brython","tailwindcss","vue@latest"],# Vue3
-        'pylibs': ["rethinkdb","uvicorn[standard]","aiofiles"],
+        'pylibs': ["rethinkdb","uvicorn[standard]","starlette"],
         'files': [
             "documentation/sweetbook.zip",
             "configuration/packages.json",
@@ -30,8 +30,8 @@ def init(config:BaseConfig,add_pylibs=""):
             "webpages/resources/tailwind.base.css",
             "webpages/resources/tailwind.config.js" ]}
     
-    if "fastapi" in add_pylibs: pass
-    else: PKG_INIT['pylibs'].extend(["starlette"])
+    if "fastapi" in add_pylibs:
+        PKG_INIT['pylibs'].remove("starlette")
 
     # set given python extra modules
     if isinstance(add_pylibs,list):
@@ -39,7 +39,7 @@ def init(config:BaseConfig,add_pylibs=""):
     elif isinstance(add_pylibs,str):
         PKG_INIT['pylibs'].extend(add_pylibs.split())
 
-    # require directories
+    # required directories
     for basedir in [
         f"{config.root_path}/configuration",
         f"{config.root_path}/database",

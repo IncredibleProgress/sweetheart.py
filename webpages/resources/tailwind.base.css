@@ -11,7 +11,13 @@
     h5 {@apply text-lg;}
 }
 @layer components {
-    h1.sw {@apply text-pink-500;}
-    input.sw, select.sw, textarea.sw {@apply border p-0.5 focus:outline-none focus:border-pink-500;}
-    button.sw {@apply py-2 px-14 rounded-md bg-pink-400 hover:bg-pink-500 text-white;}
+    h1.sw {
+        @apply text-pink-500;
+    }
+    input.sw, select.sw, textarea.sw {
+        @apply border p-0.5 focus:outline-none focus:border-pink-500;
+    }
+    button.sw {
+        @apply py-2 px-14 rounded-md bg-pink-400 hover:bg-pink-500 text-white;
+    }
 }
