@@ -1,13 +1,9 @@
 {
+    "webserver": {
+        "aptlibs": ["nginx"],
+        "pylibs": ["gunicorn"]
+    },
     "science": {
-        "npmlibs":["d3"],
-        "pylibs":["xlrd","xlwt","pyxlsb","openpyxl","xlsxwriter","tabulate","seaborn","scikit-learn"]
-    },
-    "web": {
-        "pylibs":["beautifulsoup4","html5lib","lxml","requests","scrapy"]
-    },
-    "frontend": {
-        "aptlibs":["node-typescript","node-vue"],
-        "npmlibs":["assemblyscript","jquery","bootstrap"]
+        "pylibs": ["pandas"]
     }
 }

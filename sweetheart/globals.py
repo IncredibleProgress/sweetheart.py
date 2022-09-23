@@ -76,6 +76,14 @@ class BaseConfig(UserDict):
     poetry_bin = f"{HOME}/.local/bin/poetry"
     python_bin = "python3"# unset python env
 
+    # default productive settings
+    async_host = "http://127.0.0.1:8000"# uvicorn
+    database_host = "rethinkdb://127.0.0.1:28015"
+    database_admin = "http://127.0.0.1:8180"
+    jupyter_host = "http://127.0.0.1:8888"
+    # static_host = "http://127.0.0.1:8080"# cherrypy
+    # mdbook_host = "http://127.0.0.1:3000"
+
     def __init__(self,project):
 
         # general settings
@@ -90,14 +98,6 @@ class BaseConfig(UserDict):
         self.is_jupyter_local = True
         # self.is_mongodb_local = False
         # self.is_cherrypy_local = False
-
-        # default productive settings
-        self.async_host = "http://127.0.0.1:8000"# uvicorn
-        self.database_host = "rethinkdb://127.0.0.1:28015"
-        self.database_admin = "http://127.0.0.1:8180"
-        self.jupyter_host = "http://127.0.0.1:8888"
-        # self.static_host = "http://127.0.0.1:8080"# cherrypy
-        # self.mdbook_host = "http://127.0.0.1:3000"
 
         # subprocess settings
         self.subproc = {
@@ -145,27 +145,27 @@ class BaseConfig(UserDict):
                 '/documentation': "sweetbook",
             }}
 
-    def welcome(self) -> str:
-        """ return default Html welcome message """
+    # def welcome(self) -> str:
+    #     """ return default Html welcome message """
 
-        if self.is_jupyter_local:
-            # enable html link to running Jypyter local server
-            jupyter_link = f"""<p><br>or code immediately using 
-                <a href="{self.subproc['.jupyterurl']}">JupyterLab</a></p>"""
-        else: jupyter_link = ""
+    #     if self.is_jupyter_local:
+    #         # enable html link to running Jypyter local server
+    #         jupyter_link = f"""<p><br>or code immediately using 
+    #             <a href="{self.subproc['.jupyterurl']}">JupyterLab</a></p>"""
+    #     else: jupyter_link = ""
 
-        return f"""
-          <div style="text-align:center;font-size:1.1em;">
-            <h1><br><br>Welcome {self.USER} !<br><br></h1>
-            <h2>sweetheart</h2>
-            <p>a supercharged heart for the non-expert hands</p>
-            <p>which will give you coding full power at the light speed</p>
-            <p><a href="/documentation/index.html">
-                Get Started Now!</a></p>
-            {jupyter_link}
-            <p><br><br><em>this message appears because there
-            was nothing else to render here</em></p>
-          </div>"""
+    #     return f"""
+    #       <div style="text-align:center;font-size:1.1em;">
+    #         <h1><br><br>Welcome {self.USER} !<br><br></h1>
+    #         <h2>sweetheart</h2>
+    #         <p>a supercharged heart for the non-expert hands</p>
+    #         <p>which will give you coding full power at the light speed</p>
+    #         <p><a href="/documentation/index.html">
+    #             Get Started Now!</a></p>
+    #         {jupyter_link}
+    #         <p><br><br><em>this message appears because there
+    #         was nothing else to render here</em></p>
+    #       </div>"""
 
 
 def webbrowser(url:str):

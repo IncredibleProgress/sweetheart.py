@@ -8,7 +8,7 @@ from sweetheart.globals import *
 def set_config(
     values:dict = {},
     project:str = MASTER_MODULE,
-    config_file:str = None ) -> BaseConfig:
+    config_file:str|None = None ) -> BaseConfig:
 
     """ set or reset sweetheart configuration 
         allow working with differents projects and configs """
@@ -122,11 +122,12 @@ def sws(args):
     try: config = BaseConfig._
     except: raise Exception("Error, config is missing")
 
-    if isinstance(args,str): args = args.split()
     cf,sb = config, config.subproc
     sweet = [config.python_bin,"-m","sweetheart.sweet"]
-    if cf.verbosity: sweet.append("-"+"v"*cf.verbosity)
     vv,py,po = config.python_env,config.python_bin,config.poetry_bin
+
+    if isinstance(args,str): args = args.split()
+    if cf.verbosity: sweet.append("-"+"v"*cf.verbosity)
 
     switch = {
         # sweet.py commands within master project
@@ -136,6 +137,7 @@ def sws(args):
         'new': [*sweet,"sh","--init","-p",*args[1:]],
         'start': [*sweet,"-p",cf.project,"start",*args[1:]],
         'install': [*sweet,"-p",cf.project,"install",*args[1:]],
+        'show': [*sweet,"sh","-p",cf.project,"poetry","show","--tree"],
         'jupyter-server': [*sweet,"-p",cf.project,"jupyter-server",*args[1:]],
         # services and utilities commands
         'test': [py,"-m",f"{cf.project}.tests",*args[1:]],

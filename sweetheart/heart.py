@@ -272,7 +272,28 @@ class RethinkDB(BaseService):
         if hasattr(self,'conn'): self.conn.close()
 
 
-def HTMLTemplate(filename:str,**kwargs):
+def WelcomeMessage(config:BaseConfig|None=None) -> HTMLResponse:
+    """ provide default Html welcome message """
+
+    # autoset config when not given
+    if config is None: config = BaseConfig._
+
+    return HTMLResponse(f"""
+        <div style="text-align:center;font-size:1.1em;">
+        <h1><br><br>Welcome {config.USER} !<br><br></h1>
+        <h2>sweetheart</h2>
+        <p>a supercharged heart for the non-expert hands</p>
+        <p>which will give you coding full power at the light speed</p>
+        <p><a href="/documentation/index.html">
+            Get Started Now!</a></p>
+        <p><br>or code immediately using 
+            <a href="{config.subproc['.jupyterurl']}">JupyterLab</a></p>
+        <p><br><br><em>this message appears because there
+        was nothing else to render here</em></p>
+        </div>""")
+
+
+def HTMLTemplate(filename:str,**kwargs) -> HTMLResponse:
     """ provide a Starlette-like function for rendering templates
         including configuration data and some python magic stuff """
 
@@ -349,7 +370,7 @@ class HttpServer(BaseService):
             try: self.database.set_client()
             except: raise Exception("Error, RethinkDB server not found")
 
-    def mount(self,*args:Route):
+    def mount(self,*args:Route) -> BaseService:
         """ mount given Route(s) and set facilities from config """
 
         # ensure mount() call only once
@@ -363,7 +384,7 @@ class HttpServer(BaseService):
             # allow looking documentation and testing webapp
             self.switch_port_to(8181)
             # auto route the default welcome 
-            if self.config.is_rethinkdb_local: response= HTMLResponse(self.config.welcome())
+            if self.config.is_rethinkdb_local: response= WelcomeMessage(self.config)
             else: response= RedirectResponse("documentation/welcome.html")
             self.data.append(Route("/",response))
 
@@ -394,10 +415,15 @@ class HttpServer(BaseService):
             for relpath,srcpath in self.config["static_dirs"].items()])
 
         # set the webapp Starlette object
-        self.app = Starlette(routes=self.data)
+        self.starlette = Starlette(routes=self.data)
         del self.data# new setting forbidden
 
         return self
+
+    def app(self,*args:Route) -> Starlette:
+        """ mount(*args) and return related Starlette object """
+        self.mount(*args)
+        return self.starlette
 
     def run_local(self,service:bool=False):
         """ run webapp within local Http server """
@@ -405,10 +431,17 @@ class HttpServer(BaseService):
         if self.config.is_webapp_open: webbrowser(self.url)
 
         if service:
-            raise NotImplementedError
+            # raise NotImplementedError
+            os.chdir(self.config['working_dir'])
+            sp.python(
+                "-m","gunicorn","main:app",
+                "--workers",4,
+                "--worker-class","uvicorn.workers.UvicornWorker",
+                "--bind","0.0.0.0:80",
+                cwd= self.config.subproc['codepath'])
         else:
             os.chdir(self.config['working_dir'])
-            uvicorn.run(self.app,**self.uargs)
+            uvicorn.run(self.starlette,**self.uargs)
 
 
 class JupyterLab(BaseService):
