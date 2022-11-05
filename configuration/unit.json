@@ -1,0 +1,34 @@
+{
+    "listeners": {
+        "*:80": {
+            "pass": "routes"
+        }
+    },
+
+    "routes": [
+        {
+            "match": {
+                "uri": "/jupyter/*"
+            },
+            "action": {
+                "proxy": "http://127.0.0.1:8080"
+            }
+        },
+        {
+            "action": {
+                "pass": "applications/starlette"
+            }
+        }
+    ],
+
+    "applications": {
+        "starlette": {
+            "type": "python 3.10",
+            "path": "/home/ubuntu/.sweet/sweetheart/programs/my_python",
+            "home": "/home/ubuntu/.cache/pypoetry/virtualenvs/my-python-AiiiDU9d-py3.10",
+            "module": "start",
+            "callable": "webapp",
+            "user": "ubuntu"
+        }
+    }
+}
