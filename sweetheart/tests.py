@@ -3,6 +3,7 @@
 from sweetheart import __version__
 assert __version__ == '0.1.1'
 
+import os,shutil
 from sweetheart.globals import *
 from sweetheart.sweet import *
 from sweetheart.heart import *
@@ -32,18 +33,26 @@ def test_template(template:str):
     return True
 
 
-def _set__links_for_dev_():
+def symlink(source,dest):
 
-    import os,shutil
+    if os.path.islink(dest): print(f"Warning, existing link {dest}")
+    elif os.path.isfile(dest): os.remove(dest)
+    elif os.path.isdir(dest) : shutil.rmtree(dest)
+    try: os.symlink(source,dest)
+    except: pass
+
+def _dev_sweetheart_():
+    # link ~/sweetheart.py as python package
+    set_config()
+    sp.poetry("remove","sweetheart")
+
+    symlink(f"{BaseConfig.HOME}/{MASTER_MODULE}.py",
+        f"{BaseConfig._.python_env}/lib/python*/site-packages/sweetheart")
+
+def _dev_links_():
+
     src = f"{BaseConfig.HOME}/{MASTER_MODULE}.py"# source dir
     pjt = f"{BaseConfig.HOME}/.sweet/{MASTER_MODULE}"# project dir
-
-    def symlink(source,dest):
-        if os.path.islink(dest): print(f"Warning, existing link {dest}")
-        elif os.path.isfile(dest): os.remove(dest)
-        elif os.path.isdir(dest) : shutil.rmtree(dest)
-        try: os.symlink(source,dest)
-        except: pass
 
     # make links for testing dev files
     symlink(f"{src}/configuration/packages.json",f"{pjt}/configuration/packages.json")
@@ -56,18 +65,17 @@ def _set__links_for_dev_():
     symlink(f"{src}/documentation/sweetbook",f"{pjt}/documentation/sweetbook")
     symlink(f"{src}/documentation/notebooks",f"{pjt}/documentation/notebooks")
 
-    # link ~/sweetheart.py as python package
-    set_config()
-    sp.poetry("remove","sweetheart")
-    symlink(src,f"{BaseConfig._.python_env}/lib/python*/site-packages/sweetheart")
-
 
 if __name__ == '__main__':
 
     from sys import argv
 
-    elif '--set-dev-links' in argv: 
-        _set__links_for_dev_()
+    if '--dev-sweetheart' in argv:
+        _dev_sweetheart_()
+        echo("replace sweetheart module with dev module: all done",mode='exit')
+
+    elif '--dev-links' in argv: 
+        _dev_links_()
         echo("create symbolic links for dev: all done",mode='exit')
     
     #assert test_objects()

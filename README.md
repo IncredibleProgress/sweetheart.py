@@ -1,5 +1,5 @@
-# Sweetheart **0.1.1**
-*get power with low-code and low-costs python programs*
+# Sweetheart **0.1.2**
+*innovative foundations for low-code and no-code solutions*
 
 ## A supercharged heart for the non-expert hands
 
@@ -28,36 +28,12 @@ Sweetheart supports you getting coding full power from scratch:
 
 Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. It just intends to transform you stepwise in a good driver and maybe in a pilot! Due to provided components, configuration and documentation **you will learn quickly to make great python/html code** including up-to-date best practices and patterns. You won't learn Sweetheart itself, you will learn Python/Html real programming life like any other developer, but gradually and under control. Meaning that you don't need any kind of expertise to use the good things in the right way.
 
-## The highest quality components which can be adopted by newbies
+## Rock-solid components for innovative capabilities
 
 Sweetheart delivers a stock of ready-to-use features:
-
-- backend language: [Python](https://www.python.org/)
-- database server: [RethinkDB](https://rethinkdb.com)
-- asgi framework: [Starlette](https://www.starlette.io/)
-- asynchronous webserver: [Uvicorn](https://www.uvicorn.org/)
-- fast documentation builder: [mdBook](https://rust-lang.github.io/mdBook/index.html)
-- responsive user interfaces: [Html](https://www.w3schools.com/), [JupyterLab](https://jupyter.org/)
-- web libs for going fast: [TailwindCss](https://tailwindcss.com/), [Vue](https://v3.vuejs.org/)
+NGINX Unit - RethinkDB - Starlette - TailwindCss - Vue - WebSocket - Python/Html - Rust Crates
 
 **And all other nice things you wish** using [poetry](https://python-poetry.org/), [npm](https://docs.npmjs.com/about-npm/), [apt](https://en.wikipedia.org/wiki/APT_(software)) and [cargo](https://doc.rust-lang.org/cargo/): Sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting new projects.
-
-In a first approach consider it provides to you **an incredible full-stacked sandbox**. In a second time you will take benefits of Sweetheart as a convenient super-orchestrator for low-costs.
-
-## Keep permanently innovative capabilities
-
-The following *sweetheart development chart* allows to evaluate coding and costs efforts for implementation of most important and innovative features at the date of today.
-
-|                                              | Coding effort | Costs effort |
-| :------------------------------------------- | :-----------: | :----------: |
-| Build responsive webapp with default libs    | FAST          | FREE         |
-| Build responsive datavisualizations          | MIDDLE        | FREE         |
-| Run MongoDB/webserver on local network       | FAST          | FREE         |
-| Improve code quality and reinforce security  | EXPERT        | CHEAP        |
-| Run MongoDB/webserver as internet services   | MIDDLE        | MODERATE     |
-| Implement AI capabilities                    | MIDDLE        | MODERATE     |
-| Implement SAP gateway                        | MIDDLE        | MODERATE     |
-| Erect and run a dedicated datacenter         | EXPERT        | HIGH         |
 
 ## Realistic code examples
 
@@ -69,13 +45,10 @@ Sweetheart allows you to do all what you need with only 1 Python file and 1 Html
 from sweetheart.sandbox import *
 
 config = set_config({
-    "webbrowser": "brave.exe",
     "selected_db": "test" })
 
-webapp = HttpServer(config, set_database=True).mount(
-    Route("/", HTMLTemplate("grid.htm")) )
-
-quickstart(webapp)
+webapp = HttpServer(config, set_database=True).app(
+    Route("/", HTMLTemplate("table_example.htm")) )
 ```
 
 ### typical Html webpage template
@@ -85,13 +58,14 @@ quickstart(webapp)
 
 <python>
 # some nice python code can be given here (many thanks to Brython!)
-# SweetHeart preset also RethinkDB/WebSocket/Vue3 capabilities for you
+# SweetHeart preset RethinkDB/WebSocket/Vue3 capabilities for you
 
 def on_update(event):
 
     """ this updates in realtime RethinkDB using WebSocket 
         it should be called only from html event attributes
-        e.g. <input type="text" id="row:col" v-on:keyup="update"> """
+        e.g. <input type="text" id="row:col" v-on:keyup="update">
+        you see, we handle directly the JavaScript event object """
 
     elt = event.target
     
@@ -101,8 +75,7 @@ def on_update(event):
 
 def on_message(event):
 
-    """ catch here WebSocket messages from the server side 
-        you see, we handle directly the JavaScript event object """
+    """ catch here WebSocket messages from the server side """
 
     console.log(event.data)
 
@@ -120,9 +93,8 @@ createVueApp({
 })
 </python>
 
-<div v-cloak id="VueApp" class="m-2">
+<vue>
   <h1 class="text-xl">Realtime Table</h1>
-
   <table>
     <thead>
       <tr>
@@ -132,19 +104,19 @@ createVueApp({
     <tbody>
       <tr v-for="n in table.length">
         <td v-for="h in headers" class="border">
-          <input type="text" v-bind:id="tableId(n-1,h)" v-model="table[n-1][h]" v-on:keyup="update">
+          <input type="text" v-bind:id="tableId(n,h)" v-model="table[n][h]" v-on:keyup="update">
         </td>
       </tr>
     </tbody>
   </table>
-</div>
+</vue>
 ```
 
 ## Install and run Sweetheart
 
-### set WSL on Windows 10
+### set WSL on Windows 10/11
 
-Discovering what is the WSL, have a look at the [Microsoft documentation](https://docs.microsoft.com/en-us/windows/wsl/about). Then install *Ubuntu 20.04* via the Microsoft Store. At this step installing *VS Code* and *Windows Terminal* can be recommended to you too. When done click on Ubuntu within start menu, and now *Bash* is running!
+Discovering what is the WSL, have a look at the [Microsoft documentation](https://docs.microsoft.com/en-us/windows/wsl/about). Then install *Ubuntu 22.04* via the Microsoft Store. At this step installing *VS Code* and *Windows Terminal* can be recommended to you too. When done click on Ubuntu within start menu, and now *Bash* is running!
 
 ### first steps with Bash
 
@@ -152,28 +124,17 @@ Discovering what is the WSL, have a look at the [Microsoft documentation](https:
 ``` bash
 curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -
 ```
-You can suppress the `--rethinkdb` option if you don't need to setup the RethinkDB repository for Ubuntu/Debian.
 
-2. then restart bash and get initial components
+2. then (re)start bash and get initial components
 ``` bash
 bash
 sws --init
-```
-Being experienced you can add extra python libs you want with `--init`. Typically you could prefer `fastapi` instead of simply `starlette`. Note too that JupyterLab is not set in too by default. This is because you could already use it by another way (e.g. within VS Code). If not you should also consider to install it with sweetheart as showed hereafter.
-
-``` bash
-# alternative examples for initial setting of sweetheart
-sws --init jupyterlab
-sws --init fastapi
-sws --init fastapi jupyterlab
 ```
 
 3. at last run sweetheart for tests
 ``` bash
 sws start
 ```
-
-There is here no heavy installation process which could badly interact with the operating system. Everything goes and runs safely within dedicated */home* directories. [Click-here]() for detailed informations.
 
 ### get power with many additionnal resources
 
