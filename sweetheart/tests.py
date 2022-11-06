@@ -1,26 +1,13 @@
+""" provides utilities for testing webapp """
+
+from sweetheart import __version__
+assert __version__ == '0.1.1'
 
 from sweetheart.globals import *
 from sweetheart.sweet import *
 from sweetheart.heart import *
 from sweetheart.install import *
 
-from sweetheart import __version__
-assert __version__ == '0.1.1'
-
-def test_init():
-    init(config=set_config(project="test"))
-    sp.shell("rm -r ~/.sweet/test")
-
-def test_objects():
-
-    try:
-        config = set_config()
-        RethinkDB(config)
-        JupyterLab(config)
-        HttpServer(config)
-        return True
-    except:
-        return False
 
 def test_template(template:str):
     
@@ -79,11 +66,7 @@ if __name__ == '__main__':
 
     from sys import argv
 
-    if '--init' in argv:
-        test_init()
-        echo("sws test --init: all done",mode='exit')
-
-    elif '--dev-links' in argv: 
+    elif '--set-dev-links' in argv: 
         _set__links_for_dev_()
         echo("create symbolic links for dev: all done",mode='exit')
     

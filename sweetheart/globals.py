@@ -13,7 +13,29 @@ class sp:
 
     run = lambda *args,**kwargs: subprocess.run(args,**kwargs)
     shell = lambda str,**kwargs: subprocess.run(str,**kwargs,shell=True)
+    read = lambda src: for instruc in src.splitlines(): shell(instruc.strip())
     stdout = lambda str: subprocess.run(str,text=True,capture_output=True,shell=True).stdout.strip()
+
+    is_exe = lambda cmd:str : cmd in list_executables(cmd)
+    
+    BIN = (f"{os.path.expanduser('~')}/.local/bin","/usr/local/bin","/usr/bin","/bin")
+    EXECUTABLES = {} # fetched by list_executables()
+    MISSING = [] # fetched by list_executables()
+
+    @classmethod
+    def list_executables(cls,executables:str) -> List[str]:
+        # check executables availability
+        env_ = [path for path in cls.BIN if path in os.environ["PATH"]]
+        for cmd in executables.split():
+            paths= [p for p in env_ if os.path.isfile(f"{p}/{cmd}")]
+            version = cls.stdout(f"{cmd} --version")
+            if paths: cls.EXECUTABLES.update({
+                # str pattern -> "cdm::path::version"
+                cmd: f"{cmd}::{paths[0]}::{version}" })
+        # build the missing list
+        cls.MISSING = [m for m in executables.split() if m not in cls.EXECUTABLES]
+        # return list of executables
+        return list(cls.EXECUTABLES)
 
     @classmethod
     def terminal(cls,cmd:str,select:str,**kwargs):
@@ -65,9 +87,8 @@ class BaseConfig(UserDict):
     locale_lang = locale.getlocale()[0][0:2]
 
     # get environment settings
-    PWD = os.environ['PWD']
-    HOME = os.environ['HOME']
-    USER = os.environ['USER'].capitalize()
+    PWD = os.getcwd()
+    HOME = os.path.expanduser('~')
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
     # set sws level into environment 
     SWSLVL = os.environ['SWSLVL'] = f"{int(os.getenv('SWSLVL','0'))+1}"
@@ -144,28 +165,6 @@ class BaseConfig(UserDict):
                 '/resources': f"resources",
                 '/documentation': "sweetbook",
             }}
-
-    # def welcome(self) -> str:
-    #     """ return default Html welcome message """
-
-    #     if self.is_jupyter_local:
-    #         # enable html link to running Jypyter local server
-    #         jupyter_link = f"""<p><br>or code immediately using 
-    #             <a href="{self.subproc['.jupyterurl']}">JupyterLab</a></p>"""
-    #     else: jupyter_link = ""
-
-    #     return f"""
-    #       <div style="text-align:center;font-size:1.1em;">
-    #         <h1><br><br>Welcome {self.USER} !<br><br></h1>
-    #         <h2>sweetheart</h2>
-    #         <p>a supercharged heart for the non-expert hands</p>
-    #         <p>which will give you coding full power at the light speed</p>
-    #         <p><a href="/documentation/index.html">
-    #             Get Started Now!</a></p>
-    #         {jupyter_link}
-    #         <p><br><br><em>this message appears because there
-    #         was nothing else to render here</em></p>
-    #       </div>"""
 
 
 def webbrowser(url:str):

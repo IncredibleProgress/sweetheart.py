@@ -260,7 +260,7 @@ def WelcomeMessage(config:BaseConfig|None=None) -> HTMLResponse:
 
     return HTMLResponse(f"""
         <div style="text-align:center;font-size:1.1em;">
-        <h1><br><br>Welcome {config.USER} !<br><br></h1>
+        <h1><br><br>Welcome !<br><br></h1>
         <h2>sweetheart</h2>
         <p>a supercharged heart for the non-expert hands</p>
         <p>which will give you coding full power at the light speed</p>

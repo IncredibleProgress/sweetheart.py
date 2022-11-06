@@ -7,7 +7,7 @@ import os,sys,stat,json
 from typing import List
 from subprocess import run
 
-__version__  = "0.1.5b"
+__version__  = "0.1.6b"
 __author__ = "champion.nicolas@gmail.com"
 __licence__ = "CeCILL-C FREE SOFTWARE LICENSE AGREEMENT"
 
@@ -60,7 +60,7 @@ bash_stdout = lambda cmd: \
 # get distrib infos on debian/ubuntu
 distrib = bash_stdout("lsb_release -is").lower()
 codename = bash_stdout("lsb_release -cs").lower()
-executables = Path.list_executables("apt curl cargo node npm python3 poetry")
+executables = Path.list_executables("apt curl wget python3 poetry")
 
 print(
     "\n[SWEETHEART] checking prerequisites :",
@@ -68,21 +68,10 @@ print(
     "\n missing executables:",Path.MISSING,"\n")
 
 # diagnose and set operating system
-if "apt" not in executables:
+if "apt" not in executables or "curl" not in executables:
     print("WARNING you are not running on Ubuntu/Debian derivated system",
     "which is not supported by this script for installing OS requirements")
     sys.exit(1)
-
-if "curl" not in executables:
-    run("sudo apt install curl",shell=True)
-
-if "cargo" not in executables:
-    run("sudo apt install cargo",shell=True)
-
-if "node" not in executables and "npm" not in executables:
-    print("install NodeJS 16.x LTS from nodesource.com ...")
-    run("curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -",shell=True)
-    run("sudo apt install -y nodejs",shell=True)
 
 if "poetry" not in executables:
     print("poetry has to be installed for managing Python's envs and libs")
@@ -105,32 +94,22 @@ if venv=="": raise Exception("Error, no Python env found")
 
 # check and update executables
 Path.EXECUTABLES.pop('curl')
-Path.list_executables("python3 poetry cargo npm")
+Path.list_executables("python3 poetry")
 print(
     "\n[SWEETHEART] show executables :",
     *Path.EXECUTABLES.values(), sep="\n ")
 
 # set subroc.conf
 with open(Path.SUBPROC,"w") as file_out:
-    json.dump({
-        'pyenv': venv,
-        'executables': Path.EXECUTABLES },file_out)
-
-# set RethinkDB repository
-if not bash_stdout("apt policy rethinkdb"):
-    for instruc in f"""
-
-echo WARNING: sudo permission is required for installing the RethinkDB repository
-echo "deb https://download.rethinkdb.com/repository/{distrib}-{codename} {codename} main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
-wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-key add -
-sudo apt-get update """.splitlines(): run(instruc.strip(),shell=True)
+    json.dump({ 'pyenv': venv },file_out)
 
 # set the sws command (faster than 'poetry run')
 with open(Path.SWS,"w") as file_out:
     file_out.write(f"""
-
 #!/bin/sh
 {venv}/bin/python3 -m sweetheart.sweet sh $* """.strip())
+
+# authorize execution
 os.chmod(Path.SWS,stat.S_IRWXU|stat.S_IRGRP|stat.S_IROTH)
 
 # export path within .bashrc

@@ -1,4 +1,5 @@
 
+import sys
 from sweetheart.globals import *
 
 from zipfile import ZipFile
@@ -12,6 +13,10 @@ raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py
 if not os.path.isfile(master_pyproject):
     sp.shell(f"curl -sSL {raw_github} | python3 -")
 
+# get distrib infos on debian/ubuntu
+distrib = sp.stdout("lsb_release -is").lower()
+codename = sp.stdout("lsb_release -cs").lower()
+
 
 def init(config:BaseConfig,add_pylibs=""):
     """ set require minimal features for working with sweetheart """
@@ -19,9 +24,9 @@ def init(config:BaseConfig,add_pylibs=""):
     PKG_INIT = {
         'cargolibs': ["mdbook"],
         'documentation': "sweetbook.zip",
-        'aptlibs': ["cargo","xterm","rethinkdb"],
+        'aptlibs': ["*unit","*rethinkdb","*nodejs","cargo"],
         'npmlibs': ["brython","tailwindcss","vue@latest"],# Vue3
-        'pylibs': ["rethinkdb","uvicorn[standard]","starlette"],
+        'pylibs': ["rethinkdb","starlette"],
         'files': [
             "documentation/sweetbook.zip",
             "configuration/packages.json",
@@ -57,16 +62,16 @@ def init(config:BaseConfig,add_pylibs=""):
     echo("build generic tailwindcss file",blank=True)
     sp.shell(config.subproc['.tailwindcss'],cwd=f"{config.root_path}/webpages/resources")
 
-    try:
-        # provide sweetheart html documentation    
-        os.symlink(f"{config.root_path}/documentation/sweetbook/book",
-            f"{config.root_path}/webpages/sweetbook")
-        # provide installed javascript libs within Ubuntu/Debian
-        os.symlink("/usr/share/javascript",
-            f"{config.root_path}/webpages/resources/javascript")
-    except:
-        verbose("INFO:\n an error occured creating symlinks during init process",
-            "\n an expected cause could be that links are already existing")
+    # try:
+    #     # provide sweetheart html documentation    
+    #     os.symlink(f"{config.root_path}/documentation/sweetbook/book",
+    #         f"{config.root_path}/webpages/sweetbook")
+    #     # provide installed javascript libs within Ubuntu/Debian
+    #     os.symlink("/usr/share/javascript",
+    #         f"{config.root_path}/webpages/resources/javascript")
+    # except:
+    #     verbose("INFO:\n an error occured creating symlinks during init process",
+    #         "\n an expected cause could be that links are already existing")
 
     is_in_pylibs= lambda *args:\
          [a for a in args if a in PKG_INIT['pylibs']]
@@ -103,6 +108,14 @@ class BaseInstall:
         """ install distro packages using apt """
 
         echo("apt install:",*libs,blank=True)
+        #FIXME: specific treatments for subprocesses
+        if "*nodejs" in libs:
+            self.apt_install_nodejs(); libs.remove("*nodejs")
+        if "*rethinkdb" in libs:
+            self.apt_install_rethinkdb(); libs.remove("*rethinkdb")
+        if "*unit" in libs:
+            self.apt_install_unit(); libs.remove("*unit")
+        # install other packages
         return sp.run("sudo","apt","install",*libs,**kwargs)
 
     def cargo(self,*libs:str,init=False,**kwargs):
@@ -177,3 +190,98 @@ class BaseInstall:
 
         for pkg in packages:
             self.install_libs(json_pkg[pkg])
+
+    def apt_install_nodejs(self):
+        """ install nodejs and npm on debian/ubuntu systems """
+
+        ver = "16.x"
+        exe = list_executables("node npm")
+        # set official repository and install nodejs
+        if "node" not in exe and "npm" not in exe:
+            print(f"set NodeJS {ver} LTS repository from nodesource.com")
+            sp.shell(f"curl -fsSL https://deb.nodesource.com/setup_{ver} | sudo -E bash - && apt-get install -y nodejs")
+
+    def apt_install_unit(self):
+        """ install nodejs and npm on debian/ubuntu systems """
+
+        script = f"""
+echo "set Nginx Unit repository from nginx.org"
+echo "deb https://packages.nginx.org/unit/{distrib}/ {codename} unit" | sudo tee /etc/apt/sources.list.d/unit.list
+wget -qO- https://unit.nginx.org/keys/nginx-keyring.gpg | sudo apt-key add - """
+
+        # set official Nginx Unit repository
+        if not sp.stdout("apt policy unit"):
+            sp.read(script)
+            sp.shell("sudo apt update")
+        # install Nginx Unit packages
+        if not sp.is_exe("unitd"):
+            sp.shell(f"sudo apt install unit unit-python{NginxUnitSetter.python_version}") 
+
+    def apt_install_rethinkdb(self):
+        """ install rethinkdb on debian/ubuntu systems """
+
+        script = f"""
+echo "set RethinkDB repository from rethinkdb.com"
+echo "deb https://download.rethinkdb.com/repository/{distrib}-{codename} {codename} main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
+wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-key add - """
+
+        # set offical RethinkDB repository
+        if not sp.stdout("apt policy rethinkdb"):
+            sp.read(script)
+            sp.shell("sudo apt update")
+        # update Rethinkdb package
+        if not sp.is_exe("rethinkdb"):
+            sp.shell(f"sudo apt install rethinkdb")
+
+
+class NginxUnitSetter:
+
+    python_version = "3.10"
+    def __init__(self,config):
+
+        self.config = config
+        self.host = "http://localhost"
+        self.configfile = f"{config.root_path}/configuration/unit.json"
+
+        self.listeners = {
+            "*:80": {
+                "pass": "routes"
+            }
+        }
+        self.routes = [
+            {
+                "match": {
+                    "uri": "/jupyter/*"
+                },
+                "action": {
+                    "proxy": "http://127.0.0.1:8080"
+                }
+            },
+            {
+                "action": {
+                    "pass": "applications/starlette"
+                }
+            }
+        ]
+        self.applications = {
+            "starlette": {
+                "type": f"python {self.python_version}",
+                "path": config.subproc['codepath'],
+                "home": config.python_env,
+                "module": "start",
+                "callable": "webapp",
+                "user": "ubuntu"
+            }
+        }
+
+    def put_config(self):
+
+        with open(self.configfile,'w') as file_out:
+            json.dump({ 
+                "listeners": self.listeners,
+                "routes": self.routes,
+                "applications": self.applications }, file_out)
+
+        sp.run("sudo","curl","-X","PUT","-d",f"@{self.configfile}",
+            "--unix-socket","/var/run/control.unit.sock",f"{self.host}/config/")
+

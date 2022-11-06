@@ -132,13 +132,11 @@ def sws(args):
     switch = {
         # sweet.py commands within master project
         'help': [*sweet,"start","-x"],
-        'rethinkdb-server': [*sweet,"rethinkdb-server",*args[1:]],
         # sweet.py command within any project
         'new': [*sweet,"sh","--init","-p",*args[1:]],
         'start': [*sweet,"-p",cf.project,"start",*args[1:]],
         'install': [*sweet,"-p",cf.project,"install",*args[1:]],
         'show': [*sweet,"sh","-p",cf.project,"poetry","show","--tree"],
-        'jupyter-server': [*sweet,"-p",cf.project,"jupyter-server",*args[1:]],
         # services and utilities commands
         'test': [py,"-m",f"{cf.project}.tests",*args[1:]],
         'build-css': [*config.subproc['.tailwindcss'].split()],
