@@ -5,7 +5,7 @@
 
 What about safety, big-data, realtime databases, responsive interfaces and AI? Sweetheart comes with the highest quality components widely used by GAFAM and others, also the best coding practices, and makes the hard stuff for you. Start from scratch, and create with ease and efficiency the apps you really need embedding reliable open-source code for processing at full power data which remains yours!
 
-Since Ubuntu 20.04 can be installed as usual softwares within Windows 10, it provides an incredible way for any organization to develop, deploy, and administrate **powerful responsive webapps including AI** on its own local network keeping high capabilities of integration with the already existing tools like databases, MS-Excel, and SAP.
+Since Ubuntu can be installed as usual softwares within Windows 10/11, it provides an incredible way for any organization to develop, deploy, and administrate **powerful responsive webapps including AI** on its own local network keeping high capabilities of integration with the already existing tools like databases, MS-Excel, and SAP.
 
 Sweetheart provides a simple Python/Html centric approach leading you implementing best components and best coding practices. Due to the top-rated place of the Python language regarding to data processing, calculations and AI, this makes sweetheart a fast and ideal toolkit to e-volute towards **Industry4.0** precepts and innovative ideas.
 
@@ -31,6 +31,7 @@ Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. I
 ## Rock-solid components for innovative capabilities
 
 Sweetheart delivers a stock of ready-to-use features:
+
 NGINX Unit - RethinkDB - Starlette - TailwindCss - Vue - WebSocket - Python/Html - Rust Crates
 
 **And all other nice things you wish** using [poetry](https://python-poetry.org/), [npm](https://docs.npmjs.com/about-npm/), [apt](https://en.wikipedia.org/wiki/APT_(software)) and [cargo](https://doc.rust-lang.org/cargo/): Sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting new projects.

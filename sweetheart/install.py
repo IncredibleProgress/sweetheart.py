@@ -13,10 +13,6 @@ raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py
 if not os.path.isfile(master_pyproject):
     sp.shell(f"curl -sSL {raw_github} | python3 -")
 
-# get distrib infos on debian/ubuntu
-distrib = sp.stdout("lsb_release -is").lower()
-codename = sp.stdout("lsb_release -cs").lower()
-
 
 def init(config:BaseConfig,add_pylibs=""):
     """ set require minimal features for working with sweetheart """
@@ -107,6 +103,7 @@ class BaseInstall:
     def apt(self,*libs:str,**kwargs):
         """ install distro packages using apt """
 
+        libs = list(libs)
         echo("apt install:",*libs,blank=True)
         #FIXME: specific treatments for subprocesses
         if "*nodejs" in libs:
@@ -195,7 +192,7 @@ class BaseInstall:
         """ install nodejs and npm on debian/ubuntu systems """
 
         ver = "16.x"
-        exe = list_executables("node npm")
+        exe = sp.list_executables("node npm")
         # set official repository and install nodejs
         if "node" not in exe and "npm" not in exe:
             print(f"set NodeJS {ver} LTS repository from nodesource.com")
@@ -204,37 +201,37 @@ class BaseInstall:
     def apt_install_unit(self):
         """ install nodejs and npm on debian/ubuntu systems """
 
-        script = f"""
+        _ = self.config; script = f"""
 echo "set Nginx Unit repository from nginx.org"
-echo "deb https://packages.nginx.org/unit/{distrib}/ {codename} unit" | sudo tee /etc/apt/sources.list.d/unit.list
+echo "deb https://packages.nginx.org/unit/{_.distrib}/ {_.codename} unit" | sudo tee /etc/apt/sources.list.d/unit.list
 wget -qO- https://unit.nginx.org/keys/nginx-keyring.gpg | sudo apt-key add - """
 
         # set official Nginx Unit repository
         if not sp.stdout("apt policy unit"):
-            sp.read(script)
+            sp.read_sh(script)
             sp.shell("sudo apt update")
         # install Nginx Unit packages
-        if not sp.is_exe("unitd"):
+        if not sp.is_executable("unitd"):
             sp.shell(f"sudo apt install unit unit-python{NginxUnitSetter.python_version}") 
 
     def apt_install_rethinkdb(self):
         """ install rethinkdb on debian/ubuntu systems """
 
-        script = f"""
+        _ = self.config; script = f"""
 echo "set RethinkDB repository from rethinkdb.com"
-echo "deb https://download.rethinkdb.com/repository/{distrib}-{codename} {codename} main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
+echo "deb https://download.rethinkdb.com/repository/{_.distrib}-{_.codename} {_.codename} main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
 wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-key add - """
 
         # set offical RethinkDB repository
         if not sp.stdout("apt policy rethinkdb"):
-            sp.read(script)
+            sp.read_sh(script)
             sp.shell("sudo apt update")
         # update Rethinkdb package
-        if not sp.is_exe("rethinkdb"):
+        if not sp.is_executable("rethinkdb"):
             sp.shell(f"sudo apt install rethinkdb")
 
 
-class NginxUnitSetter:
+class NginxUnit:
 
     python_version = "3.10"
     def __init__(self,config):
@@ -285,3 +282,24 @@ class NginxUnitSetter:
         sp.run("sudo","curl","-X","PUT","-d",f"@{self.configfile}",
             "--unix-socket","/var/run/control.unit.sock",f"{self.host}/config/")
 
+
+class Init_JupyterLab:
+
+    def __init__(self):
+        
+        system = """
+[Unit]
+Description=Jupyter notebook server
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=ubuntu
+ExecStart=/usr/bin/jupyter lab
+Environment="PATH=/home/ubuntu/anaconda3/bin:/home/ubuntu/anaconda3"
+
+[Install]
+WantedBy=multi-user.target
+        """

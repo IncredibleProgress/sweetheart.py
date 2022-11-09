@@ -1,29 +1,33 @@
 
 import os,subprocess,json,locale
 from collections import UserDict
-
-# default dir/module name of master project
-#FIXME: allow replacing sweetheart by a fork of it
-MASTER_MODULE = "sweetheart"
+from sweetheart import MASTER_MODULE
 
 
 class sp:
     """ namespace providing basic subprocess features 
         beware that it uses BaseConfig and not config """
 
+    # convenient functions for executing bash commands
     run = lambda *args,**kwargs: subprocess.run(args,**kwargs)
     shell = lambda str,**kwargs: subprocess.run(str,**kwargs,shell=True)
-    read = lambda src: for instruc in src.splitlines(): shell(instruc.strip())
     stdout = lambda str: subprocess.run(str,text=True,capture_output=True,shell=True).stdout.strip()
-
-    is_exe = lambda cmd:str : cmd in list_executables(cmd)
     
+    @classmethod
+    def read_sh(cls,script:str):
+        """ excec line by line a long string as a shell script """
+        for instruc in script.splitlines():
+            cls.shell(instruc.strip())
+
+    # let ensuring that a shell command is available
+    is_executable = lambda cmd: cmd in sp.list_executables(cmd)
+
     BIN = (f"{os.path.expanduser('~')}/.local/bin","/usr/local/bin","/usr/bin","/bin")
     EXECUTABLES = {} # fetched by list_executables()
     MISSING = [] # fetched by list_executables()
 
     @classmethod
-    def list_executables(cls,executables:str) -> List[str]:
+    def list_executables(cls,executables:str) -> list:
         # check executables availability
         env_ = [path for path in cls.BIN if path in os.environ["PATH"]]
         for cmd in executables.split():
@@ -77,19 +81,40 @@ class sp:
         BaseConfig.python_bin = f"{env}/bin/python"
         verbose("set python env:",BaseConfig.python_bin)
 
+    @classmethod
+    def set_project_env(cls,project_name:str):
+        """ create and init new project with its own python env """
+
+        assert project_name != MASTER_MODULE
+        _path = f"{BaseConfig.HOME}/.sweet/{project_name}"
+
+        # init a new python env for new project
+        os.makedirs(f"{_path}/programs",exist_ok=True)
+        sp.poetry("new","my_python",cwd=f"{_path}/programs")
+        sp.set_python_env(cwd=f"{_path}/programs/my_python")
+
+        os.makedirs(f"{_path}/configuration",exist_ok=True)
+        with open(f"{_path}/configuration/subproc.json","w") as fi:
+            json.dump({'pyenv':config.python_env},fi)
+
 
 # set default configuration
 class BaseConfig(UserDict):
 
-    # set messages to stdout
+    # stdout messages settings
     verbosity = 0
-    label = "sweetheart"# used within echo()
-    locale_lang = locale.getlocale()[0][0:2]
+    label = MASTER_MODULE # used within echo()
+
+    # get distrib infos on debian/ubuntu
+    distrib = sp.stdout("lsb_release -is").lower()
+    codename = sp.stdout("lsb_release -cs").lower()
 
     # get environment settings
     PWD = os.getcwd()
     HOME = os.path.expanduser('~')
+    LANG = locale.getlocale()[0][0:2]
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
+
     # set sws level into environment 
     SWSLVL = os.environ['SWSLVL'] = f"{int(os.getenv('SWSLVL','0'))+1}"
 
@@ -153,7 +178,7 @@ class BaseConfig(UserDict):
                 # subprocess settings
                 '__host__': self.async_host[7:],
                 '__load__': "pylibs tailwind vue+reql",
-                '__lang__': self.locale_lang,
+                '__lang__': self.LANG,
                 '__debug__': 1,# brython() debug argument
             },
             "static_files": {

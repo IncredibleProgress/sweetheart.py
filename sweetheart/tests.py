@@ -1,7 +1,7 @@
 """ provides utilities for testing webapp """
 
 from sweetheart import __version__
-assert __version__ == '0.1.1'
+assert __version__ == '0.1.2'
 
 import os,shutil
 from sweetheart.globals import *

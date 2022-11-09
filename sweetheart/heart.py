@@ -6,7 +6,6 @@ this provides ready-to-use utilities and services :
  JupyterLab       : enabled
  RethinkDB        : enabled
  HTMLTemplate     : enabled
-
  MongoDB          : disabled
 """
 
@@ -109,9 +108,33 @@ class BaseService:
         self.host = url_split[1].strip("/")
         self.port = int(url_split[2])
 
-        # ensure that self.port is not in use
+        #FIXME: ensure that self.port is not in use
         assert self.port not in BaseService.ports_register
         BaseService.ports_register.add(self.port)
+
+        # provide a base service file for setting systemd
+        systemd = {
+            "Unit":[
+                "After=network.target"
+                ],
+            "Service":[
+                "Type=simple",
+                "Restart=always",
+                "RestartSec=1",
+                ],
+            "Install":[
+                "WantedBy=multi-user.target"
+                ]
+            }
+
+    def set_systemd_unit(self,
+            Description: str,
+            ExecStart: str,
+            User: str ):
+
+        self.systemd["Unit"].append(f"Description={Description}")
+        self.systemd["Service"].append(f"ExecStart={ExecStart}")
+        self.systemd["Service"].append(f"User={User}")
 
     def switch_port_to(self,port_number:int):
         """ allow changing port number afterwards which can avoid conflicts
