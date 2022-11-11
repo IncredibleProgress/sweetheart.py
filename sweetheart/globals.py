@@ -4,6 +4,130 @@ from collections import UserDict
 from sweetheart import MASTER_MODULE
 
 
+class BaseConfig(UserDict):
+    """ configuration settings base class
+
+        use the get_config() func for getting a new instance 
+        BaseConfig._ return the last config created with it """
+
+    # stdout messages settings
+    verbosity = 0
+    label = MASTER_MODULE # used within echo()
+
+    # get environment settings
+    PWD = os.getcwd()
+    HOME = os.path.expanduser('~')
+    USER = HOME.split('/')[-1]
+    LANG = locale.getlocale()[0][0:2]
+    WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
+    # set sws level into environment 
+    SWSLVL = os.environ['SWSLVL'] = f"{int(os.getenv('SWSLVL','0'))+1}"
+
+    # default path settings
+    poetry_bin = f"{HOME}/.local/bin/poetry"
+    python_bin = "python3"# unset python env
+    rust_crates = f"{HOME}/.cargo/bin"
+
+    # default productive settings
+    async_host = "http://127.0.0.1:8000"# uvicorn
+    database_host = "rethinkdb://127.0.0.1:28015"
+    database_admin = "http://127.0.0.1:8180"
+    jupyter_host = "http://127.0.0.1:8888"
+
+    def __init__(self,project):
+
+        # general settings
+        self.project = self.label = project
+        self.root_path = f"{self.HOME}/.sweet/{project}"
+        self.config_file = f"{self.root_path}/configuration/config.json"
+        self.subproc_file = f"{self.root_path}/configuration/subproc.json"
+
+        # default services settings
+        self.is_webapp_open = True
+        self.is_rethinkdb_local = True
+        self.is_jupyter_local = True
+        self.is_nginx_local = True
+
+        # subprocess settings
+        self.subproc = {
+            #  can be updated using load_json(subproc=True)
+            'python_version': "3.10",# for installing Nginx Unit
+            'node_version': "16.x",# for installing from nodesource.com
+            # can not be updated within load_json()
+            '.msedge.exe': f"cmd.exe /c start msedge --app=",
+            '.brave.exe': f"cmd.exe /c start brave --app=",
+            '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css" }
+
+        self.data = {
+
+            # editable general settings
+            "db_name": "test",
+            "templates_base": "HTML",
+            "templates_dir": "templates",
+            "stsyntax": r"<% %> % {% %}",
+            "working_dir": f"{self.root_path}/webpages",
+            "db_path": f"{self.root_path}/database/rethinkdb",
+            "module_path": f"{self.root_path}/programs/my_python",# no / at end
+
+            # editable services settings
+            #FIXME: multi-databases support to implement
+            "webbrowser": "default",
+            "jupyter_url": f"{self.jupyter_host}/tree",
+            "notebooks_dir": f"{self.root_path}/documentation/notebooks",
+
+            # editable html rendering settings
+            "templates_settings": {
+                '__lang__': self.LANG,
+                '__host__': self.async_host[7:],
+                '__load__': "pylibs tailwind vue+reql",
+                '__debug__': 1,# brython() debug argument
+            },
+            "static_files": {
+                '/favicon.ico': "resources/favicon.ico",
+                '/tailwind.css': "resources/tailwind.css",
+                '/vue.js': "resources/node_modules/vue/dist/vue.global.js",
+            },
+            "static_dirs": {
+                '/resources': f"resources",
+                '/documentation': "sweetbook",
+            }}
+
+    def __getattr__(self,attr):
+        """ search non-existing attribute into self.data and self.subproc
+            example: get config.db_name instead of config['db_name'] """
+        
+        #! order: 1=obj.attr 2=subproc 3=data
+        try: return self.subproc[attr]
+        except: return self.data[attr]
+
+    def load_json(self,subproc=False):
+        """ update config from given json file """
+
+        if os.path.isfile(self.config_file):
+
+            with open(self.config_file) as file_in:
+                config.update(json.load(file_in))
+                verbose("config file:",self.config_file)
+
+        if not subproc: return
+        elif os.path.isfile(self.subproc_file):
+
+            with open(self.subproc_file) as file_in:
+                subproc_settings = json.load(file_in)
+                verbose("subproc file:",self.subproc_file)
+
+            for key,value in subproc_settings.items():
+
+                if key.startswith('.'): 
+                    echo(f"WARNING: update of subproc setting '{key}' forbidden")
+                    continue
+                if key == 'pyenv': 
+                    BaseConfig.python_env = value
+                    BaseConfig.python_bin = f"{value}/bin/python"
+                else:
+                    self.subproc[key] = value
+
+
 class sp:
     """ namespace providing basic subprocess features 
         beware that it uses BaseConfig and not config """
@@ -22,20 +146,29 @@ class sp:
     # let ensuring that a shell command is available
     is_executable = lambda cmd: cmd in sp.list_executables(cmd)
 
-    BIN = (f"{os.path.expanduser('~')}/.local/bin","/usr/local/bin","/usr/bin","/bin")
+    PATH = os.get_exec_path()
     EXECUTABLES = {} # fetched by list_executables()
     MISSING = [] # fetched by list_executables()
 
     @classmethod
     def list_executables(cls,executables:str) -> list:
+
         # check executables availability
-        env_ = [path for path in cls.BIN if path in os.environ["PATH"]]
         for cmd in executables.split():
-            paths= [p for p in env_ if os.path.isfile(f"{p}/{cmd}")]
-            version = cls.stdout(f"{cmd} --version")
-            if paths: cls.EXECUTABLES.update({
-                # str pattern -> "cdm::path::version"
-                cmd: f"{cmd}::{paths[0]}::{version}" })
+            try:
+                # will fail if cmd is not executable
+                version = cls.stdout(f"{cmd} --version")
+
+                # search the first executable path
+                for pth in cls.PATH:
+                    if os.path.isfile(f"{pth}/{cmd}"):
+                        cls.EXECUTABLES.update({
+                            # str pattern -> "cdm::path::version"
+                            cmd: f"{pth} :: {version}" })
+                        break
+            except:
+                continue
+
         # build the missing list
         cls.MISSING = [m for m in executables.split() if m not in cls.EXECUTABLES]
         # return list of executables
@@ -57,7 +190,7 @@ class sp:
     def poetry(cls,*args,**kwargs):
 
         if not kwargs.get('cwd') and hasattr(BaseConfig,'_'):
-            kwargs['cwd'] = BaseConfig._.subproc['codepath']
+            kwargs['cwd'] = BaseConfig._['module_path']
 
         return cls.run(BaseConfig.poetry_bin,*args,**kwargs)
 
@@ -96,100 +229,6 @@ class sp:
         os.makedirs(f"{_path}/configuration",exist_ok=True)
         with open(f"{_path}/configuration/subproc.json","w") as fi:
             json.dump({'pyenv':config.python_env},fi)
-
-
-# set default configuration
-class BaseConfig(UserDict):
-
-    # stdout messages settings
-    verbosity = 0
-    label = MASTER_MODULE # used within echo()
-
-    # get distrib infos on debian/ubuntu
-    distrib = sp.stdout("lsb_release -is").lower()
-    codename = sp.stdout("lsb_release -cs").lower()
-
-    # get environment settings
-    PWD = os.getcwd()
-    HOME = os.path.expanduser('~')
-    LANG = locale.getlocale()[0][0:2]
-    WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
-
-    # set sws level into environment 
-    SWSLVL = os.environ['SWSLVL'] = f"{int(os.getenv('SWSLVL','0'))+1}"
-
-    # default path settings
-    poetry_bin = f"{HOME}/.local/bin/poetry"
-    python_bin = "python3"# unset python env
-
-    # default productive settings
-    async_host = "http://127.0.0.1:8000"# uvicorn
-    database_host = "rethinkdb://127.0.0.1:28015"
-    database_admin = "http://127.0.0.1:8180"
-    jupyter_host = "http://127.0.0.1:8888"
-    # static_host = "http://127.0.0.1:8080"# cherrypy
-    # mdbook_host = "http://127.0.0.1:3000"
-
-    def __init__(self,project):
-
-        # general settings
-        self.project = self.label = project
-        self.root_path = f"{self.HOME}/.sweet/{project}"
-        self.config_file = f"{self.root_path}/configuration/config.json"
-        self.subproc_file = f"{self.root_path}/configuration/subproc.json"
-
-        # default sandbox settings
-        self.is_webapp_open = True
-        self.is_rethinkdb_local = True
-        self.is_jupyter_local = True
-        # self.is_mongodb_local = False
-        # self.is_cherrypy_local = False
-
-        # subprocess settings
-        self.subproc = {
-            # can be changed within set_config()
-            'stsyntax': r"<% %> % {% %}",
-            'rustpath': f"{self.HOME}/.cargo/bin",
-            'codepath': f"{self.root_path}/programs/my_python",# no / at end
-            'rethinkpath': f"{self.root_path}/database/rethinkdb",
-            # 'mongopath': f"{self.root_path}/database/mongodb",
-            # 'cherryconf': f"{self.root_path}/configuration/cherrypy.conf",
-            
-            # can not be changed within set_config()
-            '.msedge.exe': f"cmd.exe /c start msedge --app=",
-            '.brave.exe': f"cmd.exe /c start brave --app=",
-            '.jupyterurl': f"{self.jupyter_host}/tree",
-            '.jupytercmd': f"jupyterlab",
-            '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css",
-        }
-
-        # default editable settings
-        self.data = {
-            # editable path settings
-            "working_dir": f"{self.root_path}/webpages",
-            "notebooks_dir": f"{self.root_path}/documentation/notebooks",
-            "templates_dir": "templates",
-            "templates_base": "HTML",
-            # editable subprocess settings
-            "webbrowser": "default",
-            "selected_db": "test",
-            # editable html rendering settings
-            "templates_settings": {
-                # subprocess settings
-                '__host__': self.async_host[7:],
-                '__load__': "pylibs tailwind vue+reql",
-                '__lang__': self.LANG,
-                '__debug__': 1,# brython() debug argument
-            },
-            "static_files": {
-                '/favicon.ico': "resources/favicon.ico",
-                '/tailwind.css': "resources/tailwind.css",
-                '/vue.js': "resources/node_modules/vue/dist/vue.global.js",
-            },
-            "static_dirs": {
-                '/resources': f"resources",
-                '/documentation': "sweetbook",
-            }}
 
 
 def webbrowser(url:str):

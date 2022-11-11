@@ -1,70 +1,49 @@
-"""
-sweet.py is the multi-purpose controller of sweetheart
-it provides cli, install process, sandbox and services
-"""
+""" sweet.py is the multi-purpose controller of sweetheart
+    it provides cli, install process, sandbox and services """
+
 from sweetheart.globals import *
 
 
 def set_config(
     values:dict = {},
     project:str = MASTER_MODULE,
-    config_file:str|None = None ) -> BaseConfig:
+    config_file:str = None ) -> BaseConfig :
 
-    """ set or reset sweetheart configuration 
-        allow working with differents projects and configs """
+    """ set or reset sweetheart configuration with ease
+        allow working with differents projects and configs 
+        
+        >>> config = set_config({
+        >>>     "run": "local",
+        >>>     "db_name": "test",
+        >>>     "db_path": "~/my_database/location" }) """
 
     config = BaseConfig(project)
-    if config_file: config.config_file = config_file
+
+    if config_file:
+        config.config_file = config_file
 
     elif isinstance(values,str):
-        # allow setting config_file instead of values
+        # allow catching config_file instead of values
         if os.path.isfile(values) and values[:-5]==".json":
             config.config_file = config_file = values
-    try: 
-        # update config from given json file
-        with open(config.config_file) as fi:
-            config.update(json.load(fi))
-            verbose("config file:",config.config_file)
-    except:
-        pass
+
+    # update config from json conf file
+    try: config.load_json(subproc=True)
+    except: echo("WARNING: json config files loading failed")
 
     # allow altered config
     config.update(values)
-    config.is_local = config.get('run_local',False)
 
-    if config.is_local is False:
-        # disable sandbox settings
+    if config.get('run','local') == 'distant':
         config.is_webapp_open = False
         config.is_rethinkdb_local = False
         config.is_jupyter_local = False
-        # config.is_mongodb_local = False
-        # config.is_cherrypy_local = False
 
-    try: 
-        # get subproc settings from given json file
-        with open(config.subproc_file) as fi:
-            subproc_settings = json.load(fi)
-            verbose("subproc file:",config.subproc_file)
+    try: init = argv.init
+    except: init = False
 
-        # fix updatable subproc settings here
-        for key,value in subproc_settings.items():
-
-            if key.startswith('.'): 
-                echo(f"WARNING: update of subproc setting '{key}' forbidden")
-                continue
-
-            if value and key == 'pyenv': 
-                BaseConfig.python_env = value
-                BaseConfig.python_bin = f"{value}/bin/python"
-            elif value:
-                config.subproc[key] = value
-    except: pass
-
-    try: not_init = not argv.init
-    except: not_init = True
-
-    if not_init:
-        # ensure python subprocess setting
+    if not init:
+        # ensure python env setting if not given by subproc_file
         if not hasattr(BaseConfig,'python_env'): sp.set_python_env()
         verbose("python env:",BaseConfig.python_env)
         
@@ -138,12 +117,12 @@ def sws(args):
         'install': [*sweet,"-p",cf.project,"install",*args[1:]],
         'show': [*sweet,"sh","-p",cf.project,"poetry","show","--tree"],
         # services and utilities commands
+        'build-css': [*sb['.tailwindcss'].split()],
         'test': [py,"-m",f"{cf.project}.tests",*args[1:]],
-        'build-css': [*config.subproc['.tailwindcss'].split()],
         # subprocess commands
         'poetry': [config.poetry_bin,*args[1:]],
         'python': [f"{vv}/bin/python",*args[1:]],
-        'mdbook': [f"{sb['rustpath']}/mdbook",*args[1:]],
+        'mdbook': [f"{cf.rust_crates}/mdbook",*args[1:]],
         }
 
     if args == []:
@@ -151,7 +130,7 @@ def sws(args):
         args = ["echo",f"sws available commands:\n\n  {edit_cmd}\n\ntype 'sws help' for getting some help"]
 
     # autoset the relevant working directory
-    if args[0]=='poetry': cwd= cf.subproc['codepath']
+    if args[0]=='poetry': cwd= cf._['module_path']
     elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
     elif args[0]=='build-css': cwd= f"{cf['working_dir']}/resources"
     else: cwd= config.PWD

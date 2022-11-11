@@ -46,7 +46,7 @@ Sweetheart allows you to do all what you need with only 1 Python file and 1 Html
 from sweetheart.sandbox import *
 
 config = set_config({
-    "selected_db": "test" })
+    "db_name": "test" })
 
 webapp = HttpServer(config, set_database=True).app(
     Route("/", HTMLTemplate("table_example.htm")) )

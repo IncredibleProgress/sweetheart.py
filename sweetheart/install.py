@@ -6,25 +6,29 @@ from zipfile import ZipFile
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
+# get distrib infos on debian/ubuntu
+distrib = sp.stdout("lsb_release -is").lower()
+codename = sp.stdout("lsb_release -cs").lower()
+
 master_pyproject = f"{BaseConfig.HOME}/.sweet/{MASTER_MODULE}/programs/my_python/pyproject.toml"
 raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py"
+
 
 # ensure prerequisites
 if not os.path.isfile(master_pyproject):
     sp.shell(f"curl -sSL {raw_github} | python3 -")
-
 
 def init(config:BaseConfig,add_pylibs=""):
     """ set require minimal features for working with sweetheart """
 
     PKG_INIT = {
         'cargolibs': ["mdbook"],
-        'documentation': "sweetbook.zip",
+        #'documentation': "sweetbook.zip",
         'aptlibs': ["*unit","*rethinkdb","*nodejs","cargo"],
         'npmlibs': ["brython","tailwindcss","vue@latest"],# Vue3
         'pylibs': ["rethinkdb","starlette"],
         'files': [
-            "documentation/sweetbook.zip",
+            #"documentation/sweetbook.zip",
             "configuration/packages.json",
             "webpages/HTML",
             "webpages/resources/favicon.ico",
@@ -87,31 +91,35 @@ class BaseInstall:
 
     def __init__(self,config:BaseConfig):
 
+        assert sp.is_executable('npm')
+        assert sp.is_executable('cargo')
+
         self.config = config
         self.packages_file = f"{config.root_path}/configuration/packages.json"
 
-        if config.project != MASTER_MODULE:
-
-            # init a new python project
-            sp.poetry("new","my_python",cwd=f"{config.root_path}/programs")
-            sp.poetry("add",MASTER_MODULE)#NOTE: this can be a fork of sweetheart
-            sp.set_python_env(cwd=f"{config.root_path}/programs/my_python")
-
-            with open(f"{config.root_path}/configuration/subproc.json","w") as fi:
-                json.dump({'pyenv':config.python_env},fi)
-
+        # set python env with basic project settings
+        sp.set_project_env(config.project)
+        
     def apt(self,*libs:str,**kwargs):
-        """ install distro packages using apt """
+        """ install distro packages using 'apt install'
+            this leads specific treatments when needed """
 
         libs = list(libs)
         echo("apt install:",*libs,blank=True)
-        #FIXME: specific treatments for subprocesses
+
+        # specific treatments for subprocesses
         if "*nodejs" in libs:
-            self.apt_install_nodejs(); libs.remove("*nodejs")
+            self.apt_install_nodejs()
+            libs.remove("*nodejs")
+
         if "*rethinkdb" in libs:
-            self.apt_install_rethinkdb(); libs.remove("*rethinkdb")
+            self.apt_install_rethinkdb()
+            libs.remove("*rethinkdb")
+
         if "*unit" in libs:
-            self.apt_install_unit(); libs.remove("*unit")
+            self.apt_install_unit()
+            libs.remove("*unit")
+
         # install other packages
         return sp.run("sudo","apt","install",*libs,**kwargs)
 
@@ -119,7 +127,6 @@ class BaseInstall:
         """ install rust crates using cargo """
 
         echo("cargo install:",*libs,blank=True)
-        # path = self.config.subproc['rustpath']
         return sp.run(f"cargo","install",*libs,**kwargs)
     
     def poetry(self,*libs:str,**kwargs):
@@ -169,14 +176,15 @@ class BaseInstall:
                 os.path.join(self.config.root_path,relpath))
     
     def unzip_doc(self,zipfile:str,remove:bool=True):
-        """ unzip and build documentation """
+        """ unzip and build documentation 
+            this require using the mdbook rust crate"""
 
         os.chdir(f"{self.config.root_path}/documentation")
         name,ext = os.path.splitext(zipfile)
         assert ext == ".zip"
 
         with ZipFile(zipfile,"r") as zf: zf.extractall()
-        sp.shell(f"{self.config.subproc['rustpath']}/mdbook build {name}")
+        sp.shell(f"{self.config['rust_crates']}/mdbook build {name}")
         if remove: os.remove(zipfile)
 
     def install_packages(self,*packages:str):
@@ -188,44 +196,54 @@ class BaseInstall:
         for pkg in packages:
             self.install_libs(json_pkg[pkg])
 
+
     def apt_install_nodejs(self):
         """ install nodejs and npm on debian/ubuntu systems """
 
-        ver = "16.x"
+        ver = self.config.node_version
         exe = sp.list_executables("node npm")
+
         # set official repository and install nodejs
         if "node" not in exe and "npm" not in exe:
             print(f"set NodeJS {ver} LTS repository from nodesource.com")
             sp.shell(f"curl -fsSL https://deb.nodesource.com/setup_{ver} | sudo -E bash - && apt-get install -y nodejs")
 
-    def apt_install_unit(self):
-        """ install nodejs and npm on debian/ubuntu systems """
 
-        _ = self.config; script = f"""
+    def apt_install_unit(self):
+        """ install Nginx Unit on debian/ubuntu systems """
+
+        _ = self.config
+        #NOTE: works with current behavior of poetry
+        assert _.python_env.endswith(_.python_version)
+
+        script = f"""
 echo "set Nginx Unit repository from nginx.org"
-echo "deb https://packages.nginx.org/unit/{_.distrib}/ {_.codename} unit" | sudo tee /etc/apt/sources.list.d/unit.list
+echo "deb https://packages.nginx.org/unit/{distrib}/ {codename} unit" | sudo tee /etc/apt/sources.list.d/unit.list
 wget -qO- https://unit.nginx.org/keys/nginx-keyring.gpg | sudo apt-key add - """
 
         # set official Nginx Unit repository
         if not sp.stdout("apt policy unit"):
             sp.read_sh(script)
             sp.shell("sudo apt update")
+
         # install Nginx Unit packages
         if not sp.is_executable("unitd"):
-            sp.shell(f"sudo apt install unit unit-python{NginxUnitSetter.python_version}") 
+            sp.shell(f"sudo apt install unit unit-python{config.python_version}") 
+
 
     def apt_install_rethinkdb(self):
         """ install rethinkdb on debian/ubuntu systems """
 
         _ = self.config; script = f"""
 echo "set RethinkDB repository from rethinkdb.com"
-echo "deb https://download.rethinkdb.com/repository/{_.distrib}-{_.codename} {_.codename} main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
+echo "deb https://download.rethinkdb.com/repository/{distrib}-{codename} {codename} main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
 wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-key add - """
 
         # set offical RethinkDB repository
         if not sp.stdout("apt policy rethinkdb"):
             sp.read_sh(script)
             sp.shell("sudo apt update")
+
         # update Rethinkdb package
         if not sp.is_executable("rethinkdb"):
             sp.shell(f"sudo apt install rethinkdb")
@@ -233,7 +251,6 @@ wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-ke
 
 class NginxUnit:
 
-    python_version = "3.10"
     def __init__(self,config):
 
         self.config = config
@@ -262,8 +279,8 @@ class NginxUnit:
         ]
         self.applications = {
             "starlette": {
-                "type": f"python {self.python_version}",
-                "path": config.subproc['codepath'],
+                "type": f"python {config.python_version}",
+                "path": config.module_path,
                 "home": config.python_env,
                 "module": "start",
                 "callable": "webapp",
@@ -282,24 +299,3 @@ class NginxUnit:
         sp.run("sudo","curl","-X","PUT","-d",f"@{self.configfile}",
             "--unix-socket","/var/run/control.unit.sock",f"{self.host}/config/")
 
-
-class Init_JupyterLab:
-
-    def __init__(self):
-        
-        system = """
-[Unit]
-Description=Jupyter notebook server
-After=network.target
-
-[Service]
-Type=simple
-Restart=always
-RestartSec=1
-User=ubuntu
-ExecStart=/usr/bin/jupyter lab
-Environment="PATH=/home/ubuntu/anaconda3/bin:/home/ubuntu/anaconda3"
-
-[Install]
-WantedBy=multi-user.target
-        """

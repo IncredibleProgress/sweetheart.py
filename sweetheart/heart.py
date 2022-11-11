@@ -113,7 +113,7 @@ class BaseService:
         BaseService.ports_register.add(self.port)
 
         # provide a base service file for setting systemd
-        systemd = {
+        self.systemd = {
             "Unit":[
                 "After=network.target"
                 ],
@@ -127,7 +127,7 @@ class BaseService:
                 ]
             }
 
-    def set_systemd_unit(self,
+    def set_unit(self,
             Description: str,
             ExecStart: str,
             User: str ):
@@ -135,6 +135,18 @@ class BaseService:
         self.systemd["Unit"].append(f"Description={Description}")
         self.systemd["Service"].append(f"ExecStart={ExecStart}")
         self.systemd["Service"].append(f"User={User}")
+
+    def write_service_file(self,name):
+
+        tempfile = f"{self.config.root_path}/configuration/{name}.service"
+
+        with open(tempfile,"w") as file_out:
+            for section,items in self.systemd.items():
+                lines = [f"[{section}]",*self.systemd[section],"\n"]
+                file_out.writelines([str+"\n" for str in lines])
+
+        sp.shell(f"sudo cp {tempfile} /etc/systemd/system")
+
 
     def switch_port_to(self,port_number:int):
         """ allow changing port number afterwards which can avoid conflicts
@@ -172,13 +184,13 @@ class BaseService:
             which is not implemented directly into BaseService """
         
         parent:BaseService = self
-        if dbname is None: dbname=self.config['selected_db']
+        if dbname is None: dbname=self.config['db_name']
 
         class WebSocket(WebSocketEndpoint):
             encoding = set_encoding
             service_config = {
                 "encoding": encoding,
-                "selected_db": dbname,
+                "db_name": dbname,
                 "route": f"/data/{dbname}",
                 "receiver": parent.on_receive,
                 }
@@ -203,7 +215,7 @@ class RethinkDB(BaseService):
         #NOTE: url is auto set here from config
         super().__init__(config.database_host,config)
         assert self.protocol == 'rethinkdb'
-        self.command = f"rethinkdb --http-port 8180 -d {config.subproc['rethinkpath']}"
+        self.command = f"rethinkdb --http-port 8180 -d {config['db_path']}"
         if run_local: self.run_local(service=True)
 
     def set_client(self,dbname:str=None):
@@ -211,7 +223,7 @@ class RethinkDB(BaseService):
         # import rethinkdb only if needed
         from rethinkdb import r
 
-        if dbname is None: dbname=self.config['selected_db']
+        if dbname is None: dbname=self.config['db_name']
         self.conn = r.connect(self.host,self.port,db=dbname)
         self.client, self.dbname = r, dbname
         return self.client,self.conn
@@ -219,7 +231,7 @@ class RethinkDB(BaseService):
     def connect(self,dbname:str=None):
 
         if hasattr(self,'conn'): self.conn.close()
-        if dbname is None: dbname=self.config['selected_db']
+        if dbname is None: dbname=self.config['db_name']
         self.conn = self.client.connect(self.host,self.port,db=dbname)
         self.dbname = dbname
         return self.conn,self.dbname
@@ -290,7 +302,7 @@ def WelcomeMessage(config:BaseConfig|None=None) -> HTMLResponse:
         <p><a href="/documentation/index.html">
             Get Started Now!</a></p>
         <p><br>or code immediately using 
-            <a href="{config.subproc['.jupyterurl']}">JupyterLab</a></p>
+            <a href="{config['jupyterurl']}">JupyterLab</a></p>
         <p><br><br><em>this message appears because there
         was nothing else to render here</em></p>
         </div>""")
@@ -345,7 +357,7 @@ def createVueApp(dict):
     # render html from template and config
     template = SimpleTemplate(template)
     return HTMLResponse(template.render(
-        __db__ = BaseConfig._['selected_db'],
+        __db__ = BaseConfig._['db_name'],
         **BaseConfig._['templates_settings'],
         **kwargs ))
 
@@ -441,7 +453,7 @@ class HttpServer(BaseService):
                 "--workers",4,
                 "--worker-class","uvicorn.workers.UvicornWorker",
                 "--bind","0.0.0.0:80",
-                cwd= self.config.subproc['codepath'])
+                cwd= self.config._['module_path'])
         else:
             os.chdir(self.config['working_dir'])
             uvicorn.run(self.starlette,**self.uargs)
@@ -456,7 +468,7 @@ class JupyterLab(BaseService):
         super().__init__(config.jupyter_host,config)
 
         self.command = \
-            f"{config.python_bin} -m {config.subproc['.jupytercmd']} "+\
+            f"{config.python_bin} -m jupyterlab "+\
             f"--no-browser --notebook-dir={config['notebooks_dir']}"
 
         if run_local: self.run_local(service=True)
@@ -472,6 +484,13 @@ class JupyterLab(BaseService):
     def set_password(self):
         """ required for JupyterLab initialization """
         sp.python("-m","jupyter","notebook","password","-y")
+
+    def init_server(self):
+
+        self.set_unit(
+            Description = "JupyterLab Server",
+            ExecStart = self.command,
+            User = BaseConfig.USER )
 
 
 # class MongoDB(BaseService):
@@ -494,8 +513,8 @@ class JupyterLab(BaseService):
 #         self.client = MongoClient(host=self.host,port=self.port)
 #         echo("available databases:",self.client.list_database_names()[3:])
 
-#         self.database = self.client[self.config['selected_db']]
-#         echo(f"selected database:",self.config['selected_db'])
+#         self.database = self.client[self.config['db_name']]
+#         echo(f"selected database:",self.config['db_name'])
 #         echo("existing collections:",self.database.list_collection_names())
 
 #         return self.client,self.database
