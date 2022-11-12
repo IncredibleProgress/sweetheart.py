@@ -119,8 +119,8 @@ class BaseService:
                 ],
             "Service":[
                 "Type=simple",
-                "Restart=always",
-                "RestartSec=1",
+                #"Restart=always",
+                #"RestartSec=1",
                 ],
             "Install":[
                 "WantedBy=multi-user.target"
@@ -136,13 +136,14 @@ class BaseService:
         self.systemd["Service"].append(f"ExecStart={ExecStart}")
         self.systemd["Service"].append(f"User={User}")
 
-    def write_service_file(self,name):
+    def write_service_file(self,filename):
 
-        tempfile = f"{self.config.root_path}/configuration/{name}.service"
+        assert filename.endswith(".service")
+        tempfile = f"{self.config.root_path}/configuration/{filename}"
 
         with open(tempfile,"w") as file_out:
             for section,items in self.systemd.items():
-                lines = [f"[{section}]",*self.systemd[section]]
+                lines = [f"[{section}]",*self.systemd[section],""]
                 file_out.writelines([str+"\n" for str in lines])
 
         sp.shell(f"sudo cp {tempfile} /etc/systemd/system")
@@ -219,10 +220,10 @@ class RethinkDB(BaseService):
         self.command = \
             f"rethinkdb --http-port 8180 -d {config['db_path']}"
 
-        self.set_unit(
-            Description = "RethinkDB service made with Sweetheart",
-            ExecStart = self.command,
-            User = BaseConfig.USER )
+        # self.set_unit(
+        #     Description = "RethinkDB service made with Sweetheart",
+        #     ExecStart = self.command,
+        #     User = BaseConfig.USER )
 
         if run_local: self.run_local(service=True)
 
