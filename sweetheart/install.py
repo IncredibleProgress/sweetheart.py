@@ -13,16 +13,26 @@ codename = sp.stdout("lsb_release -cs").lower()
 master_pyproject = f"{BaseConfig.HOME}/.sweet/{MASTER_MODULE}/programs/my_python/pyproject.toml"
 raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py"
 
-
 # ensure prerequisites
 if not os.path.isfile(master_pyproject):
     sp.shell(f"curl -sSL {raw_github} | python3 -")
 
+
 def init(config:BaseConfig,add_pylibs=""):
     """ set require minimal features for working with sweetheart """
 
+    # required directories
+    for basedir in [
+          f"{config.root_path}/configuration",
+          f"{config.root_path}/database",
+          f"{config.root_path}/documentation/notebooks",
+          f"{config.root_path}/programs/scripts",
+          f"{config.root_path}/webpages/templates",
+          f"{config.root_path}/webpages/resources" ]:
+        os.makedirs(basedir,exist_ok=True)
+
     PKG_INIT = {
-        'cargolibs': ["mdbook"],
+        #'cargolibs': ["mdbook"],
         #'documentation': "sweetbook.zip",
         'aptlibs': ["*unit","*rethinkdb","*nodejs","cargo"],
         'npmlibs': ["brython","tailwindcss","vue@latest"],# Vue3
@@ -36,23 +46,20 @@ def init(config:BaseConfig,add_pylibs=""):
             "webpages/resources/tailwind.config.js" ]}
     
     if "fastapi" in add_pylibs:
+        # avoid versions conflict with starlette
         PKG_INIT['pylibs'].remove("starlette")
+
+    if "jupyter" in add_pylibs:
+        # set ipykernel instead of jupyter
+        # this allow runing python env within VS Code
+        PKG_INIT['pylibs'].remove("jupyter")
+        PKG_INIT['pylibs'].append("ipykernel")
 
     # set given python extra modules
     if isinstance(add_pylibs,list):
         PKG_INIT['pylibs'].extend(add_pylibs)
     elif isinstance(add_pylibs,str):
         PKG_INIT['pylibs'].extend(add_pylibs.split())
-
-    # required directories
-    for basedir in [
-        f"{config.root_path}/configuration",
-        f"{config.root_path}/database",
-        f"{config.root_path}/documentation/notebooks",
-        f"{config.root_path}/programs/scripts",
-        f"{config.root_path}/webpages/templates",
-        f"{config.root_path}/webpages/resources",
-    ]: os.makedirs(basedir,exist_ok=True)
 
     # install default libs with extra modules
     installer = BaseInstall(config)
@@ -62,6 +69,12 @@ def init(config:BaseConfig,add_pylibs=""):
     echo("build generic tailwindcss file",blank=True)
     sp.shell(config.subproc['.tailwindcss'],cwd=f"{config.root_path}/webpages/resources")
 
+    if "ipykernel" in PKG_INIT['pylibs']:
+        # set python env into jupyter
+        from sweetheart.heart import JupyterLab
+        JupyterLab(config).set_ipykernel()
+        #JupyterLab(config).set_password()
+   
     # try:
     #     # provide sweetheart html documentation    
     #     os.symlink(f"{config.root_path}/documentation/sweetbook/book",
@@ -72,17 +85,6 @@ def init(config:BaseConfig,add_pylibs=""):
     # except:
     #     verbose("INFO:\n an error occured creating symlinks during init process",
     #         "\n an expected cause could be that links are already existing")
-
-    is_in_pylibs= lambda *args:\
-         [a for a in args if a in PKG_INIT['pylibs']]
-    
-    if is_in_pylibs("jupyter","jupyterlab","ipykernel"):
-
-        from sweetheart.heart import JupyterLab
-        echo("set ipykernel for Jupyter: initial password is required",blank=True)
-        JupyterLab(config).set_ipykernel()
-        if config.project == MASTER_MODULE:
-            JupyterLab(config).set_password()
     
     echo("installation process completed",blank=True)
 
@@ -298,4 +300,3 @@ class NginxUnit:
 
         sp.run("sudo","curl","-X","PUT","-d",f"@{self.configfile}",
             "--unix-socket","/var/run/control.unit.sock",f"{self.host}/config/")
-

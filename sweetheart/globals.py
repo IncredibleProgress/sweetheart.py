@@ -20,8 +20,10 @@ class BaseConfig(UserDict):
     USER = HOME.split('/')[-1]
     LANG = locale.getlocale()[0][0:2]
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
+
     # set sws level into environment 
     SWSLVL = os.environ['SWSLVL'] = f"{int(os.getenv('SWSLVL','0'))+1}"
+    assert int(SWSLVL) <= 2
 
     # default path settings
     poetry_bin = f"{HOME}/.local/bin/poetry"
@@ -51,15 +53,14 @@ class BaseConfig(UserDict):
         # subprocess settings
         self.subproc = {
             #  can be updated using load_json(subproc=True)
-            'python_version': "3.10",# for installing Nginx Unit
-            'node_version': "16.x",# for installing from nodesource.com
+            'python_version': "3.10",# for using Nginx Unit
+            'node_version': "16.x",# getting node from nodesource.com
             # can not be updated within load_json()
             '.msedge.exe': f"cmd.exe /c start msedge --app=",
             '.brave.exe': f"cmd.exe /c start brave --app=",
             '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css" }
 
         self.data = {
-
             # editable general settings
             "db_name": "test",
             "templates_base": "HTML",
@@ -94,7 +95,7 @@ class BaseConfig(UserDict):
 
     def __getattr__(self,attr):
         """ search non-existing attribute into self.data and self.subproc
-            example: get config.db_name instead of config['db_name'] """
+            config.db_name cab be used instead of config['db_name'] """
         
         #! order: 1=obj.attr 2=subproc 3=data
         try: return self.subproc[attr]

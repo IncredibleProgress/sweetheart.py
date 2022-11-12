@@ -11,7 +11,12 @@ nest_asyncio.apply()
 from sweetheart.globals import *
 from sweetheart.install import BaseInstall
 from sweetheart.sweet import set_config,install,quickstart,sws
-from sweetheart.heart import RethinkDB,HttpServer,JupyterLab,HTMLTemplate as _HTMLTemplate_
+from sweetheart.heart import \
+    RethinkDB,\
+    HttpServer,\
+    JupyterLab,\
+    WelcomeMessage,\
+    HTMLTemplate as _HTMLTemplate_
 
 from starlette.routing import *
 from starlette.staticfiles import *
@@ -25,8 +30,3 @@ def HTMLTemplate(*args,**kwargs):
         altered HTMLTemplate() function for running within Jupyter """
     if not hasattr(BaseConfig,"_"): set_config()
     return _HTMLTemplate_(*args,**kwargs)
-
-def HTMLWelcomeMessage():
-    """ provide a Starlette-like function for welcoming """
-    if not hasattr(BaseConfig,"_"): set_config()
-    return HTMLResponse(BaseConfig._.welcome())

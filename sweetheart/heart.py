@@ -142,7 +142,7 @@ class BaseService:
 
         with open(tempfile,"w") as file_out:
             for section,items in self.systemd.items():
-                lines = [f"[{section}]",*self.systemd[section],"\n"]
+                lines = [f"[{section}]",*self.systemd[section]]
                 file_out.writelines([str+"\n" for str in lines])
 
         sp.shell(f"sudo cp {tempfile} /etc/systemd/system")
@@ -215,7 +215,15 @@ class RethinkDB(BaseService):
         #NOTE: url is auto set here from config
         super().__init__(config.database_host,config)
         assert self.protocol == 'rethinkdb'
-        self.command = f"rethinkdb --http-port 8180 -d {config['db_path']}"
+
+        self.command = \
+            f"rethinkdb --http-port 8180 -d {config['db_path']}"
+
+        self.set_unit(
+            Description = "RethinkDB service made with Sweetheart",
+            ExecStart = self.command,
+            User = BaseConfig.USER )
+
         if run_local: self.run_local(service=True)
 
     def set_client(self,dbname:str=None):
@@ -302,7 +310,7 @@ def WelcomeMessage(config:BaseConfig|None=None) -> HTMLResponse:
         <p><a href="/documentation/index.html">
             Get Started Now!</a></p>
         <p><br>or code immediately using 
-            <a href="{config['jupyterurl']}">JupyterLab</a></p>
+            <a href="{config.jupyter_host}">JupyterLab</a></p>
         <p><br><br><em>this message appears because there
         was nothing else to render here</em></p>
         </div>""")
@@ -471,6 +479,11 @@ class JupyterLab(BaseService):
             f"{config.python_bin} -m jupyterlab "+\
             f"--no-browser --notebook-dir={config['notebooks_dir']}"
 
+        self.set_unit(
+            Description = "JupyterLab service made with Sweetheart",
+            ExecStart = self.command,
+            User = BaseConfig.USER )
+
         if run_local: self.run_local(service=True)
 
     def set_ipykernel(self):
@@ -484,13 +497,6 @@ class JupyterLab(BaseService):
     def set_password(self):
         """ required for JupyterLab initialization """
         sp.python("-m","jupyter","notebook","password","-y")
-
-    def init_server(self):
-
-        self.set_unit(
-            Description = "JupyterLab Server",
-            ExecStart = self.command,
-            User = BaseConfig.USER )
 
 
 # class MongoDB(BaseService):
