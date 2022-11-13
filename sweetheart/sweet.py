@@ -119,6 +119,7 @@ def sws(args):
         # services and utilities commands
         'build-css': [*sb['.tailwindcss'].split()],
         'test': [py,"-m",f"{cf.project}.tests",*args[1:]],
+        'jupyter-server': [*sweet,"sh","-p","jupyter","jupyter-server"],
         # subprocess commands
         'poetry': [config.poetry_bin,*args[1:]],
         'python': [f"{vv}/bin/python",*args[1:]],

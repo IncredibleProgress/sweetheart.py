@@ -13,7 +13,6 @@ import time
 from sweetheart.globals import *
 from sweetheart.bottle import SimpleTemplate
 
-import uvicorn
 from starlette.applications import Starlette
 from starlette.staticfiles import StaticFiles
 from starlette.endpoints import WebSocketEndpoint
@@ -113,7 +112,7 @@ class BaseService:
         BaseService.ports_register.add(self.port)
 
         # provide a base service file for setting systemd
-        self.systemd = {
+        self.sysd = {
             "Unit":[
                 "After=network.target"
                 ],
@@ -132,9 +131,9 @@ class BaseService:
             ExecStart: str,
             User: str ):
 
-        self.systemd["Unit"].append(f"Description={Description}")
-        self.systemd["Service"].append(f"ExecStart={ExecStart}")
-        self.systemd["Service"].append(f"User={User}")
+        self.sysd["Unit"].append(f"Description={Description}")
+        self.sysd["Service"].append(f"ExecStart={ExecStart}")
+        self.sysd["Service"].append(f"User={User}")
 
     def write_service_file(self,filename):
 
@@ -147,7 +146,6 @@ class BaseService:
                 file_out.writelines([str+"\n" for str in lines])
 
         sp.shell(f"sudo cp {tempfile} /etc/systemd/system")
-
 
     def switch_port_to(self,port_number:int):
         """ allow changing port number afterwards which can avoid conflicts
@@ -464,6 +462,7 @@ class HttpServer(BaseService):
                 "--bind","0.0.0.0:80",
                 cwd= self.config._['module_path'])
         else:
+            import uvicorn
             os.chdir(self.config['working_dir'])
             uvicorn.run(self.starlette,**self.uargs)
 
@@ -487,7 +486,7 @@ class JupyterLab(BaseService):
 
         if run_local: self.run_local(service=True)
 
-    def set_ipykernel(self):
+    def set_ipykernel(self,pwd:bool=False):
         """ set ipython kernel for running JupyterLab """
 
         # get path,name of python env
@@ -495,9 +494,9 @@ class JupyterLab(BaseService):
         sp.python("-m","ipykernel","install","--user",
             "--name",name,"--display-name",self.config.project,cwd=path)
 
-    def set_password(self):
-        """ required for JupyterLab initialization """
-        sp.python("-m","jupyter","notebook","password","-y")
+        if pwd:
+            # set required password for JupyterLab
+            sp.python("-m","jupyter","notebook","password","-y")
 
 
 # class MongoDB(BaseService):

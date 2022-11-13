@@ -21,12 +21,19 @@ if not os.path.isfile(master_pyproject):
 def init(config:BaseConfig,add_pylibs=""):
     """ set require minimal features for working with sweetheart """
 
+    # set python env with basic project settings
+    sp.init_project_env(config.project)
+
+    if config.project.startswith("jupyter"):
+        echo("INFO: init jupyter as a specific project")
+        return
+
     # required directories
     for basedir in [
-          f"{config.root_path}/configuration",
+          #f"{config.root_path}/configuration",
           f"{config.root_path}/database",
-          f"{config.root_path}/documentation/notebooks",
-          f"{config.root_path}/programs/scripts",
+          #f"{config.root_path}/documentation/notebooks",
+          #f"{config.root_path}/programs/scripts",
           f"{config.root_path}/webpages/templates",
           f"{config.root_path}/webpages/resources" ]:
         os.makedirs(basedir,exist_ok=True)
@@ -45,6 +52,11 @@ def init(config:BaseConfig,add_pylibs=""):
             "webpages/resources/tailwind.base.css",
             "webpages/resources/tailwind.config.js" ]}
     
+    if config.project != MASTER_MODULE:
+        # unset libs installation
+        del PKG_INIT['aptlibs']
+        #del PKG_INIT['cargolibs']
+
     if "fastapi" in add_pylibs:
         # avoid versions conflict with starlette
         PKG_INIT['pylibs'].remove("starlette")
@@ -72,8 +84,7 @@ def init(config:BaseConfig,add_pylibs=""):
     if "ipykernel" in PKG_INIT['pylibs']:
         # set python env into jupyter
         from sweetheart.heart import JupyterLab
-        JupyterLab(config).set_ipykernel()
-        #JupyterLab(config).set_password()
+        JupyterLab(config).set_ipykernel(set_pwd=False)
    
     # try:
     #     # provide sweetheart html documentation    
@@ -98,9 +109,6 @@ class BaseInstall:
 
         self.config = config
         self.packages_file = f"{config.root_path}/configuration/packages.json"
-
-        # set python env with basic project settings
-        sp.set_project_env(config.project)
         
     def apt(self,*libs:str,**kwargs):
         """ install distro packages using 'apt install'
@@ -125,7 +133,7 @@ class BaseInstall:
         # install other packages
         return sp.run("sudo","apt","install",*libs,**kwargs)
 
-    def cargo(self,*libs:str,init=False,**kwargs):
+    def cargo(self,*libs:str,**kwargs):
         """ install rust crates using cargo """
 
         echo("cargo install:",*libs,blank=True)
@@ -154,7 +162,7 @@ class BaseInstall:
         if aptlibs: self.apt(*aptlibs)
 
         cargolibs = libs.get('cargolibs')
-        if cargolibs: self.cargo(*cargolibs,init=init)
+        if cargolibs: self.cargo(*cargolibs)
 
         npmlibs = libs.get('npmlibs')
         if npmlibs: self.npm(*npmlibs,init=init)
@@ -253,7 +261,7 @@ wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-ke
 
 class NginxUnit:
 
-    def __init__(self,config):
+    def __init__(self,config:BaseConfig):
 
         self.config = config
         self.host = "http://localhost"
@@ -270,7 +278,7 @@ class NginxUnit:
                     "uri": "/jupyter/*"
                 },
                 "action": {
-                    "proxy": "http://127.0.0.1:8080"
+                    "proxy": config.jupyter_host
                 }
             },
             {

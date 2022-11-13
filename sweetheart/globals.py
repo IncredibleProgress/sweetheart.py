@@ -1,7 +1,7 @@
 
 import os,subprocess,json,locale
 from collections import UserDict
-from sweetheart import MASTER_MODULE
+from sweetheart import *
 
 
 class BaseConfig(UserDict):
@@ -216,20 +216,33 @@ class sp:
         verbose("set python env:",BaseConfig.python_bin)
 
     @classmethod
-    def set_project_env(cls,project_name:str):
+    def init_project_env(cls,project_name:str):
         """ create and init new project with its own python env """
 
         assert project_name != MASTER_MODULE
         _path = f"{BaseConfig.HOME}/.sweet/{project_name}"
 
         # init a new python env for new project
+        os.makedirs(f"{_path}/documentation/notebooks",exist_ok=True)
+        os.makedirs(f"{_path}/configuration",exist_ok=True)
         os.makedirs(f"{_path}/programs",exist_ok=True)
+
         sp.poetry("new","my_python",cwd=f"{_path}/programs")
+        sp.poetry("add","sweetheart",cwd=f"{_path}/programs/my_python")
         sp.set_python_env(cwd=f"{_path}/programs/my_python")
 
-        os.makedirs(f"{_path}/configuration",exist_ok=True)
         with open(f"{_path}/configuration/subproc.json","w") as fi:
-            json.dump({'pyenv':config.python_env},fi)
+            json.dump({ 'pyenv': BaseConfig.python_env },fi)
+
+        # manage the specific case of jupyter
+        if project_name.startswith("jupyter"):
+
+            from sweetheart.sweet import set_config
+            from sweetheart.heart import JupyterLab
+
+            config = set_config(project="jupyter")
+            sp.poetry("add",project_name)
+            JupyterLab(config).set_ipykernel(pwd=True)
 
 
 def webbrowser(url:str):
