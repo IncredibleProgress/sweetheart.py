@@ -1,0 +1,119 @@
+<!SWEETHEART html>
+
+<script>
+/*NOTE: the page content is given here */
+setVueData({
+
+  title: "Technical Director", profile: "Nicolas Champion",
+  mailto: "champion.nicolas@gmail.com", tel: "06.01.02.15.12",
+  target: "my deepest wish : leading industry to better performances",
+
+  aside: {
+
+    "School": [
+        "ENSAM Engineer",
+        "Math sup/spé PT",
+        "Bac S industry tec."
+    ],
+    "Languages": [
+        "native French",
+        "fluent English",
+        "academic German"
+    ],
+    "Coding": [
+        "Python fluent",
+        "Linux passionate",
+        "Js/Ts fundamentals",
+        "Html/Css fundamentals",
+        "Rust/NginxUnit enthusiast"
+    ],
+    "Softwares": [
+        "SAP EAM expert",
+        "Lightroom dependant",
+        "VS Code fundamentals"
+    ],
+    "Hobbies": [
+        "hiking, skiing, bike",
+        "municipal councillor",
+        "programming with linux",
+        "music band, photography",
+        "readings of technical, history and management books"
+    ]
+  },
+
+  article: [
+    [
+      "period 2020+ :",
+      "Maintenance Manager For France #Agri-food Industry",
+      "Roye, Saint-Louis Sucre (Südzucker group)",
+
+      "Head of maintenance strategies, organizations and long term vision. In charge of the global maintenance budget up to 25M€.Technical support for expertise and big repairs. Implementation of best practices, within a group approach, including industry 4.0 precepts."
+    ],
+    [
+      "period 2014-2020 :",
+      "Plant Maintenance Manager #Sugar Factory",
+      "Roye, Saint-Louis Sucre (Südzucker group)",
+
+      "Head of the maintenance department populated with 60 collaborators. Hard work for improving plant reliability and safety, leading staff renewal, leading changes, strengthen skills and cohesion within the teams, implementing new organization and integrating maintenance into the production department."
+    ],
+    [
+      "period 2010-2014 :",
+      "Maintenance Engineering Manager #Petrochemical Plant",
+      "Dunkirk, Polimeri Europa France (ENI corp.)",
+
+      "Management and coordination of plant shutdowns and big repairs within a team of 10 experienced technicians. Implementation of work preparation methods and long term actions plans. Coordination of regulations matters.",
+    ],
+    [
+      "period 2008-2010 :",
+      "Plant Engineer #Petrochemical Plant",
+      "Oberhausen, Polimeri Europa GmbH (ENI corp.)",
+
+      "Technical support of the business manager in charge of production agreement with Oxea company, the owner of the plant. Production, investments, maintenance, supply chain and controlling coordination with the headquarter located in Milan."
+    ],
+    [
+      "period 2001-2008 :",
+      "Mechanical Maintenance Assistant Manager, Petrochemical Plant",
+      "Dunkirk, Polimeri Europa France (ENI corp.)",
+
+      "Responsible for maintenance coordination involving 20 technicians and the subcontractors. I Fixed maintenance strategy for a yearly 5M€ budget. Deep work related to reliability concerns on turning-machines and high pressure equipment (2000 bar)."
+    ]
+  ]
+})
+</script>
+
+<!-- VueApp starts here -->
+<vue class="flex max-w-screen-lg mx-auto">
+  <h1 hidden>Curriculum Vitae</h1>
+
+  <!-- Sidebar -->
+  <aside class="flex-none w-64 p-4 bg-red-900 text-red-100 rounded-xl">
+    <div v-for="(items,rubric) in aside" class="mt-3">
+      <b>{{ rubric }}</b>
+      <ul>
+        <li v-for="item in items" 
+        class="ml-1 p-1">{{ item }}</li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Content -->
+  <article class="flex-1 mx-6">
+
+    <h2 class="text-red-900 my-3">{{ title }}</h2>
+    <h3 class="text-red-400 my-0">{{ profile }}</h3>
+    <a href="mailto:{{ mailto }}" class="hover:text-red-600">email: {{ mailto }}</a>
+    <span class="ml-2">tel: {{ tel }}</span><br>
+
+  <hr class="my-2">
+    <div class="text-center"><b><em>{{ target }}</em></b></div>
+  <hr class="my-2">
+
+    <section v-for="content in article" class="mt-4">
+      <em>{{ content[0] }}</em>
+      <h4 class="my-0 text-red-600">{{ content[1] }}</h4>
+      <h5 class="mt-0">{{ content[2] }}</h5>
+      <p class="my-1 text-sm text-justify">{{ content[3] }}</p>
+    </section>
+
+  </article>
+</vue>

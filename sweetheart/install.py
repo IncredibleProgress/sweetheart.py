@@ -22,7 +22,8 @@ def init(config:BaseConfig,add_pylibs=""):
     """ set require minimal features for working with sweetheart """
 
     # set python env with basic project settings
-    sp.init_project_env(config.project)
+    if config.project != MASTER_MODULE:
+        sp.init_project_env(config.project)
 
     if config.project.startswith("jupyter"):
         echo("INFO: init jupyter as a specific project")
@@ -42,6 +43,7 @@ def init(config:BaseConfig,add_pylibs=""):
         #'cargolibs': ["mdbook"],
         #'documentation': "sweetbook.zip",
         'aptlibs': ["*unit","*rethinkdb","*nodejs","cargo"],
+        'dnflibs': ["*unit","*rethinkdb","nodejs","cargo"],
         'npmlibs': ["brython","tailwindcss","vue@latest"],# Vue3
         'pylibs': ["rethinkdb","starlette"],
         'files': [
@@ -112,7 +114,8 @@ class BaseInstall:
         
     def apt(self,*libs:str,**kwargs):
         """ install distro packages using 'apt install'
-            this leads specific treatments when needed """
+            this leads specific treatments for given *libs 
+            dedicated for debian/ubuntu distros branch """
 
         libs = list(libs)
         echo("apt install:",*libs,blank=True)
@@ -132,6 +135,23 @@ class BaseInstall:
 
         # install other packages
         return sp.run("sudo","apt","install",*libs,**kwargs)
+
+    def dnf(self,*libs:str,**kwargs):
+        """ install distro packages using 'dnf install'
+            this leads specific treatments for given *libs 
+            dedicated for rhel/almalinux distros branch """
+
+        # specific treatments for subprocesses
+        if "*rethinkdb" in libs:
+            raise NotImplementedError
+            libs.remove("*rethinkdb")
+
+        if "*unit" in libs:
+            raise NotImplementedError
+            libs.remove("*unit")
+
+        # install other packages
+        return sp.run("sudo","dnf","install",*libs,**kwargs)
 
     def cargo(self,*libs:str,**kwargs):
         """ install rust crates using cargo """
@@ -238,7 +258,8 @@ wget -qO- https://unit.nginx.org/keys/nginx-keyring.gpg | sudo apt-key add - """
 
         # install Nginx Unit packages
         if not sp.is_executable("unitd"):
-            sp.shell(f"sudo apt install unit unit-python{config.python_version}") 
+            version = self.config.python_version
+            sp.shell(f"sudo apt install unit unit-python{version}") 
 
 
     def apt_install_rethinkdb(self):

@@ -119,6 +119,15 @@ dbname = get('dbname',get('__db__','test'))
     r = new RethinkDB("{% dbname %}");
 
     // set default Vue3 utilities
+
+    function setVueData(vuedata, options={vm:"vdata", id:"VueApp"}) {
+          // set data only within the vue model
+          document.addEventListener("DOMContentLoaded",function(){
+          let vm = Vue.createApp({ data() {return vuedata} }).mount(`#${options.id}`);
+          eval(`${options.vm} = vm`);
+        })
+      }
+
     function createVueApp(vuedata, options={
           vm: "vmodel", id: "VueApp", hub: r
         }) {

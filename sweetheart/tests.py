@@ -1,4 +1,6 @@
-""" provides utilities for testing webapp """
+"""
+sws utilities for testing webapp 
+"""
 
 from sweetheart import __version__
 assert __version__ == '0.1.2'
@@ -10,29 +12,6 @@ from sweetheart.heart import *
 from sweetheart.install import *
 
 
-def test_template(template:str):
-    
-    BaseConfig.verbosity = 1
-    config = set_config({})
-    config.is_webapp_open = True
-    config.is_rethinkdb_local = True
-
-    # force re-building tailwind.css
-    echo("build generic tailwindcss file",blank=True)
-    sp.shell(config.subproc['.tailwindcss'],cwd=f"{config.root_path}/webpages/resources")
-
-    path = f"{config['working_dir']}/{config['templates_dir']}"
-    if not os.path.isfile(path) and not os.path.islink(path):
-        print("Error, the given template is not existing")
-        return False
-
-    webapp = HttpServer(config,set_database=True).mount(
-        Route("/",HTMLTemplate(template)) )
-
-    quickstart(webapp)
-    return True
-
-
 def symlink(source,dest):
 
     if os.path.islink(dest): print(f"Warning, existing link {dest}")
@@ -40,14 +19,6 @@ def symlink(source,dest):
     elif os.path.isdir(dest) : shutil.rmtree(dest)
     try: os.symlink(source,dest)
     except: pass
-
-def _dev_sweetheart_():
-    # link ~/sweetheart.py as python package
-    set_config()
-    sp.poetry("remove","sweetheart")
-
-    symlink(f"{BaseConfig.HOME}/{MASTER_MODULE}.py",
-        f"{BaseConfig._.python_env}/lib/python*/site-packages/sweetheart")
 
 def _dev_links_():
 
@@ -65,6 +36,38 @@ def _dev_links_():
     symlink(f"{src}/documentation/sweetbook",f"{pjt}/documentation/sweetbook")
     symlink(f"{src}/documentation/notebooks",f"{pjt}/documentation/notebooks")
 
+def _dev_sweetheart_():
+    # link ~/sweetheart.py as python package
+    set_config()
+    sp.poetry("remove","sweetheart")
+
+    symlink(f"{BaseConfig.HOME}/{MASTER_MODULE}.py",
+        f"{BaseConfig._.python_env}/lib/python*/site-packages/sweetheart")
+
+
+def test_template(template:str):
+    
+    BaseConfig.verbosity = 1
+    config = set_config({})
+    config.is_webapp_open = True
+    config.is_rethinkdb_local = False
+    config.is_jupyter_local = False
+
+    # force re-building tailwind.css
+    echo("build generic tailwindcss file",blank=True)
+    sp.shell(config.subproc['.tailwindcss'],cwd=f"{config.root_path}/webpages/resources")
+
+    path = f"{config['working_dir']}/{config['templates_dir']}"
+    if not os.path.isfile(path) and not os.path.islink(path):
+        print("Error, the given template is not existing")
+        return False
+
+    webapp = HttpServer(config,set_database=False).mount(
+        Route("/",HTMLTemplate(template)) )
+
+    quickstart(webapp)
+    return True
+
 
 if __name__ == '__main__':
 
@@ -72,11 +75,11 @@ if __name__ == '__main__':
 
     if '--dev-sweetheart' in argv:
         _dev_sweetheart_()
-        echo("replace sweetheart module with dev module: all done",mode='exit')
+        echo("replace sweetheart module with dev module: all done")
 
-    elif '--dev-links' in argv: 
+    if '--dev-links' in argv: 
         _dev_links_()
-        echo("create symbolic links for dev: all done",mode='exit')
+        echo("create symbolic links for dev: all done")
     
     #assert test_objects()
     assert test_template(argv[-1])

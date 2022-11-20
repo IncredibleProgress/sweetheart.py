@@ -120,6 +120,7 @@ def sws(args):
         'build-css': [*sb['.tailwindcss'].split()],
         'test': [py,"-m",f"{cf.project}.tests",*args[1:]],
         'jupyter-server': [*sweet,"sh","-p","jupyter","jupyter-server"],
+        'notebook': [*sweet,"sh","-p","jupyter","python","-m","jupyter","notebook",*args[1:]],
         # subprocess commands
         'poetry': [config.poetry_bin,*args[1:]],
         'python': [f"{vv}/bin/python",*args[1:]],
@@ -127,11 +128,14 @@ def sws(args):
         }
 
     if args == []:
-        edit_cmd = '\n  '.join(list(switch))
-        args = ["echo",f"sws available commands:\n\n  {edit_cmd}\n\ntype 'sws help' for getting some help"]
+        cwd= config.PWD
+
+        if config.SWSLVL=="1":
+            cmds= '\n  '.join(list(switch))
+            args= ["echo",f"sws available commands:\n\n  {cmds}\n\nuse 'sws help' for getting some help"]
 
     # autoset the relevant working directory
-    if args[0]=='poetry': cwd= cf._['module_path']
+    elif args[0]=='poetry': cwd= cf._['module_path']
     elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
     elif args[0]=='build-css': cwd= f"{cf['working_dir']}/resources"
     else: cwd= config.PWD
@@ -140,7 +144,7 @@ def sws(args):
     verbose("invoke shell:"," ".join(switch.get(args[0],args)))
 
     try: sp.run(*switch.get(args[0],args),cwd=cwd)
-    except: echo("sws has been interrupted")
+    except: verbose("sws has been interrupted")
 
 
 def install(*packages):
@@ -206,6 +210,9 @@ if __name__ == "__main__":
     cli.set_function(lambda args:
         echo("type 'sws help' for getting some help"))
 
+    cli.opt("-V","--version",action="store_true",
+        help="provide version info of sweetheart")
+
     cli.opt("-v","--verbose",action="count",default=0,
         help="get additional messages about on-going process")
 
@@ -216,6 +223,9 @@ if __name__ == "__main__":
     # create subparser for the 'shell' command:
     cli.sub("sh",help="the SWeet Shell command line interface")
     cli.set_function(lambda args: sws(args.subargs))
+
+    cli.opt("-V","--version",action="store_true",
+        help="provide version info of sweetheart")
 
     cli.opt("-v","--verbose",action="count",default=0,
         help="get additional messages about on-going process")
@@ -278,8 +288,15 @@ if __name__ == "__main__":
     argv = cli.set_parser()
     BaseConfig.verbosity = getattr(argv,"verbose",0)
 
-    if getattr(argv,"project",None): set_config(project=argv.project[0])
-    else: set_config()
+    if getattr(argv,"version"):
+        from sweetheart import __version__
+        print(MASTER_MODULE,__version__)
+        exit()
+    
+    if getattr(argv,"project",None):
+        set_config(project=argv.project[0])
+    else:
+        set_config()
 
     if getattr(argv,"init",False):
         from sweetheart.install import init

@@ -406,9 +406,7 @@ class HttpServer(BaseService):
             # allow looking documentation and testing webapp
             self.switch_port_to(8181)
             # auto route the default welcome 
-            if self.config.is_rethinkdb_local: response= WelcomeMessage(self.config)
-            else: response= RedirectResponse("documentation/welcome.html")
-            self.data.append(Route("/",response))
+            self.data.append(Route("/",WelcomeMessage(self.config)))
 
         elif len(args)==1 and isinstance(args[0],str):
             # route given template as a simple page for tests

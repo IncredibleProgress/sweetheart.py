@@ -1,7 +1,7 @@
 
 import os,subprocess,json,locale
 from collections import UserDict
-from sweetheart import *
+from sweetheart import MASTER_MODULE
 
 
 class BaseConfig(UserDict):
@@ -90,7 +90,7 @@ class BaseConfig(UserDict):
             },
             "static_dirs": {
                 '/resources': f"resources",
-                '/documentation': "sweetbook",
+                #'/documentation': "sweetbook",
             }}
 
     def __getattr__(self,attr):
