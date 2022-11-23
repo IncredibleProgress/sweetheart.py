@@ -4,12 +4,18 @@
 /*NOTE: the page content is given here */
 setVueData({
 
-  title: "Technical Director", profile: "Nicolas Champion",
-  mailto: "champion.nicolas@gmail.com", tel: "06.01.02.15.12",
-  target: "my deepest wish : leading industry to better performances",
+  title: "Technical Director",
+  mailto: "champion.nicolas@gmail.com",
+  target: "objective : leading industry to better performances",
 
   aside: {
 
+    "Nicolas Champion": [
+        "Married, 2children",
+        "Compiègne, Oise",
+        "+33 6 01021512",
+        "45 years old"
+    ],
     "School": [
         "ENSAM Engineer",
         "Math sup/spé PT",
@@ -87,25 +93,24 @@ setVueData({
 
   <!-- Sidebar -->
   <aside class="flex-none w-64 p-4 bg-red-900 text-red-100 rounded-xl">
-    <div v-for="(items,rubric) in aside" class="mt-3">
+
+    <div v-for="(items,rubric) in aside" class="mt-2">
       <b>{{ rubric }}</b>
       <ul>
-        <li v-for="item in items" 
-        class="ml-1 p-1">{{ item }}</li>
+        <li v-for="item in items" class="ml-1 p-1">{{ item }}</li>
       </ul>
     </div>
+
   </aside>
 
   <!-- Content -->
   <article class="flex-1 mx-6">
 
-    <h2 class="text-red-900 my-3">{{ title }}</h2>
-    <h3 class="text-red-400 my-0">{{ profile }}</h3>
-    <a href="mailto:{{ mailto }}" class="hover:text-red-600">email: {{ mailto }}</a>
-    <span class="ml-2">tel: {{ tel }}</span><br>
+    <h1 class="text-red-900 my-3">{{ title }}</h2>
+    <span class="text-red-700"><b><em>{{ target }}</em></b></span>
 
   <hr class="my-2">
-    <div class="text-center"><b><em>{{ target }}</em></b></div>
+    {{ mailto }}
   <hr class="my-2">
 
     <section v-for="content in article" class="mt-4">
