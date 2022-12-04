@@ -27,7 +27,7 @@ class BaseConfig(UserDict):
 
     # default path settings
     poetry_bin = f"{HOME}/.local/bin/poetry"
-    python_bin = "python3"# unset python env
+    python_bin = "python3"# here python env is unset
     rust_crates = f"{HOME}/.cargo/bin"
 
     # default productive settings
@@ -53,9 +53,9 @@ class BaseConfig(UserDict):
         # subprocess settings
         self.subproc = {
             #  can be updated using load_json(subproc=True)
-            'python_version': "3.10",# for using Nginx Unit
-            'node_version': "16.x",# getting node from nodesource.com
-            # can not be updated within load_json()
+            'python_version': "3.10",# for setting Nginx Unit
+            'node_version': "16.x",# for getting node from nodesource.com
+            # can not be updated within load_json(subproc=True)
             '.msedge.exe': f"cmd.exe /c start msedge --app=",
             '.brave.exe': f"cmd.exe /c start brave --app=",
             '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css" }
@@ -112,6 +112,7 @@ class BaseConfig(UserDict):
 
         if not subproc: return
         elif os.path.isfile(self.subproc_file):
+            # update self.subproc for allowed keys
 
             with open(self.subproc_file) as file_in:
                 subproc_settings = json.load(file_in)
@@ -133,23 +134,54 @@ class sp:
     """ namespace providing basic subprocess features 
         beware that it uses BaseConfig and not config """
 
-    # convenient functions for executing bash commands
-    run = lambda *args,**kwargs: subprocess.run(args,**kwargs)
-    shell = lambda str,**kwargs: subprocess.run(str,**kwargs,shell=True)
-    stdout = lambda str: subprocess.run(str,text=True,capture_output=True,shell=True).stdout.strip()
-    
-    @classmethod
-    def read_sh(cls,script:str):
-        """ excec line by line a long string as a shell script """
-        for instruc in script.splitlines():
-            cls.shell(instruc.strip())
-
-    # let ensuring that a shell command is available
-    is_executable = lambda cmd: cmd in sp.list_executables(cmd)
-
     PATH = os.get_exec_path()
     EXECUTABLES = {} # fetched by list_executables()
     MISSING = [] # fetched by list_executables()
+
+    try:
+        # provide system info for Python3.10 and more
+        from platform import freedesktop_os_release
+        os_release = freedesktop_os_release()
+    except:
+        #FIXME: provide system info up to Python 3.9
+        raise NotImplementedError("Python version <= 3.9")
+
+    @classmethod
+    def shell(cls,*args,**kwargs):
+        """ run subprocess providing some flexibility with args """
+
+        if len(args)==1 and isinstance(args[0],str):
+            # string passed to the linux shell
+            kwargs.update({ 'shell':True })
+            return subprocess.run(args[0],**kwargs)
+
+        elif len(args)==1 and isinstance(args[0],list) and\
+                all([ isinstance(i,str) for i in args[0] ]):
+            # list of strings passed to the linux shell
+            return subprocess.run(args[0],**kwargs)
+        
+        elif all([ isinstance(i,str) for i in args ]):
+            # str args passed to the linux shell
+            return subprocess.run(args,**kwargs)
+
+        else: raise AttributeError
+
+    @classmethod
+    def read_sh(cls,script:str):
+        """ excec line by line a long string as a shell script """
+
+        for instruc in script.splitlines():
+            subprocess.run(instruc.strip(),shell=True)
+
+    # former provided function for executing shell commands
+    run = lambda *args,**kwargs: subprocess.run(args,**kwargs)
+
+    # provide a direct way for getting the stdout
+    stdout = lambda *args,**kwargs:\
+        sp.shell(*args,text=True,capture_output=True,**kwargs).stdout.strip()
+
+    # let ensuring that a shell command is available
+    is_executable = lambda cmd: cmd in sp.list_executables(cmd)
 
     @classmethod
     def list_executables(cls,executables:str) -> list:
@@ -228,7 +260,7 @@ class sp:
         os.makedirs(f"{_path}/programs",exist_ok=True)
 
         sp.poetry("new","my_python",cwd=f"{_path}/programs")
-        sp.poetry("add","sweetheart",cwd=f"{_path}/programs/my_python")
+        sp.poetry("add",MASTER_MODULE,cwd=f"{_path}/programs/my_python")
         sp.set_python_env(cwd=f"{_path}/programs/my_python")
 
         with open(f"{_path}/configuration/subproc.json","w") as fi:
@@ -246,7 +278,8 @@ class sp:
 
 
 def webbrowser(url:str):
-    """ start url within webbrowser set in config """
+    """ start url within a webbrowser set in config 
+        it leads running on the WSL with Windows 10/11 """
 
     try: select = BaseConfig._['webbrowser']
     except: select = None

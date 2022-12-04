@@ -6,9 +6,9 @@ from zipfile import ZipFile
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
-# get distrib infos on debian/ubuntu
-distrib = sp.stdout("lsb_release -is").lower()
-codename = sp.stdout("lsb_release -cs").lower()
+#FIXME: get distrib infos on debian/ubuntu
+distrib = sp.os_release['ID'].lower()
+codename = sp.os_release['UBUNTU_CODENAME'].lower()
 
 master_pyproject = f"{BaseConfig.HOME}/.sweet/{MASTER_MODULE}/programs/my_python/pyproject.toml"
 raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py"
@@ -43,9 +43,9 @@ def init(config:BaseConfig,add_pylibs=""):
         #'cargolibs': ["mdbook"],
         #'documentation': "sweetbook.zip",
         'aptlibs': ["*unit","*rethinkdb","*nodejs","cargo"],
-        'dnflibs': ["*unit","*rethinkdb","nodejs","cargo"],
-        'npmlibs': ["brython","tailwindcss","vue@latest"],# Vue3
+        'npmlibs': ["brython","daisyui","vue@latest"],# Vue3
         'pylibs': ["rethinkdb","starlette"],
+        #'dnflibs': ["nodejs","cargo"],
         'files': [
             #"documentation/sweetbook.zip",
             "configuration/packages.json",
@@ -79,9 +79,9 @@ def init(config:BaseConfig,add_pylibs=""):
     installer = BaseInstall(config)
     installer.install_libs(PKG_INIT,init=True)
     
-    # build default tailwind.css
-    echo("build generic tailwindcss file",blank=True)
-    sp.shell(config.subproc['.tailwindcss'],cwd=f"{config.root_path}/webpages/resources")
+    # build default tailwind.css file
+    sp.shell(config.subproc['.tailwindcss'],\
+        cwd=f"{config.root_path}/webpages/resources")
 
     if "ipykernel" in PKG_INIT['pylibs']:
         # set python env into jupyter
@@ -137,7 +137,8 @@ class BaseInstall:
         return sp.run("sudo","apt","install",*libs,**kwargs)
 
     def dnf(self,*libs:str,**kwargs):
-        """ install distro packages using 'dnf install'
+        """ FIXME: coming soon !
+            install distro packages using 'dnf install'
             this leads specific treatments for given *libs 
             dedicated for rhel/almalinux distros branch """
 
@@ -281,6 +282,8 @@ wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-ke
 
 
 class NginxUnit:
+
+    #FIXME: work in progress
 
     def __init__(self,config:BaseConfig):
 

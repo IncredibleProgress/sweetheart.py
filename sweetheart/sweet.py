@@ -1,5 +1,7 @@
-""" sweet.py is the multi-purpose controller of sweetheart
-    it provides cli, install process, sandbox and services """
+"""
+sweet.py is the multi-purpose controller of sweetheart
+it provides main utilities and the command line interface
+"""
 
 from sweetheart.globals import *
 
@@ -10,7 +12,7 @@ def set_config(
     config_file:str = None ) -> BaseConfig :
 
     """ set or reset sweetheart configuration with ease
-        allow working with differents projects and configs 
+        allow working with different projects and configs 
         
         >>> config = set_config({
         >>>     "run": "local",
@@ -34,7 +36,7 @@ def set_config(
     # allow altered config
     config.update(values)
 
-    if config.get('run','local') == 'distant':
+    if config.get('run','local') == 'productive':
         config.is_webapp_open = False
         config.is_rethinkdb_local = False
         config.is_jupyter_local = False
@@ -129,7 +131,6 @@ def sws(args):
 
     if args == []:
         cwd= config.PWD
-
         if config.SWSLVL=="1":
             cmds= '\n  '.join(list(switch))
             args= ["echo",f"sws available commands:\n\n  {cmds}\n\nuse 'sws help' for getting some help"]

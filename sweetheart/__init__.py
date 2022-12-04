@@ -14,10 +14,11 @@ MASTER_MODULE = "sweetheart"
 from sys import argv
 from os import getenv
 
-set_msg = "--version" not in argv and "-V" not in argv
-
-if set_msg and not getenv('SWSLVL'):
-    # set welcome message
-    print(
+set_welcome_msg = [
+    "test" not in argv,
+    not getenv('SWSLVL'),
+    "--version" not in argv and "-V" not in argv ]
+    
+if all(set_welcome_msg): print(
         f"Thanks for using Sweetheart ",__version__," !\n",
         __license__, sep="" )

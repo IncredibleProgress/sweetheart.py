@@ -54,7 +54,7 @@ def test_template(template:str):
     config.is_jupyter_local = False
 
     # force re-building tailwind.css
-    echo("build generic tailwindcss file",blank=True)
+    echo("build generic tailwindcss file")
     sp.shell(config.subproc['.tailwindcss'],cwd=f"{config.root_path}/webpages/resources")
 
     path = f"{config['working_dir']}/{config['templates_dir']}"
@@ -80,6 +80,6 @@ if __name__ == '__main__':
     if '--dev-links' in argv: 
         _dev_links_()
         echo("create symbolic links for dev: all done")
-    
-    #assert test_objects()
-    assert test_template(argv[-1])
+
+    if not argv[-1].startswith("-"):
+        assert test_template(argv[-1])
