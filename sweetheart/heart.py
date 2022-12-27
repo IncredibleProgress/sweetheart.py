@@ -9,7 +9,7 @@ this provides ready-to-use utilities and services :
  MongoDB          : disabled
 """
 
-import time
+import time,configparser
 from sweetheart.globals import *
 from sweetheart.bottle import SimpleTemplate
 
@@ -90,6 +90,7 @@ class BaseService:
              - ensure ports unicity for tests on localhost
              - allow setting websocket protocol in simple way
              - provide default API for exchanging data through http
+             - provide a base config for running within systemd
 
             the given url should follow the http://host:port pattern
             sub-classes must set self.command attribute for running service """
@@ -111,40 +112,41 @@ class BaseService:
         assert self.port not in BaseService.ports_register
         BaseService.ports_register.add(self.port)
 
-        # provide a base service file for setting systemd
-        self.sysd = {
-            "Unit":[
-                "After=network.target"
-                ],
-            "Service":[
-                "Type=simple",
-                #"Restart=always",
-                #"RestartSec=1",
-                ],
-            "Install":[
-                "WantedBy=multi-user.target"
-                ]
-            }
+        # provide a ConfigParser for setting systemd
+        self.sysd = configparser.ConfigParser()
 
-    def set_unit(self,
-            Description: str,
-            ExecStart: str,
-            User: str ):
-
-        self.sysd["Unit"].append(f"Description={Description}")
-        self.sysd["Service"].append(f"ExecStart={ExecStart}")
-        self.sysd["Service"].append(f"User={User}")
+        # set usual sections of systemd service file
+        self.sysd.add_section('Unit')
+        self.sysd.add_section('Service')
+        self.sysd.add_section('Install')
 
     def write_service_file(self,filename):
+        """ write service file for setting systemd
+            provide default value if not given """
 
         assert filename.endswith(".service")
         tempfile = f"{self.config.root_path}/configuration/{filename}"
 
-        with open(tempfile,"w") as file_out:
-            for section,items in self.systemd.items():
-                lines = [f"[{section}]",*self.systemd[section],""]
-                file_out.writelines([str+"\n" for str in lines])
+        #FIXME: provide initial default systemd setting
+        def ensure_default(section,param,default_value):
+            assert section in "Unit|Service|Install"
 
+            if self.sysd[section].get(param) is None:
+                verbose("set systemd",f"[{section}]","default value:",param,"=",default_value)
+                self.sysd[section][param] = default_value
+
+        # [Unit]
+        ensure_default('Unit','description',
+            f'Sweetheart default service for {self.url}')
+
+        # [Service]
+        ensure_default('Service','ExecStart',self.command)
+
+        # [Install]
+        ensure_default('Install','WantedBy','multi-user.target')
+
+        # write and set service file for systemd
+        self.sysd.write(tempfile)
         sp.shell(f"sudo cp {tempfile} /etc/systemd/system")
 
     def switch_port_to(self,port_number:int):

@@ -11,14 +11,14 @@ __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 #FIXME: allow replacing sweetheart by a fork of it
 MASTER_MODULE = "sweetheart"
 
-from sys import argv
-from os import getenv
+# from sys import argv
+# from os import getenv
 
-set_welcome_msg = [
-    "test" not in argv,
-    not getenv('SWSLVL'),
-    "--version" not in argv and "-V" not in argv ]
+# set_welcome_msg = [
+#     "test" not in argv,
+#     not getenv('SWSLVL'),
+#     "--version" not in argv and "-V" not in argv ]
     
-if all(set_welcome_msg): print(
-        f"Thanks for using Sweetheart ",__version__," !\n",
-        __license__, sep="" )
+# if all(set_welcome_msg): print(
+#         f"Thanks for using Sweetheart ",__version__," !\n",
+#         __license__, sep="" )

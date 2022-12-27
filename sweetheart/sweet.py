@@ -129,17 +129,14 @@ def sws(args):
         'mdbook': [f"{cf.rust_crates}/mdbook",*args[1:]],
         }
 
-    if args == []:
-        cwd= config.PWD
-        if config.SWSLVL=="1":
-            cmds= '\n  '.join(list(switch))
-            args= ["echo",f"sws available commands:\n\n  {cmds}\n\nuse 'sws help' for getting some help"]
+    if args == [] and config.SWSLVL == "1" :
+        args= ["echo",f"enjoy programming with Sweetheart!\na bit lost? type 'sws help' for getting help"]
 
     # autoset the relevant working directory
-    elif args[0]=='poetry': cwd= cf._['module_path']
+    cwd= config.PWD
+    if args[0]=='poetry': cwd= cf._['module_path']
     elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
     elif args[0]=='build-css': cwd= f"{cf['working_dir']}/resources"
-    else: cwd= config.PWD
 
     verbose("working directory:",cwd)
     verbose("invoke shell:"," ".join(switch.get(args[0],args)))

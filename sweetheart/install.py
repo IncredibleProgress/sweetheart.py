@@ -41,13 +41,13 @@ def init(config:BaseConfig,add_pylibs=""):
 
     PKG_INIT = {
         #'cargolibs': ["mdbook"],
-        #'documentation': "sweetbook.zip",
+        'documentation': "sweetbook.zip",
         'aptlibs': ["*unit","*rethinkdb","*nodejs","cargo"],
-        'npmlibs': ["brython","daisyui","vue@latest"],# Vue3
+        'npmlibs': ["brython","tailwindcss","daisyui","vue@latest"],# Vue3
         'pylibs': ["rethinkdb","starlette"],
         #'dnflibs': ["nodejs","cargo"],
         'files': [
-            #"documentation/sweetbook.zip",
+            "documentation/sweetbook.zip",
             "configuration/packages.json",
             "webpages/HTML",
             "webpages/resources/favicon.ico",
@@ -88,16 +88,16 @@ def init(config:BaseConfig,add_pylibs=""):
         from sweetheart.heart import JupyterLab
         JupyterLab(config).set_ipykernel(set_pwd=False)
    
-    # try:
-    #     # provide sweetheart html documentation    
-    #     os.symlink(f"{config.root_path}/documentation/sweetbook/book",
-    #         f"{config.root_path}/webpages/sweetbook")
-    #     # provide installed javascript libs within Ubuntu/Debian
-    #     os.symlink("/usr/share/javascript",
-    #         f"{config.root_path}/webpages/resources/javascript")
-    # except:
-    #     verbose("INFO:\n an error occured creating symlinks during init process",
-    #         "\n an expected cause could be that links are already existing")
+    try:
+        # provide sweetheart html documentation    
+        os.symlink(f"{config.root_path}/documentation/sweetbook/book",
+            f"{config.root_path}/webpages/sweetbook")
+        # # provide installed javascript libs within Ubuntu/Debian
+        # os.symlink("/usr/share/javascript",
+        #     f"{config.root_path}/webpages/resources/javascript")
+    except:
+        verbose("INFO:\n an error occurred creating symlinks during init process",
+            "\n an expected cause could be that links are already existing")
     
     echo("installation process completed",blank=True)
 
@@ -215,7 +215,7 @@ class BaseInstall:
         assert ext == ".zip"
 
         with ZipFile(zipfile,"r") as zf: zf.extractall()
-        sp.shell(f"{self.config['rust_crates']}/mdbook build {name}")
+        sp.shell(f"{self.config.rust_crates}/mdbook build {name}")
         if remove: os.remove(zipfile)
 
     def install_packages(self,*packages:str):

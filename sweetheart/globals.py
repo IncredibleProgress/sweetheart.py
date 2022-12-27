@@ -90,7 +90,7 @@ class BaseConfig(UserDict):
             },
             "static_dirs": {
                 '/resources': f"resources",
-                #'/documentation': "sweetbook",
+                '/documentation': "sweetbook",
             }}
 
     def __getattr__(self,attr):
@@ -143,8 +143,14 @@ class sp:
         from platform import freedesktop_os_release
         os_release = freedesktop_os_release()
     except:
-        #FIXME: provide system info up to Python 3.9
-        raise NotImplementedError("Python version <= 3.9")
+        # provide system info if not
+        import csv
+        os_release = {}
+        with open("/etc/os-release") as fi:
+             reader = csv.reader(fi,delimiter="=")
+             for line in reader:
+                if line==[]: continue # this can happen...
+                os_release[line[0]] = line[1]
 
     @classmethod
     def shell(cls,*args,**kwargs):
@@ -267,6 +273,7 @@ class sp:
             json.dump({ 'pyenv': BaseConfig.python_env },fi)
 
         # manage the specific case of jupyter
+        #FIXME: lead jupyter/jupyterlab/jupyterhub matter
         if project_name.startswith("jupyter"):
 
             from sweetheart.sweet import set_config
