@@ -191,13 +191,11 @@ class sp:
 
     @classmethod
     def list_executables(cls,executables:str) -> list:
-
         # check executables availability
         for cmd in executables.split():
             try:
                 # will fail if cmd is not executable
                 version = cls.stdout(f"{cmd} --version")
-
                 # search the first executable path
                 for pth in cls.PATH:
                     if os.path.isfile(f"{pth}/{cmd}"):
@@ -207,7 +205,6 @@ class sp:
                         break
             except:
                 continue
-
         # build the missing list
         cls.MISSING = [m for m in executables.split() if m not in cls.EXECUTABLES]
         # return list of executables

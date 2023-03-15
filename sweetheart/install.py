@@ -6,8 +6,8 @@ from zipfile import ZipFile
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
-#FIXME: get distrib infos on debian/ubuntu
 distrib = sp.os_release['ID'].lower()
+distbase = sp.os_release['ID_LIKE'].lower()
 codename = sp.os_release['UBUNTU_CODENAME'].lower()
 
 master_pyproject = f"{BaseConfig.HOME}/.sweet/{MASTER_MODULE}/programs/my_python/pyproject.toml"
@@ -40,14 +40,20 @@ def init(config:BaseConfig,add_pylibs=""):
         os.makedirs(basedir,exist_ok=True)
 
     PKG_INIT = {
-        #'cargolibs': ["mdbook"],
-        'documentation': "sweetbook.zip",
+        # set minimum distro resources
         'aptlibs': ["*unit","*rethinkdb","*nodejs","cargo"],
+        'dnflibs': [],#FIXME: rhel not yet implemented
+        # set minimum rust resources
+        'cargolibs': ["cargo-binstall"],
+        'cargobin': ["mdbook"],
+        # set minimum js and python resources        
         'npmlibs': ["brython","tailwindcss","daisyui","vue@latest"],# Vue3
         'pylibs': ["rethinkdb","starlette"],
-        #'dnflibs': ["nodejs","cargo"],
+        # set documentation and further resources
         'files': [
+            # set documentation .zip package
             "documentation/sweetbook.zip",
+            # set the other needed files
             "configuration/packages.json",
             "webpages/HTML",
             "webpages/resources/favicon.ico",
@@ -56,7 +62,7 @@ def init(config:BaseConfig,add_pylibs=""):
     
     if config.project != MASTER_MODULE:
         # unset libs installation
-        del PKG_INIT['aptlibs']
+        del PKG_INIT['aptlibs'],PKG_INIT['dnflibs']
         #del PKG_INIT['cargolibs']
 
     if "fastapi" in add_pylibs:
@@ -180,7 +186,12 @@ class BaseInstall:
             no libs arg will set init process for new project """
 
         aptlibs = libs.get('aptlibs')
-        if aptlibs: self.apt(*aptlibs)
+        if "debian" in distbase and aptlibs:
+            self.apt(*aptlibs)
+
+        dnflibs = libs.get('dnflibs')
+        if "rhel" in distbase and dnflibs:
+            self.dnf(*dnflibs)
 
         cargolibs = libs.get('cargolibs')
         if cargolibs: self.cargo(*cargolibs)
@@ -194,18 +205,22 @@ class BaseInstall:
         files = libs.get('files')
         if files: self.download(*files)
 
-        # install package documentation if given
-        documentation = libs.get('documentation')
-        if documentation: self.unzip_doc(documentation)
-
     def download(self,*files_list:str):
-        """ download given listed files from github """
+        """ download given listed files from github 
+            unzip documentation when given within files """
 
         for relpath in files_list:
+
+            # download files at the given path
             echo("download file:",relpath)
             urlretrieve(urljoin(raw_github,relpath),
                 os.path.join(self.config.root_path,relpath))
-    
+
+            # unzip doc when given
+            pth,file = os.path.split(relpath)
+            if pth.startswith("documentation") and path.endswith(".zip"):
+                self.unzip_doc(file)
+
     def unzip_doc(self,zipfile:str,remove:bool=True):
         """ unzip and build documentation 
             this require using the mdbook rust crate"""
@@ -283,7 +298,7 @@ wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-ke
 
 class NginxUnit:
 
-    #FIXME: work in progress
+    #FIXME: still to implement
 
     def __init__(self,config:BaseConfig):
 
