@@ -256,7 +256,8 @@ class BaseInstall:
 
 
     def apt_install_unit(self):
-        """ install Nginx Unit on debian/ubuntu systems """
+        """ install Nginx Unit on debian/ubuntu systems 
+            will set official Nginx repository if needed """
 
         _ = self.config
         #NOTE: works with current behavior of poetry
@@ -279,7 +280,8 @@ wget -qO- https://unit.nginx.org/keys/nginx-keyring.gpg | sudo apt-key add - """
 
 
     def apt_install_rethinkdb(self):
-        """ install rethinkdb on debian/ubuntu systems """
+        """ install rethinkdb on debian/ubuntu systems
+            will set official RethinkDB repository if needed """
 
         _ = self.config; script = f"""
 echo "set RethinkDB repository from rethinkdb.com"
@@ -295,55 +297,3 @@ wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-ke
         if not sp.is_executable("rethinkdb"):
             sp.shell(f"sudo apt install rethinkdb")
 
-
-class NginxUnit:
-
-    #FIXME: still to implement
-
-    def __init__(self,config:BaseConfig):
-
-        self.config = config
-        self.host = "http://localhost"
-        self.configfile = f"{config.root_path}/configuration/unit.json"
-
-        self.listeners = {
-            "*:80": {
-                "pass": "routes"
-            }
-        }
-        self.routes = [
-            {
-                "match": {
-                    "uri": "/jupyter/*"
-                },
-                "action": {
-                    "proxy": config.jupyter_host
-                }
-            },
-            {
-                "action": {
-                    "pass": "applications/starlette"
-                }
-            }
-        ]
-        self.applications = {
-            "starlette": {
-                "type": f"python {config.python_version}",
-                "path": config.module_path,
-                "home": config.python_env,
-                "module": "start",
-                "callable": "webapp",
-                "user": "ubuntu"
-            }
-        }
-
-    def put_config(self):
-
-        with open(self.configfile,'w') as file_out:
-            json.dump({ 
-                "listeners": self.listeners,
-                "routes": self.routes,
-                "applications": self.applications }, file_out)
-
-        sp.run("sudo","curl","-X","PUT","-d",f"@{self.configfile}",
-            "--unix-socket","/var/run/control.unit.sock",f"{self.host}/config/")

@@ -499,36 +499,57 @@ class JupyterLab(BaseService):
             sp.python("-m","jupyter","notebook","password","-y")
 
 
-# class MongoDB(BaseService):
 
-#     def __init__(self,config:BaseConfig,run_local:bool=False):
-#         """ set Mongo Database as a service """
+class NginxUnit:
 
-#         # url auto set from config
-#         super().__init__(config.database_host,config)
-#         self.command = f"mongod --dbpath={config.subproc['mongopath']}"
-#         if run_local: self.run_local(service=True)
-        
-#     def set_client(self):
-#         """ set MongoDB client and select database given by config 
-#             it provides default messages related to the database 
-#             return pymongo.MongoClient, MongoClient.Database tuple """
+    #FIXME: still to implement
 
-#         from pymongo import MongoClient
+    def __init__(self,config:BaseConfig):
 
-#         self.client = MongoClient(host=self.host,port=self.port)
-#         echo("available databases:",self.client.list_database_names()[3:])
+        self.config = config
+        self.host = "http://localhost"
+        self.configfile = f"{config.root_path}/configuration/unit.json"
 
-#         self.database = self.client[self.config['db_name']]
-#         echo(f"selected database:",self.config['db_name'])
-#         echo("existing collections:",self.database.list_collection_names())
+        self.listeners = {
+            "*:80": {
+                "pass": "routes"
+            }
+        }
+        self.routes = [
+            {
+                "match": {
+                    "uri": "/jupyter/*"
+                },
+                "action": {
+                    "proxy": config.jupyter_host
+                }
+            },
+            {
+                "action": {
+                    "pass": "applications/starlette"
+                }
+            }
+        ]
+        self.applications = {
+            "starlette": {
+                "type": f"python {config.python_version}",
+                "path": config.module_path,
+                "home": config.python_env,
+                "module": "start",
+                "callable": "webapp",
+                "user": "ubuntu"
+            }
+        }
 
-#         return self.client,self.database
+    def put_config(self):
 
-#     def on_receive(self,websocket,data):
+        with open(self.configfile,'w') as file_out:
+            json.dump({ 
+                "listeners": self.listeners,
+                "routes": self.routes,
+                "applications": self.applications }, file_out)
 
-#         # collection.find_one(data['select'],{'_id':0})
-#         # collection.update_one(data['select'],{'$set':data['values']})
-#         # collection.insert_one(data['values'])
-#         raise NotImplementedError
+        sp.run("sudo","curl","-X","PUT","-d",f"@{self.configfile}",
+            "--unix-socket","/var/run/control.unit.sock",f"{self.host}/config/")
+
 
