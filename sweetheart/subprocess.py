@@ -2,6 +2,7 @@
 import subprocess
 from sweetheart import *
 
+
 class sp:
     """ namespace providing basic subprocess features 
         beware that it uses BaseConfig and not config """
@@ -10,12 +11,23 @@ class sp:
     EXECUTABLES = {} # fetched by list_executables()
     MISSING = [] # fetched by list_executables()
 
+    # former provided function for executing shell commands
+    run = lambda *args,**kwargs: subprocess.run(args,**kwargs)
+
+    # provide a direct way for getting the stdout
+    stdout = lambda *args,**kwargs:\
+        sp.shell(*args,text=True,capture_output=True,**kwargs).stdout.strip()
+
+    # let ensuring that a shell command is available
+    is_executable = lambda cmd: cmd in sp.list_executables(cmd)
+
     try:
         # provide system info for Python3.10 and more
         from platform import freedesktop_os_release
         os_release = freedesktop_os_release()
     except:
         # provide system info if not
+        # this allows working with RHEL9 and clones
         import csv
         os_release = {}
         with open("/etc/os-release") as fi:
@@ -50,16 +62,6 @@ class sp:
 
         for instruc in script.splitlines():
             subprocess.run(instruc.strip(),shell=True)
-
-    # former provided function for executing shell commands
-    run = lambda *args,**kwargs: subprocess.run(args,**kwargs)
-
-    # provide a direct way for getting the stdout
-    stdout = lambda *args,**kwargs:\
-        sp.shell(*args,text=True,capture_output=True,**kwargs).stdout.strip()
-
-    # let ensuring that a shell command is available
-    is_executable = lambda cmd: cmd in sp.list_executables(cmd)
 
     @classmethod
     def list_executables(cls,executables:str) -> list:
@@ -153,6 +155,10 @@ class sp:
             JupyterLab(config).set_ipykernel(pwd=True)
 
 
+  #############################################################################
+ ## facilities ###############################################################
+#############################################################################
+
 def webbrowser(url:str):
     """ start url within the webbrowser set in config 
         it allow running on the WSL with Windows 10/11 """
@@ -179,3 +185,44 @@ def install(*packages):
 
     from sweetheart.install import BaseInstall
     BaseInstall(config).install_packages(*packages)
+
+
+  #############################################################################
+ ## dev tools ################################################################
+#############################################################################
+
+def symlink(source,dest):
+
+    import shutil
+
+    if os.path.islink(dest): print(f"Warning, existing link {dest}")
+    elif os.path.isfile(dest): os.remove(dest)
+    elif os.path.isdir(dest) : shutil.rmtree(dest)
+    try: os.symlink(source,dest)
+    except: pass
+
+
+def _dev_links_():
+
+    src = f"{BaseConfig.HOME}/{MASTER_MODULE}.py"# source dir
+    pjt = f"{BaseConfig.HOME}/.sweet/{MASTER_MODULE}"# project dir
+
+    # make links for testing dev files
+    symlink(f"{src}/configuration/packages.json",f"{pjt}/configuration/packages.json")
+    symlink(f"{src}/webpages/resources/tailwind.base.css",f"{pjt}/webpages/resources/tailwind.base.css")
+    symlink(f"{src}/webpages/resources/tailwind.config.js",f"{pjt}/webpages/resources/tailwind.config.js")
+    symlink(f"{src}/webpages/HTML",f"{pjt}/webpages/HTML")
+
+    # make links for testing dev directories
+    symlink(f"{src}/webpages/templates",f"{pjt}/webpages/templates")
+    symlink(f"{src}/documentation/sweetbook",f"{pjt}/documentation/sweetbook")
+    symlink(f"{src}/documentation/notebooks",f"{pjt}/documentation/notebooks")
+
+
+def _dev_sweetheart_():
+    # link ~/sweetheart.py as python package
+    set_config()
+    sp.poetry("remove","sweetheart")
+
+    symlink(f"{BaseConfig.HOME}/{MASTER_MODULE}.py",
+        f"{BaseConfig._.python_env}/lib/python*/site-packages/sweetheart")

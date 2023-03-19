@@ -310,6 +310,31 @@ def createVueApp(dict):
         **kwargs ))
 
 
+def build_css():
+    """ build or rebuild tailwind.css file """
+    from sweetheart.subprocess import sp
+    
+    sp.shell(BaseConfig._.subproc['.tailwindcss'],
+        cwd=f"{config.root_path}/webpages/resources")
+
+
+def test_template(template:str):
+
+    BaseConfig.verbosity = 1
+    BaseConfig._.is_webapp_open = True
+    BaseConfig._.rethinkdb_local = False
+    BaseConfig._.jupyter_local = False
+
+    path = f"{BaseConfig._.working_dir}/{BaseConfig._.templates_dir}"
+    if not os.path.isfile(path) and not os.path.islink(path):
+        echo("Error, the given template is not existing",mode="exit")
+
+    webapp = HttpServer(config,set_database=False).mount(
+        Route("/",HTMLTemplate(template)) )
+
+    quickstart(webapp)
+
+
   #############################################################################
  ## logging functions ########################################################
 #############################################################################

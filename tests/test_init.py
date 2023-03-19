@@ -1,6 +1,5 @@
 
-from sweetheart.globals import *
-from sweetheart.sweet import set_config
+from sweetheart.subprocess import *
 from sweetheart.install import init
 
 def test_init():
