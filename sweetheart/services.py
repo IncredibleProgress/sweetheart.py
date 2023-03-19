@@ -1,17 +1,7 @@
-"""
-heart.py is ... the heart of sweetheart!
-this provides ready-to-use utilities and services :
-
- HttpServer       : enabled
- JupyterLab       : enabled
- RethinkDB        : enabled
- HTMLTemplate     : enabled
- MongoDB          : disabled
-"""
 
 import time,configparser
-from sweetheart.globals import *
-from sweetheart.bottle import SimpleTemplate
+from sweetheart.subprocess import *
+#from sweetheart.bottle import SimpleTemplate
 
 from starlette.applications import Starlette
 from starlette.staticfiles import StaticFiles
@@ -315,60 +305,6 @@ def WelcomeMessage(config:BaseConfig|None=None) -> HTMLResponse:
         <p><br><br><em>this message appears because there
         was nothing else to render here</em></p>
         </div>""")
-
-
-def HTMLTemplate(filename:str,**kwargs) -> HTMLResponse:
-    """ provide a Starlette-like function for rendering templates
-        including configuration data and some python magic stuff """
-
-    os.chdir(BaseConfig._['working_dir'])
-
-    if os.path.isfile(f"{BaseConfig._['templates_dir']}/{filename}"):
-        # load template from filename if exists
-        with open(f"{BaseConfig._['templates_dir']}/{filename}","r") as tpl:
-            template = tpl.read()
-
-    elif isinstance(filename,str):
-        # alternatively test the given string as template
-        template = filename
-
-    else: raise TypeError
-
-    for old,new in {
-      # provide magic html rebase() syntax <!SWEETHEART html>
-      f'<!{MASTER_MODULE.upper()} html>': \
-          f'%rebase("{BaseConfig._["templates_base"]}")',
-
-      # provide magic html facilities
-      ' s-style>': ' class="sw">',
-      ' s-style="': ' class="sw ', # switch for tailwindcss
-      '<vue': '<div v-cloak id="VueApp"',
-      '</vue>': '</div>',
-
-      # provide magic <python></python> syntax
-      '</python>': "</script>",
-      '<python>': """<script type="text/python">
-import json
-from browser import window, document
-console, r = window.console, window.r
-def try_exec(code:str):
-    try: exec(code)
-    except: pass
-def createVueApp(dict):
-    try_exec("r.onupdate = on_update")
-    try_exec("r.onmessage = on_message")
-    try_exec("window.vuecreated = vue_created")
-    window.createVueApp(json.dumps(dict))\n""",
-
-      }.items():
-        template = template.replace(old,new)
-    
-    # render html from template and config
-    template = SimpleTemplate(template)
-    return HTMLResponse(template.render(
-        __db__ = BaseConfig._['db_name'],
-        **BaseConfig._['templates_settings'],
-        **kwargs ))
 
 
 class HttpServer(BaseService):

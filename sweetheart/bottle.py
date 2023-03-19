@@ -17,7 +17,7 @@ from __future__ import with_statement
  ## set SimpleTemplate syntax for Sweetheart #################################
 #############################################################################
 
-from sweetheart.globals import BaseConfig, verbose
+from sweetheart import BaseConfig, verbose
 
 try:
     # if existing, BaseConfig._ provides the current sweetheart config

@@ -154,8 +154,8 @@ class sp:
 
 
 def webbrowser(url:str):
-    """ start url within a webbrowser set in config 
-        it leads running on the WSL with Windows 10/11 """
+    """ start url within the webbrowser set in config 
+        it allow running on the WSL with Windows 10/11 """
 
     try: select = BaseConfig._['webbrowser']
     except: select = None
@@ -168,3 +168,14 @@ def webbrowser(url:str):
 
     else: sp.python("-m","webbrowser",url)
 
+
+def install(*packages):
+    """ easy way for installing whole packages with documentation,
+        apt libs, rust libs, node libs, python libs, and files """
+
+    # allow auto config
+    if hasattr(BaseConfig,"_"): config = BaseConfig._
+    else: config = set_config()
+
+    from sweetheart.install import BaseInstall
+    BaseInstall(config).install_packages(*packages)

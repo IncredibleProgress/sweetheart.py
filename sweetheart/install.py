@@ -1,6 +1,6 @@
 
 import sys
-from sweetheart.globals import *
+from sweetheart.subprocess import *
 
 from zipfile import ZipFile
 from urllib.parse import urljoin

@@ -6,9 +6,9 @@ from sweetheart import __version__
 assert __version__ == '0.1.2'
 
 import os,shutil
-from sweetheart.globals import *
-from sweetheart.sweet import *
-from sweetheart.heart import *
+from sweetheart.subprocess import *
+#from sweetheart.sweet import *
+from sweetheart.services import *
 from sweetheart.install import *
 
 

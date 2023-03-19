@@ -1,13 +1,9 @@
 """
-sweet.py is the multi-purpose controller of sweetheart
-it provides main utilities and the command line interface
+cli.py is the multi-purpose controller provided by sweetheart
+it provides main utilities through the command line interface
 """
 
-from sweetheart.globals import *
-
-
-
-
+from sweetheart.subprocess import *
 
 
 def sws(args):
@@ -17,7 +13,7 @@ def sws(args):
     except: raise Exception("Error, config is missing")
 
     cf,sb = config, config.subproc
-    sweet = [config.python_bin,"-m","sweetheart.sweet"]
+    sweet = [config.python_bin,"-m","sweetheart.cli"]
     vv,py,po = config.python_env,config.python_bin,config.poetry_bin
 
     if isinstance(args,str): args = args.split()
@@ -47,27 +43,15 @@ def sws(args):
 
     # autoset the relevant working directory
     cwd= config.PWD
-    if args[0]=='poetry': cwd= cf._['module_path']
+    if args[0]=='poetry': cwd= cf.module_path
     elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
-    elif args[0]=='build-css': cwd= f"{cf['working_dir']}/resources"
+    elif args[0]=='build-css': cwd= f"{cf.working_dir}/resources"
 
     verbose("working directory:",cwd)
     verbose("invoke shell:"," ".join(switch.get(args[0],args)))
 
     try: sp.run(*switch.get(args[0],args),cwd=cwd)
     except: verbose("sws has been interrupted")
-
-
-def install(*packages):
-    """ easy way for installing whole packages with documentation,
-        apt libs, rust libs, node libs, python libs, and files """
-
-    # allow auto config
-    if hasattr(BaseConfig,"_"): config = BaseConfig._
-    else: config = set_config()
-
-    from sweetheart.install import BaseInstall
-    BaseInstall(config).install_packages(*packages)
 
 
 class CommandLineInterface:

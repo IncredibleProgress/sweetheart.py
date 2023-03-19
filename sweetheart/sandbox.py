@@ -8,9 +8,9 @@ when not given config will be autoset for providing some magic
 import nest_asyncio
 nest_asyncio.apply()
 
-from sweetheart.globals import *
+from sweetheart.cli import sws
+from sweetheart.subprocess import *
 from sweetheart.install import BaseInstall
-from sweetheart.sweet import set_config,install,quickstart,sws
 from sweetheart.heart import \
     RethinkDB,\
     HttpServer,\
@@ -25,8 +25,8 @@ from starlette.responses import *
 try: import pandas as pa
 except: pass
 
-def HTMLTemplate(*args,**kwargs):
-    """ provide a Starlette-like function for templates
-        altered HTMLTemplate() function for running within Jupyter """
-    if not hasattr(BaseConfig,"_"): set_config()
-    return _HTMLTemplate_(*args,**kwargs)
+# def HTMLTemplate(*args,**kwargs):
+#     """ provide a Starlette-like function for templates
+#         altered HTMLTemplate() function for running within Jupyter """
+#     if not hasattr(BaseConfig,"_"): set_config()
+#     return _HTMLTemplate_(*args,**kwargs)
