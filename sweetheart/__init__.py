@@ -1,5 +1,5 @@
 """
-SWEETHEART 0.1.x `new age rising`
+SWEETHEART 0.1.x 'new age rising'
 rock-solid pillars for innovative and enterprise-grade apps
 ---
 Start from scratch and create with ease and efficiency the apps you really need
@@ -11,7 +11,7 @@ __init__.py :
  (non-exhaustive)
 """
 
-import os,json,subprocess
+import os,sys,json,subprocess
 from collections import UserDict
 
 __version__ = "0.1.2"
@@ -47,7 +47,7 @@ class BaseConfig(UserDict):
 
     # default path settings
     poetry_bin = f"{HOME}/.local/bin/poetry"
-    python_bin = "python3"# no python env set here
+    python_bin = sys.executable # no python env set here
     rust_crates = f"{HOME}/.cargo/bin"
 
     # default productive settings
@@ -355,29 +355,37 @@ def webbrowser(url:str):
 #############################################################################
 
 class sp:
-    """ namespace providing basic subprocess features 
-        beware that it uses BaseConfig and not config """
+    """
+    namespace providing basic subprocess features 
+    beware that it uses BaseConfig and not config 
+        
+    >>> sp.stdout("which python3")
+    >>> sp.is_executable("cargo")
+    """
 
     PATH = os.get_exec_path()
     EXECUTABLES = {} # fetched by list_executables()
     MISSING = [] # fetched by list_executables()
 
     # former provided function for executing shell commands
-    run = lambda *args,**kwargs: subprocess.run(args,**kwargs)
+    # args must be given separately as function arguments
+    run = lambda *args,**kwargs:\
+        subprocess.run(args,**kwargs)
 
-    # provide a direct way for getting the stdout
+    # provide a direct way for getting the shell stdout 
     stdout = lambda *args,**kwargs:\
         sp.shell(*args,text=True,capture_output=True,**kwargs).stdout.strip()
 
     # let ensuring that a shell command is available
-    is_executable = lambda cmd: cmd in sp.list_executables(cmd)
+    is_executable = lambda cmd:\
+        cmd in sp.list_executables(cmd)
 
     try:
         # provide system info for Python3.10 and more
         from platform import freedesktop_os_release
         os_release = freedesktop_os_release()
     except:
-        # provide system info if not
+        #FIXME: provide system info if not
         # this allows working with RHEL9 and clones
         import csv
         os_release = {}
@@ -386,6 +394,11 @@ class sp:
              for line in reader:
                 if line==[]: continue # this can happen...
                 os_release[line[0]] = line[1]
+
+    # provide distro infos
+    distrib = os_release['ID'].lower()
+    distbase = os_release['ID_LIKE'].lower()
+    codename = os_release['UBUNTU_CODENAME'].lower()
 
     @classmethod
     def shell(cls,*args,**kwargs):
@@ -498,7 +511,6 @@ class sp:
         #FIXME: lead jupyter/jupyterlab/jupyterhub matter
         if project_name.startswith("jupyter"):
 
-            from sweetheart.sweet import set_config
             from sweetheart.heart import JupyterLab
 
             config = set_config(project="jupyter")
@@ -536,6 +548,7 @@ def echo(*args,mode:str="default",blank:bool=False):
         print("[%s]"% BaseConfig.label.upper(),*args)
 
     if "exit" in mode: exit()
+
 
 def verbose(*args,level:int=1):
     """ convenient function for verbose messages 

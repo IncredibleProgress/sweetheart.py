@@ -12,7 +12,7 @@ PATH = os.environ['PATH']
 # ensure prerequisites for sweetheart
 # this installs poetry and sws with minimum capabilities
 if not os.path.isfile(
-    "{HOME}/.sweet/sweetheart/programs/my_python/pyproject.toml" ):
+    f"{HOME}/.sweet/sweetheart/programs/my_python/pyproject.toml" ):
 
     # provide which as python func
     wh = lambda command: sp.run(
@@ -37,7 +37,14 @@ if not os.path.isfile(
     # build my_python directory
     os.chdir(f"{HOME}/.sweet/sweetheart/programs/my_python")
     sp.run(f"{poetry} init -n",shell=True)
-    sp.run(f"{poetry} add sweetheart",shell=True)
+
+    if "--github" in sys.argv:
+        # install sweetheart from github repository
+        src = "https://github.com/IncredibleProgress/sweetheart.py.git"
+        sp.run(f"{poetry} add git+{src}",shell=True)
+    else:
+        # install sweetheart from pypi repository
+        sp.run(f"{poetry} add sweetheart",shell=True)
 
     # set python env
     venv = sp.run(
@@ -84,10 +91,6 @@ from sweetheart import *
 from zipfile import ZipFile
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
-
-distrib = sp.os_release['ID'].lower()
-distbase = sp.os_release['ID_LIKE'].lower()
-codename = sp.os_release['UBUNTU_CODENAME'].lower()
 
 master_pyproject = f"{BaseConfig.HOME}/.sweet/{MASTER_MODULE}/programs/my_python/pyproject.toml"
 raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py"
@@ -325,7 +328,7 @@ class BaseInstall:
 
         # set official repository and install nodejs
         if "node" not in exe and "npm" not in exe:
-            print(f"set NodeJS {ver} LTS repository from nodesource.com")
+            verbose(f"set NodeJS {ver} LTS repository from nodesource.com")
             sp.shell(f"curl -fsSL https://deb.nodesource.com/setup_{ver} | sudo -E bash - && apt-get install -y nodejs")
 
 
@@ -333,23 +336,21 @@ class BaseInstall:
         """ install Nginx Unit on debian/ubuntu systems 
             will set official Nginx repository if needed """
 
-        _ = self.config
         #NOTE: works with current behavior of poetry
-        assert _.python_env.endswith(_.python_version)
+        assert self.config.python_env.endswith(self.config.python_version)
 
-        script = f"""
-echo "set Nginx Unit repository from nginx.org"
-echo "deb https://packages.nginx.org/unit/{distrib}/ {codename} unit" | sudo tee /etc/apt/sources.list.d/unit.list
-wget -qO- https://unit.nginx.org/keys/nginx-keyring.gpg | sudo apt-key add - """
-
-        # set official Nginx Unit repository
         if not sp.stdout("apt policy unit"):
-            sp.read_sh(script)
-            sp.shell("sudo apt update")
+            # set official Nginx Unit repository
+            sp.read_sh(f"""
+echo "set Nginx Unit repository from nginx.org"
+echo "deb https://packages.nginx.org/unit/{sp.distrib}/ {sp.codename} unit" | sudo tee /etc/apt/sources.list.d/unit.list
+wget -qO- https://unit.nginx.org/keys/nginx-keyring.gpg | sudo apt-key add - 
+            """.strip() )
 
-        # install Nginx Unit packages
         if not sp.is_executable("unitd"):
+            # install Nginx Unit packages
             version = self.config.python_version
+            sp.shell("sudo apt update")
             sp.shell(f"sudo apt install unit unit-python{version}") 
 
 
@@ -357,17 +358,15 @@ wget -qO- https://unit.nginx.org/keys/nginx-keyring.gpg | sudo apt-key add - """
         """ install rethinkdb on debian/ubuntu systems
             will set official RethinkDB repository if needed """
 
-        _ = self.config; script = f"""
-echo "set RethinkDB repository from rethinkdb.com"
-echo "deb https://download.rethinkdb.com/repository/{distrib}-{codename} {codename} main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
-wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-key add - """
-
-        # set offical RethinkDB repository
         if not sp.stdout("apt policy rethinkdb"):
-            sp.read_sh(script)
+            # set offical RethinkDB repository
+            sp.read_sh(f"""
+echo "set RethinkDB repository from rethinkdb.com"
+echo "deb https://download.rethinkdb.com/repository/{sp.distrib}-{sp.codename} {sp.codename} main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
+wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-key add -
+            """.strip() )
+
+        if not sp.executable("rethinkdb"):
+            # install rethinkdb package
             sp.shell("sudo apt update")
-
-        # update Rethinkdb package
-        if not sp.is_executable("rethinkdb"):
             sp.shell(f"sudo apt install rethinkdb")
-
