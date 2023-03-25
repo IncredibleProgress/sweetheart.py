@@ -1,6 +1,85 @@
+"""
+provide installation tools for getting
+sweetheart requirements and resources
+"""
+import os,sys,json,stat
+import subprocess as sp
 
-import sys
-from sweetheart.subprocess import *
+HOME = os.environ['HOME']
+PATH = os.environ['PATH']
+
+
+# ensure prerequisites for sweetheart
+# this installs poetry and sws with minimum capabilities
+if not os.path.isfile(
+    "{HOME}/.sweet/sweetheart/programs/my_python/pyproject.toml" ):
+
+    # provide which as python func
+    wh = lambda command: sp.run(
+        f"which {command}",
+        shell=True,text=True,capture_output=True,
+        ).stdout.strip()
+
+    sws_script = f"{HOME}/.local/bin/sws"
+    poetry = wh('poetry') or wh('~/.local/bin/poetry')
+    sp_conf_file = f"{HOME}/.sweet/sweetheart/configuration/subproc.json"
+
+    if not poetry:
+        assert wh('curl') and wh('python3')
+        sp.run("curl -sSL https://install.python-poetry.org|python3 -",shell=True)
+        poetry = wh('poetry') or wh('~/.local/bin/poetry')
+        assert poetry
+
+    # make required directories
+    os.makedirs(f"{HOME}/.sweet/sweetheart/programs",exist_ok=True)
+    os.makedirs(f"{HOME}/.sweet/sweetheart/configuration",exist_ok=True)
+    
+    # build my_python directory
+    os.chdir(f"{HOME}/.sweet/sweetheart/programs/my_python")
+    sp.run(f"{poetry} init -n",shell=True)
+    sp.run(f"{poetry} add sweetheart",shell=True)
+
+    # set python env
+    venv = sp.run(
+        f"{poetry} env info --path",
+        shell=True,text=True,capture_output=True,
+        ).stdout.strip()
+
+    # provide subroc.conf file
+    if venv=="": raise Exception("!Error, no Python env found")
+    with open(sp_conf_file,"w") as file_out:
+        json.dump({ 'pyenv': venv },file_out)
+
+    # provide sws command (faster than 'poetry run')
+    with open(sws_script,"w") as file_out:
+        file_out.write(f"#!/bin/sh\n{venv}/bin/python3 -m sweetheart.cli sh $*")
+    
+    # authorize execution of sws
+    os.chmod(sws_script,stat.S_IRWXU|stat.S_IRGRP|stat.S_IROTH)
+
+    if f"{HOME}/.local/bin" not in PATH:
+        # export ~/.local/bin within .bashrc
+        with open("{HOME}/.bashrc","a") as file_out:
+            file_out.write(f"\nexport PATH={HOME}/.local/bin:$PATH")
+
+
+if __name__ == "__main__": 
+
+    if "--init" in sys.argv:
+        # autostart init process for full install
+        sp.run("bash sws --init",shell=True)
+
+    # STOP install module execution here
+    # a sweetheart config is required for next utilities
+    exit()
+
+
+  #############################################################################
+ ## Sweetheart Install Tools #################################################
+#############################################################################
+
+from sweetheart import *
+#NOTE: sp is replaced here by sp class of sweetheart
 
 from zipfile import ZipFile
 from urllib.parse import urljoin
@@ -12,11 +91,6 @@ codename = sp.os_release['UBUNTU_CODENAME'].lower()
 
 master_pyproject = f"{BaseConfig.HOME}/.sweet/{MASTER_MODULE}/programs/my_python/pyproject.toml"
 raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py"
-
-# ensure prerequisites
-if not os.path.isfile(master_pyproject):
-    sp.shell(f"curl -sSL {raw_github} | python3 -")
-
 
 def init(config:BaseConfig,add_pylibs=""):
     """ set require minimal features for working with sweetheart """
@@ -33,7 +107,7 @@ def init(config:BaseConfig,add_pylibs=""):
     for basedir in [
           #f"{config.root_path}/configuration",
           f"{config.root_path}/database",
-          #f"{config.root_path}/documentation/notebooks",
+          f"{config.root_path}/documentation/notebooks",
           #f"{config.root_path}/programs/scripts",
           f"{config.root_path}/webpages/templates",
           f"{config.root_path}/webpages/resources" ]:
@@ -51,7 +125,7 @@ def init(config:BaseConfig,add_pylibs=""):
         'pylibs': ["rethinkdb","starlette"],
         # set documentation and further resources
         'files': [
-            # set documentation .zip package
+            # set the documentation .zip package
             "documentation/sweetbook.zip",
             # set the other needed files
             "configuration/packages.json",

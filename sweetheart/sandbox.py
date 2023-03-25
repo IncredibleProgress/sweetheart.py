@@ -8,8 +8,8 @@ when not given config will be autoset for providing some magic
 import nest_asyncio
 nest_asyncio.apply()
 
+from sweetheart import *
 from sweetheart.cli import sws
-from sweetheart.subprocess import *
 from sweetheart.install import BaseInstall
 from sweetheart.heart import \
     RethinkDB,\
