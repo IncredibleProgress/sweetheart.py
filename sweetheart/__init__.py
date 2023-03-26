@@ -395,7 +395,7 @@ class sp:
                 if line==[]: continue # this can happen...
                 os_release[line[0]] = line[1]
 
-    # provide distro infos
+    # provide distro (lower) infos 
     distrib = os_release['ID'].lower()
     distbase = os_release['ID_LIKE'].lower()
     codename = os_release['UBUNTU_CODENAME'].lower()

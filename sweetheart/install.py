@@ -237,11 +237,17 @@ class BaseInstall:
         # install other packages
         return sp.run("sudo","dnf","install",*libs,**kwargs)
 
-    def cargo(self,*libs:str,**kwargs):
-        """ install rust crates using cargo """
+    def cargo(self,*libs:str,bin:bool=False,**kwargs):
+        """ install rust crates (given libs) using cargo 
+            will use cargo-binstall when bin is set at True """
 
-        echo("cargo install:",*libs,blank=True)
-        return sp.run(f"cargo","install",*libs,**kwargs)
+        if bin == True:
+            echo("cargo install:",*libs,blank=True)
+            return sp.run(f"cargo","install",*libs,**kwargs)
+        elif bin == False:
+            echo("cargo-binstall:",*libs,blank=True)
+            return sp.run(f"{rust_crates}/cargo-binstall",*libs,**kwargs)
+        else: raise TypeError
     
     def poetry(self,*libs:str,**kwargs):
         """ install python packages using poetry """
@@ -263,15 +269,19 @@ class BaseInstall:
             no libs arg will set init process for new project """
 
         aptlibs = libs.get('aptlibs')
-        if "debian" in distbase and aptlibs:
+        if "debian" in sp.distbase and aptlibs:
             self.apt(*aptlibs)
 
         dnflibs = libs.get('dnflibs')
-        if "rhel" in distbase and dnflibs:
+        if "rhel" in sp.distbase and dnflibs:
             self.dnf(*dnflibs)
 
         cargolibs = libs.get('cargolibs')
         if cargolibs: self.cargo(*cargolibs)
+
+        # cargo-binstall must be installed 
+        cargobin = libs.get('cargobin')
+        if cargobin: self.cargo(*cargobin,bin=True)
 
         npmlibs = libs.get('npmlibs')
         if npmlibs: self.npm(*npmlibs,init=init)
