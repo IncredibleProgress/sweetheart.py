@@ -1,12 +1,18 @@
 """
-provide installation tools for getting
+installation tools for getting
 sweetheart requirements and resources
+
+available options to provide within argv :
+ --github   get sweetheart from github instead of pypi
+ --init     autostart the initialization process 
 """
+
 import os,sys,json,stat
 import subprocess as sp
 
 HOME = os.environ['HOME']
 PATH = os.environ['PATH']
+raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"#! / at end
 
 
 # ensure prerequisites for sweetheart
@@ -82,7 +88,7 @@ if __name__ == "__main__":
 
 
   #############################################################################
- ## Sweetheart Install Tools #################################################
+ ## Sweetheart Installation Tools ############################################
 #############################################################################
 
 from sweetheart import *
@@ -92,9 +98,26 @@ from zipfile import ZipFile
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
-master_pyproject = f"{BaseConfig.HOME}/.sweet/{MASTER_MODULE}/programs/my_python/pyproject.toml"
-raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py"
 
+def init_project_env(project_name:str):
+    """ create and init new python env for new project """
+
+    assert project_name != MASTER_MODULE
+    _path = f"{BaseConfig.HOME}/.sweet/{project_name}"
+
+    #os.makedirs(f"{_path}/documentation/notebooks",exist_ok=True)
+    os.makedirs(f"{_path}/configuration",exist_ok=True)
+    os.makedirs(f"{_path}/programs",exist_ok=True)
+
+    # init a new python env for new project
+    sp.poetry("new","my_python",cwd=f"{_path}/programs")
+    sp.poetry("add",MASTER_MODULE,cwd=f"{_path}/programs/my_python")
+    sp.set_python_env(cwd=f"{_path}/programs/my_python")
+
+    with open(f"{_path}/configuration/subproc.json","w") as fi:
+        json.dump({ 'pyenv': BaseConfig.python_env },fi)
+
+        
 def init(config:BaseConfig,add_pylibs=""):
     """ set require minimal features for working with sweetheart """
 
@@ -103,7 +126,16 @@ def init(config:BaseConfig,add_pylibs=""):
         sp.init_project_env(config.project)
 
     if config.project.startswith("jupyter"):
+        
         echo("INFO: init jupyter as a specific project")
+        #FIXME: lead jupyter/jupyterlab/jupyterhub matter
+
+        config = set_config(project="jupyter")
+        sp.poetry("add",project_name)
+
+        from sweetheart.heart import JupyterLab
+        JupyterLab(config).set_ipykernel(pwd=True)
+
         return
 
     # required directories
@@ -129,7 +161,7 @@ def init(config:BaseConfig,add_pylibs=""):
         # set documentation and further resources
         'files': [
             # set the documentation .zip package
-            "documentation/sweetbook.zip",
+            "documentation/sweetdoc.zip",
             # set the other needed files
             "configuration/packages.json",
             "webpages/HTML",
@@ -173,18 +205,14 @@ def init(config:BaseConfig,add_pylibs=""):
    
     try:
         # provide sweetheart html documentation    
-        os.symlink(f"{config.root_path}/documentation/sweetbook/book",
-            f"{config.root_path}/webpages/sweetbook")
-        # # provide installed javascript libs within Ubuntu/Debian
-        # os.symlink("/usr/share/javascript",
-        #     f"{config.root_path}/webpages/resources/javascript")
+        os.symlink(f"{config.root_path}/documentation/sweetdoc/book",
+            f"{config.root_path}/webpages/sweetdoc")
     except:
-        verbose("INFO:\n an error occurred creating symlinks during init process",
-            "\n an expected cause could be that links are already existing")
+        verbose("WARNING: link creation to sweetdoc failed")
     
     echo("installation process completed",blank=True)
 
-    
+
 class BaseInstall:
 
     def __init__(self,config:BaseConfig):

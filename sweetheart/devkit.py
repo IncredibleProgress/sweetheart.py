@@ -24,7 +24,7 @@ def dev_links():
 
     # make links for testing dev directories
     symlink(f"{src}/webpages/templates",f"{pjt}/webpages/templates")
-    symlink(f"{src}/documentation/sweetbook",f"{pjt}/documentation/sweetbook")
+    symlink(f"{src}/documentation/sweetdoc",f"{pjt}/documentation/sweetdoc")
     symlink(f"{src}/documentation/notebooks",f"{pjt}/documentation/notebooks")
 
 

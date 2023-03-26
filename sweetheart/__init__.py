@@ -1,13 +1,13 @@
 """
 SWEETHEART 0.1.x 'new age rising'
 rock-solid pillars for innovative and enterprise-grade apps
----
-Start from scratch and create with ease and efficiency the apps you really need
-embedding reliable open-source code, highest quality components, best practices.
----
+
+*Start from scratch and create with ease and efficiency the apps you really need
+embedding reliable open-source code, highest quality components, best practices.*
+
 __init__.py :
- imports python modules: os json
- provides: BaseConfig set_config quickstart
+ imports python modules: os sys json
+ provides: set_config quickstart HTMLTemplate
  (non-exhaustive)
 """
 
@@ -112,7 +112,7 @@ class BaseConfig(UserDict):
             },
             "static_dirs": {
                 '/resources': f"resources",
-                '/documentation': "sweetbook",
+                '/documentation': "sweetdoc",
                 #FIXME: documentation to integrate better
             }}
 
@@ -429,7 +429,7 @@ class sp:
 
     @classmethod
     def list_executables(cls,executables:str) -> list:
-        # check executables availability
+        #FIXME: check executables availability
         for cmd in executables.split():
             try:
                 # will fail if cmd is not executable
@@ -487,35 +487,6 @@ class sp:
         BaseConfig.python_env = env
         BaseConfig.python_bin = f"{env}/bin/python"
         verbose("set python env:",BaseConfig.python_bin)
-
-    @classmethod
-    def init_project_env(cls,project_name:str):
-        """ create and init new project with its own python env """
-
-        assert project_name != MASTER_MODULE
-        _path = f"{BaseConfig.HOME}/.sweet/{project_name}"
-
-        # init a new python env for new project
-        os.makedirs(f"{_path}/documentation/notebooks",exist_ok=True)
-        os.makedirs(f"{_path}/configuration",exist_ok=True)
-        os.makedirs(f"{_path}/programs",exist_ok=True)
-
-        sp.poetry("new","my_python",cwd=f"{_path}/programs")
-        sp.poetry("add",MASTER_MODULE,cwd=f"{_path}/programs/my_python")
-        sp.set_python_env(cwd=f"{_path}/programs/my_python")
-
-        with open(f"{_path}/configuration/subproc.json","w") as fi:
-            json.dump({ 'pyenv': BaseConfig.python_env },fi)
-
-        # manage the specific case of jupyter
-        #FIXME: lead jupyter/jupyterlab/jupyterhub matter
-        if project_name.startswith("jupyter"):
-
-            from sweetheart.heart import JupyterLab
-
-            config = set_config(project="jupyter")
-            sp.poetry("add",project_name)
-            JupyterLab(config).set_ipykernel(pwd=True)
 
 
 def install(*packages):
