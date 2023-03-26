@@ -1,14 +1,22 @@
 """
 SWEETHEART 0.1.x 'new age rising'
-rock-solid pillars for innovative and enterprise-grade apps
+Rock-solid pillars for innovative and enterprise-grade apps.
 
 *Start from scratch and create with ease and efficiency the apps you really need
 embedding reliable open-source code, highest quality components, best practices.*
 
-__init__.py :
- imports python modules: os sys json
- provides: set_config quickstart HTMLTemplate
- (non-exhaustive)
+About __init__.py :
+
+    imports python modules: os sys json
+    provides: set_config quickstart HTMLTemplate
+    (non-exhaustive)
+
+ Sweetheart 0.1.x includes an adapted version of bottle.py,
+ which is not a part of the sweetheart project itself. Info:
+
+    Homepage and documentation: http://bottlepy.org/
+    Copyright (c) 2016, Marcel Hellkamp.
+    License: MIT (see LICENSE for details)
 """
 
 import os,sys,json,subprocess
@@ -55,6 +63,7 @@ class BaseConfig(UserDict):
     database_host = "rethinkdb://127.0.0.1:28015"
     database_admin = "http://127.0.0.1:8180"
     jupyter_host = "http://127.0.0.1:8888"
+    nginxunit_host = "http://localhost"
 
     def __init__(self,project):
 
@@ -73,6 +82,7 @@ class BaseConfig(UserDict):
         # subprocess settings
         self.subproc = {
             #  can be updated using load_json(subproc=True)
+            'unit_listener': "*:80",
             'python_version': "3.10",# for setting Nginx Unit
             'node_version': "16.x",# for getting node from nodesource.com
 
@@ -85,6 +95,8 @@ class BaseConfig(UserDict):
         self.data = {
             # editable general settings
             "db_name": "test",
+            "app_module": "start",#! no .py suffix here
+            "app_callable": "webapp",
             "templates_base": "HTML",
             "templates_dir": "templates",
             "stsyntax": r"<% %> % {% %}",
@@ -112,7 +124,7 @@ class BaseConfig(UserDict):
             },
             "static_dirs": {
                 '/resources': f"resources",
-                '/documentation': "sweetdoc",
+                #'/documentation': "sweetdoc",
                 #FIXME: documentation to integrate better
             }}
 
@@ -314,7 +326,7 @@ def build_css():
     """ build or rebuild tailwind.css file """
     
     sp.shell(BaseConfig._.subproc['.tailwindcss'],
-        cwd=f"{config.root_path}/webpages/resources")
+        cwd=f"{BaseConfig._.root_path}/webpages/resources")
 
 
 def test_template(template:str):
@@ -328,7 +340,7 @@ def test_template(template:str):
     if not os.path.isfile(path) and not os.path.islink(path):
         echo("Error, the given template is not existing",mode="exit")
 
-    webapp = HttpServer(config,set_database=False).mount(
+    webapp = HttpServer(BaseConfig._,set_database=False).mount(
         Route("/",HTMLTemplate(template)) )
 
     quickstart(webapp)

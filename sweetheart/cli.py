@@ -3,60 +3,13 @@ cli.py is the multi-purpose controller provided by sweetheart
 it provides main utilities through the command line interface
 """
 
-from sweetheart.subprocess import *
-
-
-def sws(args):
-    """ SWeet Shell command line interface """
-
-    try: config = BaseConfig._
-    except: raise Exception("Error, config is missing")
-
-    cf,sb = config, config.subproc
-    sweet = [config.python_bin,"-m","sweetheart.cli"]
-    vv,py,po = config.python_env,config.python_bin,config.poetry_bin
-
-    if isinstance(args,str): args = args.split()
-    if cf.verbosity: sweet.append("-"+"v"*cf.verbosity)
-
-    switch = {
-        # sweet.py commands within master project
-        'help': [*sweet,"start","-x"],
-        # sweet.py command within any project
-        'new': [*sweet,"sh","--init","-p",*args[1:]],
-        'start': [*sweet,"-p",cf.project,"start",*args[1:]],
-        'install': [*sweet,"-p",cf.project,"install",*args[1:]],
-        'show': [*sweet,"sh","-p",cf.project,"poetry","show","--tree"],
-        # services and utilities commands
-        'build-css': [*sb['.tailwindcss'].split()],
-        'test': [py,"-m",f"{cf.project}.tests",*args[1:]],
-        'jupyter-server': [*sweet,"sh","-p","jupyter","jupyter-server"],
-        'notebook': [*sweet,"sh","-p","jupyter","python","-m","jupyter","notebook",*args[1:]],
-        # subprocess commands
-        'poetry': [config.poetry_bin,*args[1:]],
-        'python': [f"{vv}/bin/python",*args[1:]],
-        'mdbook': [f"{cf.rust_crates}/mdbook",*args[1:]],
-        }
-
-    if args == [] and config.SWSLVL == "1" :
-        args= ["echo",f"enjoy programming with Sweetheart!\na bit lost? type 'sws help' for getting help"]
-
-    # autoset the relevant working directory
-    cwd= config.PWD
-    if args[0]=='poetry': cwd= cf.module_path
-    elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
-    elif args[0]=='build-css': cwd= f"{cf.working_dir}/resources"
-
-    verbose("working directory:",cwd)
-    verbose("invoke shell:"," ".join(switch.get(args[0],args)))
-
-    try: sp.run(*switch.get(args[0],args),cwd=cwd)
-    except: verbose("sws has been interrupted")
+from sweetheart import *
 
 
 class CommandLineInterface:
 
     def __init__(self) -> None:
+
         """ build Command Line Interface with ease
             it uses argparse but provides better look and feel """
 
@@ -84,7 +37,7 @@ class CommandLineInterface:
         """ set related service for the current parser or subparser """
 
         def func(args):
-            exec(f"from sweetheart.heart import {classname}")
+            exec(f"from sweetheart.services import {classname}")
             eval(f"{classname}(BaseConfig._).cli_func(args)")
 
         self.dict[self.cur].set_defaults(func=func)
@@ -102,8 +55,9 @@ if __name__ == "__main__":
 
     # build sweetheart command iine interface
     cli = CommandLineInterface()
-    cli.set_function(lambda args:
-        echo("type 'sws help' for getting some help"))
+
+    cli.set_function( lambda args:
+        print("type 'sws help' for getting some help") )
 
     cli.opt("-V","--version",action="store_true",
         help="provide version info of sweetheart")
@@ -115,68 +69,28 @@ if __name__ == "__main__":
         help="set a project name different of sweetheart")
 
 
-    # create subparser for the 'shell' command:
-    cli.sub("sh",help="the SWeet Shell command line interface")
-    cli.set_function(lambda args: sws(args.subargs))
+    def sws_init(args):
+        from sweetheart.install import init
+        init(BaseConfig._,add_pylibs=args.subargs)
 
-    cli.opt("-V","--version",action="store_true",
-        help="provide version info of sweetheart")
-
-    cli.opt("-v","--verbose",action="count",default=0,
-        help="get additional messages about on-going process")
-
-    cli.opt("-p",dest="project",nargs=1,
-        help="set a project name different of sweetheart")
-
-    cli.opt("--init",action="store_true",
-        help="launch init process for building sweetheart ")
+    #$ sws init
+    cli.sub("init",help="launch init process for building sweetheart")
+    cli.set_function(sws_init)
 
     cli.opt("subargs",nargs=cli.REMAINDER,
-        help="remaining arguments processed by SWeet Shell")
+        help="additionnal python modules to install")
 
+    #$ sws start
+    cli.sub("start",help="start webapp and required services")
+    cli.set_service("HttpServer")
 
-    # create subparser for the 'start' command:
-    cli.sub("start",help="start webapp and the required services")
-    cli.set_function(lambda args: quickstart(_cli_args=args))
+    #$ sws show
+    cli.sub("show",help="show the python modules tree")
+    cli.set_function(lambda args: sp.poetry("show","tree"))
 
-    cli.opt("-x","--db-disabled",action="store_true",
-        help="start without local Database server")
-
-    cli.opt("-j","--jupyter-lab",action="store_true",
-        help="start Jupyter Http server for enabling notebooks")
-
-    # cli.opt("-c","--cherrypy",action="store_true",
-    #     help="start CherryPy Http server for static contents")
-
-    cli.opt("-s","--server-only",action="store_true",
-        help="start Http server without opening webbrowser")
-
-
-    # create subparser for the 'install' command:
-    cli.sub("install",help="easy way for installing new components")
-    cli.set_function(lambda args: install(*args.packages))
-
-    cli.opt("packages",nargs="+",
-        help="names of packages to install: science|web")
-
-
-    # create subparsers for services
-    # available only fot the master project
-    cli.sub("rethinkdb-server",help="run the Rethink-Database server")
-    cli.opt("-o","--open-terminal",action="store_true")
-    cli.set_service("RethinkDB")
-
-    cli.sub("jupyter-server",help="run the JupyterLab server")
-    cli.opt("-o","--open-terminal",action="store_true")
-    cli.set_service("JupyterLab")
-
-    # cli.sub("mongodb-server",help="run the Mongo-Database server")
-    # cli.opt("-o","--open-terminal",action="store_true")
-    # cli.set_service("MongoDB")
-
-    # cli.sub("cherrypy-server",help="run cherrypy as http static server")
-    # cli.opt("-o","--open-terminal",action="store_true")
-    # cli.set_service("HttpStaticServer")
+    #$ sws build-css
+    cli.sub("build-css",help="rebuild the tailwind.css file")
+    cli.set_function(lambda args: build_css())
 
 
     # execute command line arguments
@@ -191,11 +105,119 @@ if __name__ == "__main__":
     if getattr(argv,"project",None):
         set_config(project=argv.project[0])
     else:
-        set_config()
-
-    if getattr(argv,"init",False):
-        from sweetheart.install import init
-        add_pylibs = getattr(argv,"subargs","")
-        init(BaseConfig._, add_pylibs)
+        set_config()        
     
     cli.apply_function()
+
+
+    # # create subparser for the 'shell' command:
+    # cli.sub("sh",help="the SWeet Shell command line interface")
+    # cli.set_function(lambda args: sws(args.subargs))
+
+    # cli.opt("-V","--version",action="store_true",
+    #     help="provide version info of sweetheart")
+
+    # cli.opt("-v","--verbose",action="count",default=0,
+    #     help="get additional messages about on-going process")
+
+    # cli.opt("-p",dest="project",nargs=1,
+    #     help="set a project name different of sweetheart")
+
+    # cli.opt("--init",action="store_true",
+    #     help="launch init process for building sweetheart ")
+
+    # cli.opt("subargs",nargs=cli.REMAINDER,
+    #     help="remaining arguments processed by SWeet Shell")
+
+
+    # # create subparser for the 'start' command:
+    # cli.sub("start",help="start webapp and the required services")
+    # cli.set_function(lambda args: quickstart(_cli_args=args))
+
+    # cli.opt("-x","--db-disabled",action="store_true",
+    #     help="start without local Database server")
+
+    # cli.opt("-j","--jupyter-lab",action="store_true",
+    #     help="start Jupyter Http server for enabling notebooks")
+
+    # # cli.opt("-c","--cherrypy",action="store_true",
+    # #     help="start CherryPy Http server for static contents")
+
+    # cli.opt("-s","--server-only",action="store_true",
+    #     help="start Http server without opening webbrowser")
+
+
+    # # create subparser for the 'install' command:
+    # cli.sub("install",help="easy way for installing new components")
+    # cli.set_function(lambda args: install(*args.packages))
+
+    # cli.opt("packages",nargs="+",
+    #     help="names of packages to install: science|web")
+
+
+    # # create subparsers for services
+    # # available only fot the master project
+    # cli.sub("rethinkdb-server",help="run the Rethink-Database server")
+    # cli.opt("-o","--open-terminal",action="store_true")
+    # cli.set_service("RethinkDB")
+
+    # cli.sub("jupyter-server",help="run the JupyterLab server")
+    # cli.opt("-o","--open-terminal",action="store_true")
+    # cli.set_service("JupyterLab")
+
+    # cli.sub("mongodb-server",help="run the Mongo-Database server")
+    # cli.opt("-o","--open-terminal",action="store_true")
+    # cli.set_service("MongoDB")
+
+    # cli.sub("cherrypy-server",help="run cherrypy as http static server")
+    # cli.opt("-o","--open-terminal",action="store_true")
+    # cli.set_service("HttpStaticServer")
+
+
+# def sws(args):
+#     """ SWeet Shell command line interface """
+
+#     try: config = BaseConfig._
+#     except: raise Exception("Error, config is missing")
+
+#     cf,sb = config, config.subproc
+#     sweet = [config.python_bin,"-m","sweetheart.cli"]
+#     vv,py,po = config.python_env,config.python_bin,config.poetry_bin
+
+#     if isinstance(args,str): args = args.split()
+#     if cf.verbosity: sweet.append("-"+"v"*cf.verbosity)
+
+#     switch = {
+#         # sweet.py commands within master project
+#         'help': [*sweet,"start","-x"],
+#         # sweet.py command within any project
+#         'new': [*sweet,"sh","--init","-p",*args[1:]],
+#         'start': [*sweet,"-p",cf.project,"start",*args[1:]],
+#         'install': [*sweet,"-p",cf.project,"install",*args[1:]],
+#         'show': [*sweet,"sh","-p",cf.project,"poetry","show","--tree"],
+#         # services and utilities commands
+#         'build-css': [*sb['.tailwindcss'].split()],
+#         'test': [py,"-m",f"{cf.project}.tests",*args[1:]],
+#         'jupyter-server': [*sweet,"sh","-p","jupyter","jupyter-server"],
+#         'notebook': [*sweet,"sh","-p","jupyter","python","-m","jupyter","notebook",*args[1:]],
+#         # subprocess commands
+#         'poetry': [config.poetry_bin,*args[1:]],
+#         'python': [f"{vv}/bin/python",*args[1:]],
+#         'mdbook': [f"{cf.rust_crates}/mdbook",*args[1:]],
+#         }
+
+#     if args == [] and config.SWSLVL == "1" :
+#         args= ["echo",f"enjoy programming with Sweetheart!\na bit lost? type 'sws help' for getting help"]
+
+#     # autoset the relevant working directory
+#     cwd= config.PWD
+#     if args[0]=='poetry': cwd= cf.module_path
+#     elif args[0]=='mdbook': cwd= f"{cf.root_path}/documentation"
+#     elif args[0]=='build-css': cwd= f"{cf.working_dir}/resources"
+
+#     verbose("working directory:",cwd)
+#     verbose("invoke shell:"," ".join(switch.get(args[0],args)))
+
+#     try: sp.run(*switch.get(args[0],args),cwd=cwd)
+#     except: verbose("sws has been interrupted")
+

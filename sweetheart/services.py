@@ -86,7 +86,7 @@ class BaseService:
             sub-classes must set self.command attribute for running service """
 
         self.API = BaseAPI
-        self.config = config
+        self.config = self._ = config
         self.command = "echo Error, no command attribute given"
 
         if config.WSL_DISTRO_NAME: self.terminal = 'wsl'
@@ -115,29 +115,30 @@ class BaseService:
             provide default value if not given """
 
         assert filename.endswith(".service")
-        tempfile = f"{self.config.root_path}/configuration/{filename}"
 
-        #FIXME: provide initial default systemd setting
+        tempfile = f"{self.config.root_path}/configuration/{filename}"
+        
+
         def ensure_default(section,param,default_value):
             assert section in "Unit|Service|Install"
-
             if self.sysd[section].get(param) is None:
                 verbose("set systemd",f"[{section}]","default value:",param,"=",default_value)
                 self.sysd[section][param] = default_value
 
-        # [Unit]
-        ensure_default('Unit','description',
-            f'Sweetheart default service for {self.url}')
-
-        # [Service]
+        # [Unit] section
+        ensure_default('Unit','Description',f'Sweetheart service')
+        ensure_default('Unit','After',f'network.target')
+        # [Service] section
         ensure_default('Service','ExecStart',self.command)
-
-        # [Install]
-        ensure_default('Install','WantedBy','multi-user.target')
+        ensure_default('Service','Type','simple')
+        # [Install] section
+        ensure_default('Install','WantedBy','default.target')
 
         # write and set service file for systemd
         self.sysd.write(tempfile)
         sp.shell(f"sudo cp {tempfile} /etc/systemd/system")
+
+        # 
 
     def switch_port_to(self,port_number:int):
         """ allow changing port number afterwards which can avoid conflicts
@@ -163,9 +164,9 @@ class BaseService:
 
     def cli_func(self,args):
         """ this provides default function available from command line interface 
-            e.g. called within sweet.py as follow: cli.set_service("RethinkDB") """
+            e.g. called within cli.py as follow: cli.set_service("RethinkDB") """
 
-        echo(f"run service:\n{self.command}")
+        echo(f"run service: {self.command}")
         if getattr(args,"open_terminal",None): self.run_local(service=True)
         else: self.run_local(service=False)
 
@@ -286,27 +287,6 @@ class RethinkDB(BaseService):
         if hasattr(self,'conn'): self.conn.close()
 
 
-def WelcomeMessage(config:BaseConfig|None=None) -> HTMLResponse:
-    """ provide default Html welcome message """
-
-    # autoset config when not given
-    if config is None: config = BaseConfig._
-
-    return HTMLResponse(f"""
-        <div style="text-align:center;font-size:1.1em;">
-        <h1><br><br>Welcome !<br><br></h1>
-        <h2>sweetheart</h2>
-        <p>a supercharged heart for the non-expert hands</p>
-        <p>which will give you coding full power at the light speed</p>
-        <p><a href="/documentation/index.html">
-            Get Started Now!</a></p>
-        <p><br>or code immediately using 
-            <a href="{config.jupyter_host}">JupyterLab</a></p>
-        <p><br><br><em>this message appears because there
-        was nothing else to render here</em></p>
-        </div>""")
-
-
 class HttpServer(BaseService):
 
     def __init__(self,config:BaseConfig,set_database=False):
@@ -340,16 +320,31 @@ class HttpServer(BaseService):
         echo("mount webapp:",self.config['working_dir'])
 
         if not args:
+
+            WelcomeMessage = lambda: HTMLResponse(f"""
+                <div style="text-align:center;font-size:1.1em;">
+                    <h1><br><br>Welcome !<br><br></h1>
+                    <h2>sweetheart</h2>
+                    <p>a supercharged heart for the non-expert hands</p>
+                    <p>which will give you coding full power at the light speed</p>
+                    <p><a href="/documentation/index.html">
+                        Get Started Now!</a></p>
+                    <p><br>or code immediately using 
+                        <a href="{BaseConfig.jupyter_host}">JupyterLab</a></p>
+                    <p><br><br><em>this message appears because there
+                    was nothing else to render here</em></p>
+                </div> """)
+
             # switch port to 8181 and keep free 8000
             # allow looking documentation and testing webapp
             self.switch_port_to(8181)
             # auto route the default welcome 
-            self.data.append(Route("/",WelcomeMessage(self.config)))
+            self.data.append( Route("/",WelcomeMessage()) )
 
         elif len(args)==1 and isinstance(args[0],str):
             # route given template as a simple page for tests
             self.config.is_webapp_open = True
-            self.data.append(Route("/",HTMLTemplate(args[0])))
+            self.data.append( Route("/",HTMLTemplate(args[0])) )
 
         else:
             # assumes that args are Route objects
@@ -386,10 +381,8 @@ class HttpServer(BaseService):
     def run_local(self,service:bool=False):
         """ run webapp within local Http server """
 
-        if self.config.is_webapp_open: webbrowser(self.url)
-
         if service:
-            # raise NotImplementedError
+            #FIXME: deprecated
             os.chdir(self.config['working_dir'])
             sp.python(
                 "-m","gunicorn","main:app",
@@ -400,6 +393,8 @@ class HttpServer(BaseService):
         else:
             import uvicorn
             os.chdir(self.config['working_dir'])
+            if hasattr(self,"data"): self.mount()
+            if self.config.is_webapp_open: webbrowser(self.url)
             uvicorn.run(self.starlette,**self.uargs)
 
 
@@ -436,56 +431,59 @@ class JupyterLab(BaseService):
 
 
 
-class NginxUnit:
-
-    #FIXME: still to implement
+class NginxUnit(UserDict):
+    #FIXME: to implement
 
     def __init__(self,config:BaseConfig):
 
-        self.config = config
-        self.host = "http://localhost"
-        self.configfile = f"{config.root_path}/configuration/unit.json"
-
-        self.listeners = {
-            "*:80": {
-                "pass": "routes"
-            }
-        }
-        self.routes = [
-            {
-                "match": {
-                    "uri": "/jupyter/*"
-                },
-                "action": {
-                    "proxy": config.jupyter_host
+        self._ = config
+        self.data =\
+          {
+            "listeners": {
+                self._.unit_listener: {
+                    "pass": "routes"
                 }
             },
-            {
-                "action": {
-                    "pass": "applications/starlette"
+            "routes": [
+                {
+                    "match": {
+                        "uri": "/jupyter/*"
+                    },
+                    "action": {
+                        "proxy": config.jupyter_host
+                    }
+                },
+                {
+                    "action": {
+                        "pass": "applications/starlette"
+                    }
+                }
+            ],
+            "applications": {
+                "starlette": {
+                    "type": f"python {config.python_version}",
+                    "path": config.module_path,
+                    "home": config.python_env,
+                    "module": config.app_module,
+                    "callable": config.app_callable,
+                    "user": "ubuntu"
                 }
             }
-        ]
-        self.applications = {
-            "starlette": {
-                "type": f"python {config.python_version}",
-                "path": config.module_path,
-                "home": config.python_env,
-                "module": "start",
-                "callable": "webapp",
-                "user": "ubuntu"
-            }
-        }
+          }
 
     def put_config(self):
 
-        with open(self.configfile,'w') as file_out:
-            json.dump({ 
-                "listeners": self.listeners,
-                "routes": self.routes,
-                "applications": self.applications }, file_out)
+        host = self._.nginxunit_host
+        conf = f"{self._.root_path}/configuration/unit.json"
 
-        sp.run("sudo","curl","-X","PUT","-d",f"@{self.configfile}",
-            "--unix-socket","/var/run/control.unit.sock",f"{self.host}/config/")
+        with open(conf,'w') as file_out:
+            json.dump(self.data, file_out)
 
+        sp.shell("sudo","curl","-X","PUT","-d",f"@{conf}",
+            "--unix-socket","/var/run/control.unit.sock",f"{host}/config/")
+        
+        sp.shell("sudo","systemctl","restart","unit")
 
+    def stop(self):
+        sp.shell("sudo","systemctl","stop","unit")
+        

@@ -32,7 +32,7 @@ if not os.path.isfile(
 
     if not poetry:
         assert wh('curl') and wh('python3')
-        sp.run("curl -sSL https://install.python-poetry.org|python3 -",shell=True)
+        sp.run("curl -sSL https://install.python-poetry.org | python3 -",shell=True)
         poetry = wh('poetry') or wh('~/.local/bin/poetry')
         assert poetry
 
@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     if "--init" in sys.argv:
         # autostart init process for full install
-        sp.run("bash sws --init",shell=True)
+        sp.run("bash sws init ipykernel",shell=True)
 
     # STOP install module execution here
     # a sweetheart config is required for next utilities
@@ -208,7 +208,7 @@ def init(config:BaseConfig,add_pylibs=""):
         os.symlink(f"{config.root_path}/documentation/sweetdoc/book",
             f"{config.root_path}/webpages/sweetdoc")
     except:
-        verbose("WARNING: link creation to sweetdoc failed")
+        verbose("WARNING: symlink to sweetdoc already existing?")
     
     echo("installation process completed",blank=True)
 
