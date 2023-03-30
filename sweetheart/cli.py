@@ -3,6 +3,7 @@ cli.py is the multi-purpose controller provided by sweetheart
 it provides main utilities through the command line interface
 """
 
+import argparse
 from sweetheart import *
 
 
@@ -14,11 +15,10 @@ class CommandLineInterface:
             it uses argparse but provides better look and feel """
 
         # provide default parsers tools
-        import argparse
         self.parser= argparse.ArgumentParser()
         self.subparser= self.parser.add_subparsers()
-        self.REMAINDER = argparse.REMAINDER
-        self.SUPPRESS = argparse.SUPPRESS
+        self.REMAINDER= argparse.REMAINDER
+        self.SUPPRESS= argparse.SUPPRESS
         self.dict= { "_": self.parser }
         self.cur= "_"
     
@@ -218,6 +218,6 @@ if __name__ == "__main__":
 #     verbose("working directory:",cwd)
 #     verbose("invoke shell:"," ".join(switch.get(args[0],args)))
 
-#     try: sp.run(*switch.get(args[0],args),cwd=cwd)
+#     try: sp.shell(*switch.get(args[0],args),cwd=cwd)
 #     except: verbose("sws has been interrupted")
 

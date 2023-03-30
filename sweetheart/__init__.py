@@ -7,8 +7,9 @@ embedding reliable open-source code, highest quality components, best practices.
 
 About __init__.py :
 
-    imports python modules: os sys json
-    provides: set_config quickstart HTMLTemplate
+    imports python modules: sys, json
+    provides: set_config, quickstart, HTMLTemplate
+    the python os module is replaced by an os class
     (non-exhaustive)
 
  Sweetheart 0.1.x includes an adapted version of bottle.py,
@@ -19,8 +20,9 @@ About __init__.py :
     License: MIT (see LICENSE for details)
 """
 
-import os,sys,json,subprocess
+import sys,json
 from collections import UserDict
+from sweetheart.subprocess import os
 
 __version__ = "0.1.2"
 __license__ = "CeCILL-C FREE SOFTWARE LICENSE AGREEMENT"
@@ -43,12 +45,8 @@ class BaseConfig(UserDict):
     label = MASTER_MODULE # printed with echo()
 
     # get environment settings
-    PWD = os.getcwd()
     HOME = os.path.expanduser('~')
-    USER = HOME.split('/')[-1]
-    #LANG = locale.getlocale()[0][0:2]
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
-
     # set sws level into environment 
     SWSLVL = os.environ['SWSLVL'] = f"{int(os.getenv('SWSLVL','0'))+1}"
     assert int(SWSLVL) <= 2
@@ -85,6 +83,7 @@ class BaseConfig(UserDict):
             'unit_listener': "*:80",
             'python_version': "3.10",# for setting Nginx Unit
             'node_version': "16.x",# for getting node from nodesource.com
+            'system_dir': "/etc/systemd/system",
 
             # can not be updated within load_json(subproc=True)
             # the settings are locked because key starts with .
@@ -202,10 +201,7 @@ def set_config(
         config.is_rethinkdb_local = False
         config.is_jupyter_local = False
 
-    try: init = argv.init
-    except: init = False
-
-    if not init:
+    if "init" not in sys.argv :
         # ensure python env setting if not given by subproc_file
         if not hasattr(BaseConfig,'python_env'): sp.set_python_env()
         verbose("python env:",BaseConfig.python_env)
@@ -366,7 +362,7 @@ def webbrowser(url:str):
  ## Subprocesses handling ####################################################
 #############################################################################
 
-class sp:
+class sp(os):
     """
     namespace providing basic subprocess features 
     beware that it uses BaseConfig and not config 
@@ -375,90 +371,52 @@ class sp:
     >>> sp.is_executable("cargo")
     """
 
-    PATH = os.get_exec_path()
-    EXECUTABLES = {} # fetched by list_executables()
-    MISSING = [] # fetched by list_executables()
-
-    # former provided function for executing shell commands
-    # args must be given separately as function arguments
-    run = lambda *args,**kwargs:\
-        subprocess.run(args,**kwargs)
-
     # provide a direct way for getting the shell stdout 
     stdout = lambda *args,**kwargs:\
         sp.shell(*args,text=True,capture_output=True,**kwargs).stdout.strip()
-
-    # let ensuring that a shell command is available
-    is_executable = lambda cmd:\
-        cmd in sp.list_executables(cmd)
-
-    try:
-        # provide system info for Python3.10 and more
-        from platform import freedesktop_os_release
-        os_release = freedesktop_os_release()
-    except:
-        #FIXME: provide system info if not
-        # this allows working with RHEL9 and clones
-        import csv
-        os_release = {}
-        with open("/etc/os-release") as fi:
-             reader = csv.reader(fi,delimiter="=")
-             for line in reader:
-                if line==[]: continue # this can happen...
-                os_release[line[0]] = line[1]
-
-    # provide distro (lower) infos 
-    distrib = os_release['ID'].lower()
-    distbase = os_release['ID_LIKE'].lower()
-    codename = os_release['UBUNTU_CODENAME'].lower()
 
     @classmethod
     def shell(cls,*args,**kwargs):
         """ run subprocess providing some flexibility with args """
 
         if len(args)==1 and isinstance(args[0],str):
-            # string passed to the linux shell
             kwargs.update({ 'shell':True })
-            return subprocess.run(args[0],**kwargs)
+            return cls.run(args[0],**kwargs)
 
-        elif len(args)==1 and isinstance(args[0],list) and\
-                all([ isinstance(i,str) for i in args[0] ]):
-            # list of strings passed to the linux shell
-            return subprocess.run(args[0],**kwargs)
+        elif len(args)==1 and isinstance(args[0],list):
+            return cls.run(args[0],**kwargs)
         
-        elif all([ isinstance(i,str) for i in args ]):
-            # str args passed to the linux shell
-            return subprocess.run(args,**kwargs)
-
-        else: raise AttributeError
+        else: return cls.run(args,**kwargs)
 
     @classmethod
     def read_sh(cls,script:str):
         """ excec line by line a long string as a shell script """
 
         for instruc in script.splitlines():
-            subprocess.run(instruc.strip(),shell=True)
+            cls.run(instruc.strip(),shell=True)
+
+
+    EXECUTABLES = {} # fetched by list_executables()
+    MISSING = [] # fetched by list_executables()
 
     @classmethod
     def list_executables(cls,executables:str) -> list:
-        #FIXME: check executables availability
-        for cmd in executables.split():
-            try:
-                # will fail if cmd is not executable
-                version = cls.stdout(f"{cmd} --version")
-                # search the first executable path
-                for pth in cls.PATH:
-                    if os.path.isfile(f"{pth}/{cmd}"):
-                        cls.EXECUTABLES.update({
-                            # str pattern -> "cdm::path::version"
-                            cmd: f"{pth} :: {version}" })
-                        break
-            except:
-                continue
-        # build the missing list
-        cls.MISSING = [m for m in executables.split() if m not in cls.EXECUTABLES]
-        # return list of executables
+
+        exe = executables.split()
+        pth = [ os.which(cmd) for cmd in exe ]
+
+        for index in len(exe):
+            if pth[index] is not None:
+                cls.EXECUTABLES.update(
+                    { exe[index]: pth[index] })
+                        
+        cls.MISSING = [m for m in exe if m not in cls.EXECUTABLES]
         return list(cls.EXECUTABLES)
+
+    # let ensuring that a shell command is available
+    is_executable = lambda cmd:\
+        cmd in sp.list_executables(cmd)
+
 
     @classmethod
     def terminal(cls,cmd:str,select:str,**kwargs):
@@ -478,13 +436,14 @@ class sp:
         if not kwargs.get('cwd') and hasattr(BaseConfig,'_'):
             kwargs['cwd'] = BaseConfig._['module_path']
 
-        return cls.run(BaseConfig.poetry_bin,*args,**kwargs)
+        return cls.shell(BaseConfig.poetry_bin,*args,**kwargs)
 
     @classmethod
     def python(cls,*args,**kwargs):
+
         # no python env given is forbidden here
         assert hasattr(BaseConfig,'python_env')
-        return cls.run(BaseConfig.python_bin,*args,**kwargs)
+        return cls.shell(BaseConfig.python_bin,*args,**kwargs)
 
     @classmethod
     def set_python_env(cls,**kwargs):

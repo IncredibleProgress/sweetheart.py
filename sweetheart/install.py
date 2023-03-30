@@ -12,7 +12,7 @@ import subprocess as sp
 
 HOME = os.environ['HOME']
 PATH = os.environ['PATH']
-raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"#! / at end
+raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"# / at end
 
 
 # ensure prerequisites for sweetheart
@@ -72,7 +72,7 @@ if not os.path.isfile(
 
     if f"{HOME}/.local/bin" not in PATH:
         # export ~/.local/bin within .bashrc
-        with open("{HOME}/.bashrc","a") as file_out:
+        with open(f"{HOME}/.bashrc","a") as file_out:
             file_out.write(f"\nexport PATH={HOME}/.local/bin:$PATH")
 
 
@@ -123,7 +123,7 @@ def init(config:BaseConfig,add_pylibs=""):
 
     # set python env with basic project settings
     if config.project != MASTER_MODULE:
-        sp.init_project_env(config.project)
+        init_project_env(config.project)
 
     if config.project.startswith("jupyter"):
         
@@ -148,6 +148,7 @@ def init(config:BaseConfig,add_pylibs=""):
           f"{config.root_path}/webpages/resources" ]:
         os.makedirs(basedir,exist_ok=True)
 
+
     PKG_INIT = {
         # set minimum distro resources
         'aptlibs': ["*unit","*rethinkdb","*nodejs","cargo"],
@@ -155,9 +156,10 @@ def init(config:BaseConfig,add_pylibs=""):
         # set minimum rust resources
         'cargolibs': ["cargo-binstall"],
         'cargobin': ["mdbook"],
-        # set minimum js and python resources        
+        # set minimum js and python resources
+        # ipykernel allows working with jupyter e.g. within VS-Code      
         'npmlibs': ["brython","tailwindcss","daisyui","vue@latest"],# Vue3
-        'pylibs': ["rethinkdb","starlette"],
+        'pylibs': ["rethinkdb","starlette","ipykernel"],
         # set documentation and further resources
         'files': [
             # set the documentation .zip package
@@ -168,21 +170,20 @@ def init(config:BaseConfig,add_pylibs=""):
             "webpages/resources/favicon.ico",
             "webpages/resources/tailwind.base.css",
             "webpages/resources/tailwind.config.js" ]}
-    
+
+
     if config.project != MASTER_MODULE:
-        # unset libs installation
-        del PKG_INIT['aptlibs'],PKG_INIT['dnflibs']
-        #del PKG_INIT['cargolibs']
+        # unset global libs installation
+        del PKG_INIT['aptlibs'], PKG_INIT['dnflibs']
+        del PKG_INIT['cargolibs'], PKG_INIT['cargobin']
 
     if "fastapi" in add_pylibs:
-        # avoid versions conflict with starlette
+        # avoid version conflict with starlette
         PKG_INIT['pylibs'].remove("starlette")
 
-    if "jupyter" in add_pylibs:
-        # set ipykernel instead of jupyter
-        # this allow runing python env within VS Code
-        PKG_INIT['pylibs'].remove("jupyter")
-        PKG_INIT['pylibs'].append("ipykernel")
+    # if "jupyter" in add_pylibs:
+    #     # avoid version conflict with ipykernel
+    #     PKG_INIT['pylibs'].remove("ipykernel")
 
     # set given python extra modules
     if isinstance(add_pylibs,list):
@@ -245,7 +246,7 @@ class BaseInstall:
             libs.remove("*unit")
 
         # install other packages
-        return sp.run("sudo","apt","install",*libs,**kwargs)
+        return sp.shell("sudo","apt","install",*libs,**kwargs)
 
     def dnf(self,*libs:str,**kwargs):
         """ FIXME: coming soon !
@@ -263,7 +264,7 @@ class BaseInstall:
             libs.remove("*unit")
 
         # install other packages
-        return sp.run("sudo","dnf","install",*libs,**kwargs)
+        return sp.shell("sudo","dnf","install",*libs,**kwargs)
 
     def cargo(self,*libs:str,bin:bool=False,**kwargs):
         """ install rust crates (given libs) using cargo 
@@ -271,10 +272,10 @@ class BaseInstall:
 
         if bin == True:
             echo("cargo install:",*libs,blank=True)
-            return sp.run(f"cargo","install",*libs,**kwargs)
+            return sp.shell(f"cargo","install",*libs,**kwargs)
         elif bin == False:
             echo("cargo-binstall:",*libs,blank=True)
-            return sp.run(f"{rust_crates}/cargo-binstall",*libs,**kwargs)
+            return sp.shell(f"{rust_crates}/cargo-binstall",*libs,**kwargs)
         else: raise TypeError
     
     def poetry(self,*libs:str,**kwargs):
@@ -288,8 +289,8 @@ class BaseInstall:
 
         echo("npm install:",*libs,blank=True)
         os.chdir(f"{self.config.root_path}/webpages/resources")
-        if init: sp.run("npm","init","--yes")
-        return sp.run("npm","install",*libs,**kwargs)
+        if init: sp.shell("npm","init","--yes")
+        return sp.shell("npm","install",*libs,**kwargs)
 
     def install_libs(self,libs:dict,init:bool=False):
         """ install given libs using apt,cargo,poetry,npm
@@ -297,11 +298,11 @@ class BaseInstall:
             no libs arg will set init process for new project """
 
         aptlibs = libs.get('aptlibs')
-        if "debian" in sp.distbase and aptlibs:
+        if "debian" in os.distbase and aptlibs:
             self.apt(*aptlibs)
 
         dnflibs = libs.get('dnflibs')
-        if "rhel" in sp.distbase and dnflibs:
+        if "rhel" in os.distbase and dnflibs:
             self.dnf(*dnflibs)
 
         cargolibs = libs.get('cargolibs')
@@ -381,7 +382,7 @@ class BaseInstall:
             # set official Nginx Unit repository
             sp.read_sh(f"""
 echo "set Nginx Unit repository from nginx.org"
-echo "deb https://packages.nginx.org/unit/{sp.distrib}/ {sp.codename} unit" | sudo tee /etc/apt/sources.list.d/unit.list
+echo "deb https://packages.nginx.org/unit/{os.distrib}/ {os.codename} unit" | sudo tee /etc/apt/sources.list.d/unit.list
 wget -qO- https://unit.nginx.org/keys/nginx-keyring.gpg | sudo apt-key add - 
             """.strip() )
 
@@ -400,11 +401,11 @@ wget -qO- https://unit.nginx.org/keys/nginx-keyring.gpg | sudo apt-key add -
             # set offical RethinkDB repository
             sp.read_sh(f"""
 echo "set RethinkDB repository from rethinkdb.com"
-echo "deb https://download.rethinkdb.com/repository/{sp.distrib}-{sp.codename} {sp.codename} main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
+echo "deb https://download.rethinkdb.com/repository/{os.distrib}-{os.codename} {os.codename} main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
 wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-key add -
             """.strip() )
 
-        if not sp.executable("rethinkdb"):
+        if not sp.is_executable("rethinkdb"):
             # install rethinkdb package
             sp.shell("sudo apt update")
             sp.shell(f"sudo apt install rethinkdb")

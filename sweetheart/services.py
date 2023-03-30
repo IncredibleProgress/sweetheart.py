@@ -1,13 +1,186 @@
 
 from sweetheart import *
 import time,configparser
-#from sweetheart.bottle import SimpleTemplate
 
 from starlette.applications import Starlette
 from starlette.staticfiles import StaticFiles
 from starlette.endpoints import WebSocketEndpoint
 from starlette.routing import Route,Mount,WebSocketRoute
 from starlette.responses import HTMLResponse,FileResponse,JSONResponse,RedirectResponse
+
+
+class BaseService:
+
+    # ports tracker for avoiding localhost conflicts
+    ports_register = set()
+
+    def __init__(self,url:str,config:BaseConfig):
+        """ 
+        set basic features of Sweeheart service objects :
+
+            - start server for both testing or production
+            - set capabilities from cli, python script, juypter notebooks
+            - ensure ports unicity for tests on localhost
+            - allow setting websocket protocol in simple way
+            - provide default API for exchanging data through http
+            - provide a base config for running within systemd
+
+        the given url should follow the http://host:port pattern
+        sub-classes must set self.command attribute for running service
+        """
+
+        self.config = self._ = config
+        self.command = "echo Error, no command attribute given"
+
+        if config.WSL_DISTRO_NAME: self.terminal = 'wsl'
+        else: self.terminal = 'xterm'
+
+        self.url = url
+        url_split = url.split(":")
+        self.protocol = url_split[0].lower()
+        self.host = url_split[1].strip("/")
+        self.port = int(url_split[2])
+
+        #FIXME: ensure that self.port is not in use
+        assert self.port not in BaseService.ports_register
+        BaseService.ports_register.add(self.port)
+
+    def set_service_config(self,
+        # [Unit]
+        Description=None, After=None, Before=None,
+        # [Service]
+        ExecStart=None, ExecReload=None, Restart=None, Type=None,
+        # [Install]
+        WantedBy=None, RequiredBy=None ):
+
+        """ create and set config for new systemd service 
+            kwargs keys must be supported service parameters """
+
+        # provide a ConfigParser for setting systemd
+        self.sysd = configparser.ConfigParser()
+        # set usual sections of systemd service file
+        self.sysd.add_section('Unit')
+        self.sysd.add_section('Service')
+        self.sysd.add_section('Install')
+
+        def set_in(param,section):
+            if eval(param) is not None:
+                assert section in "Unit|Service|Install"
+                self.sysd[section][param] = eval(param)
+
+        # set supported parameters in sysd config
+        set_in('Description','Unit')
+        set_in('After','Unit')
+        set_in('Before','Unit')
+        set_in('ExecStart','Service')
+        set_in('ExecReload','Service')
+        set_in('Restart','Service')
+        set_in('Type','Service')
+        set_in('WantedBy','Install')
+        set_in('RequiredBy','Install')
+
+    def write_service_file(self,filename):
+        """ write service file for setting systemd
+            will provide default value when not given """
+
+        assert filename.endswith(".service")
+        tempfile = f"{self.config.root_path}/configuration/{filename}"
+
+        def ensure_default(param,default_value):
+            """ ensure default values for main service parameters """
+
+            unit = ('Description','After')
+            serv = ('ExecStart','Type')
+            inst = ('WantedBy',)
+
+            if param in unit: section = 'Unit'
+            elif param in serv: section = 'Service'
+            elif param in inst: section = 'Install'
+            else: raise Exception
+            
+            if not self.sysd[section].get(param):
+                self.sysd[section][param] = default_value
+
+        # auto set service parameters when needed
+        ensure_default('Description',f'Sweetheart service')
+        ensure_default('After',f'network.target')
+        ensure_default('ExecStart',self.command)
+        ensure_default('Type','simple')
+        ensure_default('WantedBy','default.target')
+
+        # write and set service file for systemd
+        self.sysd.write(tempfile)
+        sp.shell("sudo","cp",tempfile,self._.system_dir)
+
+        # # add service within subproc conf file
+        # with open(self._.subproc_file) as file_in:
+        #     sp_settings = json.load(file_in)
+        #FIXME
+        # system = sp_settings.get('system',[])
+        # system.append(f"/etc/systemd/system/{tempfile}")
+        # sp_settings['system'] = system
+        #
+        # with open(sp_conf_file,"w") as file_out:
+        #     json.dump(sp_settings,file_out)
+
+    def switch_port_to(self,port_number:int):
+        """ allow changing port number afterwards which can avoid conflicts
+            typically testing all services and servers on localhost
+            it will raise exception if port_number is already in use """
+
+        self.port = self.uargs['port'] = port_number
+        self.url = f"http://{self.host}:{self.port}"
+
+        # ensure that port_number is not in use
+        assert port_number not in BaseService.ports_register
+        BaseService.ports_register.add(port_number)
+
+    def run_local(self,service=None):
+        """ start and run the command attribute locally
+            the 'command' attribute must be set previously """
+
+        if service:
+            # sp.terminal(self.command,self.terminal)
+            sp.shell("sudo","systemctl","reload-or-restart",service)
+            time.sleep(2) #FIXME: waiting time needed
+        else:
+            sp.shell(self.command)
+
+    def cli_func(self,args):
+        """ this provides default function available from command line interface 
+            e.g. called within cli.py as follow: cli.set_service("RethinkDB") """
+
+        echo(f"run service: {self.command}")
+        if getattr(args,"open_terminal",None): self.run_local(service=True)
+        else: self.run_local(service=False)
+
+    def set_websocket(self,dbname=None,set_encoding='json'):
+        """ factory function for implementing starlette WebSocketEndpoint
+            the parent class 'self' must provide an 'on_receive' method
+            which is not implemented directly into BaseService """
+        
+        parent:BaseService = self
+        if dbname is None: dbname=self.config['db_name']
+
+        class WebSocket(WebSocketEndpoint):
+            encoding = set_encoding
+            service_config = {
+                "encoding": encoding,
+                "db_name": dbname,
+                "route": f"/data/{dbname}",
+                "receiver": parent.on_receive,
+                }
+            async def on_receive(self,websocket,data):
+                receiver = self.service_config['receiver']
+                await receiver(websocket,data)
+
+        self.ws_config:dict = WebSocket.service_config
+        self.WebSocketEndpoint:type = WebSocket
+        verbose("new websocket endpoint: ",WebSocket.service_config['route'])
+        return WebSocket.service_config['route'], WebSocket
+    
+    def on_receive(self,websocket,data):
+        raise NotImplementedError
 
 
 class BaseAPI(UserDict):
@@ -67,138 +240,6 @@ class BaseAPI(UserDict):
         return JSONResponse(self.response)
 
 
-class BaseService:
-
-    # ports tracker for avoiding localhost conflicts
-    ports_register = set()
-
-    def __init__(self,url:str,config:BaseConfig):
-        """ set basic features of Sweeheart service objects :
-
-             - start server for both testing or production
-             - set capabilities from cli, python script, juypter notebooks
-             - ensure ports unicity for tests on localhost
-             - allow setting websocket protocol in simple way
-             - provide default API for exchanging data through http
-             - provide a base config for running within systemd
-
-            the given url should follow the http://host:port pattern
-            sub-classes must set self.command attribute for running service """
-
-        self.API = BaseAPI
-        self.config = self._ = config
-        self.command = "echo Error, no command attribute given"
-
-        if config.WSL_DISTRO_NAME: self.terminal = 'wsl'
-        else: self.terminal = 'xterm'
-
-        self.url = url
-        url_split = url.split(":")
-        self.protocol = url_split[0].lower()
-        self.host = url_split[1].strip("/")
-        self.port = int(url_split[2])
-
-        #FIXME: ensure that self.port is not in use
-        assert self.port not in BaseService.ports_register
-        BaseService.ports_register.add(self.port)
-
-        # provide a ConfigParser for setting systemd
-        self.sysd = configparser.ConfigParser()
-
-        # set usual sections of systemd service file
-        self.sysd.add_section('Unit')
-        self.sysd.add_section('Service')
-        self.sysd.add_section('Install')
-
-    def write_service_file(self,filename):
-        """ write service file for setting systemd
-            provide default value if not given """
-
-        assert filename.endswith(".service")
-
-        tempfile = f"{self.config.root_path}/configuration/{filename}"
-        
-
-        def ensure_default(section,param,default_value):
-            assert section in "Unit|Service|Install"
-            if self.sysd[section].get(param) is None:
-                verbose("set systemd",f"[{section}]","default value:",param,"=",default_value)
-                self.sysd[section][param] = default_value
-
-        # [Unit] section
-        ensure_default('Unit','Description',f'Sweetheart service')
-        ensure_default('Unit','After',f'network.target')
-        # [Service] section
-        ensure_default('Service','ExecStart',self.command)
-        ensure_default('Service','Type','simple')
-        # [Install] section
-        ensure_default('Install','WantedBy','default.target')
-
-        # write and set service file for systemd
-        self.sysd.write(tempfile)
-        sp.shell(f"sudo cp {tempfile} /etc/systemd/system")
-
-        # 
-
-    def switch_port_to(self,port_number:int):
-        """ allow changing port number afterwards which can avoid conflicts
-            typically testing all services and servers on localhost
-            it will raise exception if port_number is already in use """
-
-        self.port = self.uargs['port'] = port_number
-        self.url = f"http://{self.host}:{self.port}"
-
-        # ensure that port_number is not in use
-        assert port_number not in BaseService.ports_register
-        BaseService.ports_register.add(port_number)
-
-    def run_local(self,service:bool=True):
-        """ start and run the command attribute locally
-            the 'command' attribute must be set previously """
-
-        if service:
-            sp.terminal(self.command,self.terminal)
-            time.sleep(2)#FIXME: waiting time needed
-        else:
-            sp.shell(self.command)
-
-    def cli_func(self,args):
-        """ this provides default function available from command line interface 
-            e.g. called within cli.py as follow: cli.set_service("RethinkDB") """
-
-        echo(f"run service: {self.command}")
-        if getattr(args,"open_terminal",None): self.run_local(service=True)
-        else: self.run_local(service=False)
-
-    def set_websocket(self,dbname=None,set_encoding='json'):
-        """ factory function for implementing starlette WebSocketEndpoint
-            the parent class 'self' must provide an 'on_receive' method
-            which is not implemented directly into BaseService """
-        
-        parent:BaseService = self
-        if dbname is None: dbname=self.config['db_name']
-
-        class WebSocket(WebSocketEndpoint):
-            encoding = set_encoding
-            service_config = {
-                "encoding": encoding,
-                "db_name": dbname,
-                "route": f"/data/{dbname}",
-                "receiver": parent.on_receive,
-                }
-            async def on_receive(self,websocket,data):
-                receiver = self.service_config['receiver']
-                await receiver(websocket,data)
-
-        self.ws_config:dict = WebSocket.service_config
-        self.WebSocketEndpoint:type = WebSocket
-        verbose("new websocket endpoint: ",WebSocket.service_config['route'])
-        return WebSocket.service_config['route'], WebSocket
-    
-    def on_receive(self,websocket,data):
-        raise NotImplementedError
-
-
 class RethinkDB(BaseService):
 
     def __init__(self,config:BaseConfig,run_local:bool=False):
@@ -208,13 +249,15 @@ class RethinkDB(BaseService):
         super().__init__(config.database_host,config)
         assert self.protocol == 'rethinkdb'
 
+        self.API = BaseAPI
+
         self.command = \
             f"rethinkdb --http-port 8180 -d {config['db_path']}"
 
         # self.set_unit(
         #     Description = "RethinkDB service made with Sweetheart",
         #     ExecStart = self.command,
-        #     User = BaseConfig.USER )
+        #     User = os.getuser() )
 
         if run_local: self.run_local(service=True)
 
@@ -413,7 +456,7 @@ class JupyterLab(BaseService):
         self.set_unit(
             Description = "JupyterLab service made with Sweetheart",
             ExecStart = self.command,
-            User = BaseConfig.USER )
+            User = os.getuser() )
 
         if run_local: self.run_local(service=True)
 
