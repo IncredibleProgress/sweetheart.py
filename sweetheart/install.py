@@ -27,14 +27,13 @@ if not os.path.isfile(
         ).stdout.strip()
 
     sws_script = f"{HOME}/.local/bin/sws"
-    poetry = wh('poetry') or wh('~/.local/bin/poetry')
+    poetry = lambda: wh('poetry') or wh('~/.local/bin/poetry')
     sp_conf_file = f"{HOME}/.sweet/sweetheart/configuration/subproc.json"
 
-    if not poetry:
+    if not poetry():
         assert wh('curl') and wh('python3')
         sp.run("curl -sSL https://install.python-poetry.org | python3 -",shell=True)
-        poetry = wh('poetry') or wh('~/.local/bin/poetry')
-        assert poetry
+        assert poetry()
 
     # make required directories
     os.makedirs(f"{HOME}/.sweet/sweetheart/programs/my_python",exist_ok=True)
@@ -65,7 +64,7 @@ if not os.path.isfile(
 
     # provide sws command (faster than 'poetry run')
     with open(sws_script,"w") as file_out:
-        file_out.write(f"#!/bin/sh\n{venv}/bin/python3 -m sweetheart.cli sh $*")
+        file_out.write(f"#!/bin/sh\n{venv}/bin/python3 -m sweetheart.cli $*")
     
     # authorize execution of sws
     os.chmod(sws_script,stat.S_IRWXU|stat.S_IRGRP|stat.S_IROTH)
@@ -221,7 +220,7 @@ class BaseInstall:
         assert sp.is_executable('npm')
         assert sp.is_executable('cargo')
 
-        self.config = config
+        self.config = self._ = config
         self.packages_file = f"{config.root_path}/configuration/packages.json"
         
     def apt(self,*libs:str,**kwargs):
@@ -270,12 +269,14 @@ class BaseInstall:
         """ install rust crates (given libs) using cargo 
             will use cargo-binstall when bin is set at True """
 
-        if bin == True:
+        if bin == False:
             echo("cargo install:",*libs,blank=True)
             return sp.shell(f"cargo","install",*libs,**kwargs)
-        elif bin == False:
+
+        elif bin == True:
             echo("cargo-binstall:",*libs,blank=True)
-            return sp.shell(f"{rust_crates}/cargo-binstall",*libs,**kwargs)
+            return sp.shell(f"{self.config.rust_crates}/cargo-binstall",*libs,**kwargs)
+
         else: raise TypeError
     
     def poetry(self,*libs:str,**kwargs):
