@@ -57,27 +57,24 @@ class BaseService:
             kwargs keys must be supported service parameters """
 
         # provide a ConfigParser for setting systemd
-        self.sysd = configparser.ConfigParser()
+        sysd = self.sysd = configparser.ConfigParser()
         # set usual sections of systemd service file
-        self.sysd.add_section('Unit')
-        self.sysd.add_section('Service')
-        self.sysd.add_section('Install')
+        sysd.add_section('Unit')
+        sysd.add_section('Service')
+        sysd.add_section('Install')
 
-        def set_in(param,section):
-            if eval(param) is not None:
-                assert section in "Unit|Service|Install"
-                self.sysd[section][param] = eval(param)
-
-        # set supported parameters in sysd config
-        set_in('Description','Unit')
-        set_in('After','Unit')
-        set_in('Before','Unit')
-        set_in('ExecStart','Service')
-        set_in('ExecReload','Service')
-        set_in('Restart','Service')
-        set_in('Type','Service')
-        set_in('WantedBy','Install')
-        set_in('RequiredBy','Install')
+        # [Unit] settings
+        if Description: sysd['Unit']['Description']= Description
+        if After: sysd['Unit']['After']= After
+        if Before: sysd['Unit']['Before']= Before
+        # [Service] settings
+        if ExecStart: sysd['Service']['ExecStart']= ExecStart
+        if ExecReload: sysd['Service']['ExecReload']= ExecReload
+        if Restart: sysd['Service']['Restart']= Restart
+        if Type: sysd['Service']['Type']= Type
+        # [Install] settings
+        if WantedBy: sysd['Service']['WantedBy']= WantedBy
+        if RequiredBy: sysd['Service']['RequiredBy']= RequiredBy
 
     def write_service_file(self,filename):
         """ write service file for setting systemd
@@ -109,8 +106,11 @@ class BaseService:
         ensure_default('WantedBy','default.target')
 
         # write and set service file for systemd
-        self.sysd.write(tempfile)
-        sp.shell("sudo","cp",tempfile,self._.system_dir)
+        with open(tempfile,'w') as file_out:
+            self.sysd.write(file_out)
+
+        sp.sudo("cp",tempfile,self._.system_dir)
+        sp.sudo(f"systemctl reload-or-restart {tempfile}",getpass=False)
 
         # # add service within subproc conf file
         # with open(self._.subproc_file) as file_in:
@@ -425,14 +425,15 @@ class HttpServer(BaseService):
         """ run webapp within local Http server """
 
         if service:
+            raise NotImplementedError
             #FIXME: deprecated
-            os.chdir(self.config['working_dir'])
-            sp.python(
-                "-m","gunicorn","main:app",
-                "--workers",4,
-                "--worker-class","uvicorn.workers.UvicornWorker",
-                "--bind","0.0.0.0:80",
-                cwd= self.config._['module_path'])
+            # os.chdir(self.config['working_dir'])
+            # sp.python(
+            #     "-m","gunicorn","main:app",
+            #     "--workers",4,
+            #     "--worker-class","uvicorn.workers.UvicornWorker",
+            #     "--bind","0.0.0.0:80",
+            #     cwd= self.config._['module_path'])
         else:
             import uvicorn
             os.chdir(self.config['working_dir'])
@@ -452,11 +453,6 @@ class JupyterLab(BaseService):
         self.command = \
             f"{config.python_bin} -m jupyterlab "+\
             f"--no-browser --notebook-dir={config['notebooks_dir']}"
-
-        self.set_unit(
-            Description = "JupyterLab service made with Sweetheart",
-            ExecStart = self.command,
-            User = os.getuser() )
 
         if run_local: self.run_local(service=True)
 

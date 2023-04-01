@@ -263,9 +263,9 @@ def HTMLTemplate(filename:str,**kwargs):
     from sweetheart.bottle import SimpleTemplate
     from starlette.responses import HTMLResponse
 
-    if not hasattr(BaseConfig,"_"):
-        verbose("config is missing and autoset by HTMLTemplate")
-        set_config()
+    # if not hasattr(BaseConfig,"_"):
+    #     verbose("config is missing and autoset by HTMLTemplate")
+    #     set_config()
 
     # set templates dir as working dir
     os.chdir(BaseConfig._.working_dir)
@@ -327,14 +327,19 @@ def build_css():
 
 def test_template(template:str):
 
+    from sweetheart.services import HttpServer,Route
+
     BaseConfig.verbosity = 1
+    assert hasattr(BaseConfig,'_')
+    
     BaseConfig._.is_webapp_open = True
-    BaseConfig._.rethinkdb_local = False
-    BaseConfig._.jupyter_local = False
+    BaseConfig._.is_rethinkdb_local = False
+    BaseConfig._.is_jupyter_local = False
 
     path = f"{BaseConfig._.working_dir}/{BaseConfig._.templates_dir}"
     if not os.path.isfile(path) and not os.path.islink(path):
-        echo("Error, the given template is not existing",mode="exit")
+        echo("Error, the given template is not existing")
+        exit()
 
     webapp = HttpServer(BaseConfig._,set_database=False).mount(
         Route("/",HTMLTemplate(template)) )
@@ -377,7 +382,7 @@ class sp(os):
 
     @classmethod
     def shell(cls,*args,**kwargs):
-        """ run subprocess providing some flexibility with args """
+        """ run bash command providing some flexibility with args """
 
         if len(args)==1 and isinstance(args[0],str):
             kwargs.update({ 'shell':True })
@@ -386,7 +391,10 @@ class sp(os):
         elif len(args)==1 and isinstance(args[0],list):
             return cls.run(args[0],**kwargs)
         
-        else: return cls.run(args,**kwargs)
+        else: 
+            # zip the args into a list given as first arg to run()
+            # allow shell("echo","hello") instead of shell(["echo","hello"])
+            return cls.run(args,**kwargs)
 
     @classmethod
     def read_sh(cls,script:str):
@@ -394,6 +402,18 @@ class sp(os):
 
         for instruc in script.splitlines():
             cls.run(instruc.strip(),shell=True)
+
+    @classmethod
+    def sudo(cls,*args,**kwargs):
+        """ a Jupyter compliant sudo cmd that runs sudo -S """
+
+        command = ' '.join(args)
+
+        if getattr(cls,'_getpass_',False) is True: 
+            sp.shell(f"sudo -S {command}")
+        else:
+            sp.shell(f"echo {os.getpass()} | sudo -S {command}")
+            cls._getpass_ = True
 
 
     EXECUTABLES = {} # fetched by list_executables()
@@ -405,7 +425,7 @@ class sp(os):
         exe = executables.split()
         pth = [ os.which(cmd) for cmd in exe ]
 
-        for index in len(exe):
+        for index in range(len(exe)):
             if pth[index] is not None:
                 cls.EXECUTABLES.update(
                     { exe[index]: pth[index] })
@@ -457,7 +477,7 @@ class sp(os):
 
         BaseConfig.python_env = env
         BaseConfig.python_bin = f"{env}/bin/python"
-        verbose("set python env:",BaseConfig.python_bin)
+        verbose("set python env:",BaseConfig.python_env)
 
 
 def install(*packages):

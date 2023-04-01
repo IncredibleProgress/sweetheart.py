@@ -246,7 +246,7 @@ class BaseInstall:
             libs.remove("*unit")
 
         # install other packages
-        return sp.shell("sudo","apt","install",*libs,**kwargs)
+        return sp.sudo("apt-get","install",*libs,**kwargs)
 
     def dnf(self,*libs:str,**kwargs):
         """ FIXME: coming soon !
@@ -264,7 +264,7 @@ class BaseInstall:
             libs.remove("*unit")
 
         # install other packages
-        return sp.shell("sudo","dnf","install",*libs,**kwargs)
+        return sp.sudo("dnf","install",*libs,**kwargs)
 
     def cargo(self,*libs:str,bin:bool=False,**kwargs):
         """ install rust crates (given libs) using cargo 
@@ -389,8 +389,8 @@ wget -qO- https://unit.nginx.org/keys/nginx-keyring.gpg | sudo apt-key add -
         if not sp.is_executable("unitd"):
             # install Nginx Unit packages
             version = self.config.python_version
-            sp.shell("sudo apt update")
-            sp.shell(f"sudo apt install unit unit-python{version}") 
+            sp.sudo("apt-get update")
+            sp.sudo(f"apt-get install unit unit-python{version}") 
 
 
     def apt_install_rethinkdb(self):
@@ -407,5 +407,5 @@ wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-ke
 
         if not sp.is_executable("rethinkdb"):
             # install rethinkdb package
-            sp.shell("sudo apt update")
-            sp.shell(f"sudo apt install rethinkdb")
+            sp.sudo("apt-get update")
+            sp.sudo(f"apt-get install rethinkdb")

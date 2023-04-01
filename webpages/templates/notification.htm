@@ -2,12 +2,12 @@
 
 <python>
 createVueApp({
-  "equipements": ["Compresseur principal"],
+  "equipements": ["Tube de diffusion RT4"],
   "owners": ["Méca","Eléc.","Chaudro.","Voirie","Automat."],
   "priorities": [0,1,2,3,4] })
 </python>
 
-<div id="VueApp" class="max-w-2xl mx-auto p-2">
+<vue class="max-w-2xl mx-auto p-2">
   <h1 class="text-center mt-10">Demande d'intervention</h1>
 
   <div class="flex mt-12">
@@ -27,4 +27,4 @@ createVueApp({
     apporter les premiers élements de diagnostiques ou à défaut vos observations
     indiquer également les actions déjà réalisées ainsi que les premières conclusions""" %>
   <textarea id="" class="sw flex rounded-b-md mt-2 h-48 w-full" placeholder="{%txt%}"></textarea>
-</div>
+</vue>

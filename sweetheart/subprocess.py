@@ -2,6 +2,7 @@
 import os as _os
 import platform,getpass,locale,subprocess,shutil
 
+
 class os:
 
     """ reimplements common tools of the python os module 
@@ -12,7 +13,8 @@ class os:
     putenv = _os.putenv
 
     getcwd = _os.getcwd
-    getuser = getpass.getuser()
+    getuser = getpass.getuser
+    getpass = getpass.getpass
     get_exec_path = _os.get_exec_path
     getlocale = locale.getlocale
 
@@ -41,6 +43,16 @@ class os:
     run = subprocess.run
     which = shutil.which
 
+    @staticmethod
+    def enforced_symlink(source,dest):
+
+        if os.path.islink(dest): print(f"Warning, existing link {dest}")
+        elif os.path.isfile(dest): os.remove(dest)
+        elif os.path.isdir(dest) : shutil.rmtree(dest)
+        try: os.symlink(source,dest)
+        except: pass
+
+
     # get os_release with Python <= 3.9 :
     # 
     #     import csv
@@ -51,12 +63,3 @@ class os:
     #             if line==[]: continue # this can happen...
     #             os_release[line[0]] = line[1]
     #
-
-    @staticmethod
-    def enforced_symlink(source,dest):
-
-        if os.path.islink(dest): print(f"Warning, existing link {dest}")
-        elif os.path.isfile(dest): os.remove(dest)
-        elif os.path.isdir(dest) : shutil.rmtree(dest)
-        try: os.symlink(source,dest)
-        except: pass

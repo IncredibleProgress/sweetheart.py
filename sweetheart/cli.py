@@ -85,8 +85,11 @@ if __name__ == "__main__":
     cli.set_service("HttpServer")
 
     #$ sws show
-    cli.sub("show",help="show the python modules tree")
-    cli.set_function(lambda args: sp.poetry("show","tree"))
+    cli.sub("test",help="start the given html template as single webpage")
+    cli.set_function(lambda args: test_template(args.template[0]) )
+
+    cli.opt("template",nargs=1,
+        help="filename of the template to test")
 
     #$ sws build-css
     cli.sub("build-css",help="rebuild the tailwind.css file")
