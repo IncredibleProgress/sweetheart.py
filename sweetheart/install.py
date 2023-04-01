@@ -37,7 +37,7 @@ if not os.path.isfile(
         assert poetry
 
     # make required directories
-    os.makedirs(f"{HOME}/.sweet/sweetheart/programs",exist_ok=True)
+    os.makedirs(f"{HOME}/.sweet/sweetheart/programs/my_python",exist_ok=True)
     os.makedirs(f"{HOME}/.sweet/sweetheart/configuration",exist_ok=True)
     
     # build my_python directory

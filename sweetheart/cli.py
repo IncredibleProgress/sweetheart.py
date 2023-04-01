@@ -75,25 +75,21 @@ if __name__ == "__main__":
 
     #$ sws init
     cli.sub("init",help="launch init process for building sweetheart")
+    cli.opt("subargs",nargs=cli.REMAINDER,help="additionnal python modules to install")
     cli.set_function(sws_init)
-
-    cli.opt("subargs",nargs=cli.REMAINDER,
-        help="additionnal python modules to install")
 
     #$ sws start
     cli.sub("start",help="start webapp and required services")
     cli.set_service("HttpServer")
 
-    #$ sws show
+    #$ sws test
     cli.sub("test",help="start the given html template as single webpage")
-    cli.set_function(lambda args: test_template(args.template[0]) )
-
-    cli.opt("template",nargs=1,
-        help="filename of the template to test")
+    cli.opt("template",nargs=1,help="filename of the template to test")
+    cli.set_function( lambda args: test_template(args.template[0]) )
 
     #$ sws build-css
     cli.sub("build-css",help="rebuild the tailwind.css file")
-    cli.set_function(lambda args: build_css())
+    cli.set_function( lambda args: build_css() )
 
 
     # execute command line arguments
