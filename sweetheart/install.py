@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
     if "--init" in sys.argv:
         # autostart init process for full install
-        sp.run("bash sws init ipykernel",shell=True)
+        sp.run('bash -c "sws init ipykernel"',shell=True)
 
     # STOP install module execution here
     # a sweetheart config is required for next utilities
@@ -275,7 +275,8 @@ class BaseInstall:
 
         elif bin == True:
             echo("cargo-binstall:",*libs,blank=True)
-            return sp.shell(f"{self.config.rust_crates}/cargo-binstall",*libs,**kwargs)
+            binstall = f"{self.config.rust_crates}/cargo-binstall"
+            return sp.shell(binstall,*libs,**kwargs)
 
         else: raise TypeError
     
@@ -335,7 +336,7 @@ class BaseInstall:
 
             # unzip doc when given
             pth,file = os.path.split(relpath)
-            if pth.startswith("documentation") and path.endswith(".zip"):
+            if pth.startswith("documentation") and pth.endswith(".zip"):
                 self.unzip_doc(file)
 
     def unzip_doc(self,zipfile:str,remove:bool=True):

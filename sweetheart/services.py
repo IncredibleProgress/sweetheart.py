@@ -11,8 +11,8 @@ from starlette.responses import HTMLResponse,FileResponse,JSONResponse,RedirectR
 
 class BaseService:
 
-    # ports tracker for avoiding localhost conflicts
     ports_register = set()
+    system_dir = "/etc/systemd/system"
 
     def __init__(self,url:str,config:BaseConfig):
         """ 
@@ -109,7 +109,7 @@ class BaseService:
         with open(tempfile,'w') as file_out:
             self.sysd.write(file_out)
 
-        sp.sudo("cp",tempfile,self._.system_dir)
+        sp.sudo("cp",tempfile,self.system_dir)
         sp.sudo(f"systemctl reload-or-restart {tempfile}",getpass=False)
 
         # # add service within subproc conf file
@@ -337,6 +337,7 @@ class HttpServer(BaseService):
         
         # autoset url from config
         super().__init__(config.async_host,config)
+        self._mounted_ = False
         self.data = []
 
         # set default uvivorn server args
@@ -357,10 +358,10 @@ class HttpServer(BaseService):
         """ mount given Route(s) and set facilities from config """
 
         # ensure mount() call only once
-        assert hasattr(self,'data')
+        assert self._mounted_ is False
 
         os.chdir(self.config['working_dir'])
-        echo("mount webapp:",self.config['working_dir'])
+        verbose("mount webapp:",self.config['working_dir'])
 
         if not args:
 
@@ -390,7 +391,7 @@ class HttpServer(BaseService):
             self.data.append( Route("/",HTMLTemplate(args[0])) )
 
         else:
-            # assumes that args are Route objects
+            # it assumes that args are Route objects
             self.data.extend(args)
 
         if hasattr(self,'database'):
@@ -412,28 +413,56 @@ class HttpServer(BaseService):
 
         # set the webapp Starlette object
         self.starlette = Starlette(routes=self.data)
-        del self.data# new setting forbidden
+        self._mounted_ = True
 
         return self
 
-    def app(self,*args:Route) -> Starlette:
+    def pre_mount(self,*list:str):
+        """ FIXME: only for tests """
+        self._mount_ = list
+
+    def app(self,*args) -> Starlette:
         """ mount(*args) and return related Starlette object """
-        self.mount(*args)
+
+        args_are = lambda typ:\
+            all([ isinstance(arg,typ) for arg in args ])
+
+        if args_are(str):
+            self.pre_mount(*args)
+        
+        if hasattr(self,'_mount_'):
+            self.mount([ eval(str) for str in self._mount_ ])
+
+        elif self._mounted_ is False:
+            assert args_are((Route,Mount))
+            self.mount(*args)
+        
         return self.starlette
 
     def run_local(self,service:bool=False):
         """ run webapp within local Http server """
 
         if service:
-            raise NotImplementedError
-            #FIXME: deprecated
-            # os.chdir(self.config['working_dir'])
-            # sp.python(
-            #     "-m","gunicorn","main:app",
-            #     "--workers",4,
-            #     "--worker-class","uvicorn.workers.UvicornWorker",
-            #     "--bind","0.0.0.0:80",
-            #     cwd= self.config._['module_path'])
+
+            assert hasattr(self,'_mount_')
+            mount = ',\n'.join(self._mount_)
+
+            NginxUnit(self.config).load(f"""
+
+# auto-generated using sweetheart.services.HttpServer
+# { os.getuser(), sp.stdout("date") }
+
+from sweetheart import *
+from sweetheart.services import HttpServer
+
+config = set_config(
+    # set here configuration of your sweetheart app
+    { self.config.data })
+
+{ self.config.app_callable } = HttpServer(config).app(
+    # set here url routing of your sweetheart app
+    { mount })""" )
+
         else:
             import uvicorn
             os.chdir(self.config['working_dir'])
@@ -470,28 +499,26 @@ class JupyterLab(BaseService):
 
 
 
-class NginxUnit(UserDict):
-    #FIXME: to implement
+class NginxUnit(UserDict):        
 
     def __init__(self,config:BaseConfig):
-
-        self._ = config
+        self.config = self._ = config
         self.data =\
           {
             "listeners": {
-                self._.unit_listener: {
+                config.unit_listener: {
                     "pass": "routes"
                 }
             },
             "routes": [
-                {
-                    "match": {
-                        "uri": "/jupyter/*"
-                    },
-                    "action": {
-                        "proxy": config.jupyter_host
-                    }
-                },
+                # {
+                #     "match": {
+                #         "uri": "/jupyter/*"
+                #     },
+                #     "action": {
+                #         "proxy": config.jupyter_host
+                #     }
+                # },
                 {
                     "action": {
                         "pass": "applications/starlette"
@@ -505,24 +532,30 @@ class NginxUnit(UserDict):
                     "home": config.python_env,
                     "module": config.app_module,
                     "callable": config.app_callable,
-                    "user": "ubuntu"
+                    "user": os.getuser()
                 }
             }
           }
 
-    def put_config(self):
+    def load(self,py_module_content:str=None):
 
         host = self._.nginxunit_host
+        socket = "/var/run/control.unit.sock"
         conf = f"{self._.root_path}/configuration/unit.json"
 
         with open(conf,'w') as file_out:
             json.dump(self.data, file_out)
 
-        sp.shell("sudo","curl","-X","PUT","-d",f"@{conf}",
-            "--unix-socket","/var/run/control.unit.sock",f"{host}/config/")
-        
-        sp.shell("sudo","systemctl","restart","unit")
+        if isinstance(py_module_content,str):
+            sp.overwrite_file(
+                content= py_module_content,
+                file= self.config.app_module+'.py',
+                cwd= self.config.module_path )
+
+        sp.sudo("curl","-X","PUT","-d",f"@{conf}","--unix-socket",socket,f"{host}/config/")
+        sp.sudo("systemctl reload-or-restart unit")
 
     def stop(self):
-        sp.shell("sudo","systemctl","stop","unit")
+
+        sp.sudo("systemctl stop unit")
         

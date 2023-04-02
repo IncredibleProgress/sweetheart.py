@@ -83,7 +83,7 @@ class BaseConfig(UserDict):
             'unit_listener': "*:80",
             'python_version': "3.10",# for setting Nginx Unit
             'node_version': "16.x",# for getting node from nodesource.com
-            'system_dir': "/etc/systemd/system",
+            'stsyntax': r"<% %> % {% %}",
 
             # can not be updated within load_json(subproc=True)
             # the settings are locked because key starts with .
@@ -98,7 +98,7 @@ class BaseConfig(UserDict):
             "app_callable": "webapp",
             "templates_base": "HTML",
             "templates_dir": "templates",
-            "stsyntax": r"<% %> % {% %}",
+            
             "working_dir": f"{self.root_path}/webpages",
             "db_path": f"{self.root_path}/database/rethinkdb",
             "module_path": f"{self.root_path}/programs/my_python",# no / at end
@@ -414,6 +414,13 @@ class sp(os):
         else:
             sp.shell(f"echo {os.getpass()} | sudo -S {command}")
             cls._getpass_ = True
+
+    @classmethod
+    def overwrite_file(cls,content:str,file:str,cwd:str=None):
+        
+        if cwd: os.chdir(cwd)
+        with open(file,'w') as file_out:
+            file_out.write(content.strip())
 
 
     EXECUTABLES = {} # fetched by list_executables()

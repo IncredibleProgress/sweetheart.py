@@ -21,7 +21,7 @@ from sweetheart import BaseConfig, verbose
 
 try:
     # if existing, BaseConfig._ provides the current sweetheart config
-    SWEETHEART_SYNTAX = BaseConfig._['stsyntax']
+    SWEETHEART_SYNTAX = BaseConfig._.stsyntax
     verbose(f"set SimpleTemplate syntax from given config: {SWEETHEART_SYNTAX}")
     
 except:
