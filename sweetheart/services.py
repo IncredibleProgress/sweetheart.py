@@ -99,7 +99,7 @@ class BaseService:
                 self.sysd[section][param] = default_value
 
         # auto set service parameters when needed
-        ensure_default('Description',f'Sweetheart service')
+        ensure_default('Description',f'Service made with Sweetheart')
         ensure_default('After',f'network.target')
         ensure_default('ExecStart',self.command)
         ensure_default('Type','simple')
@@ -141,7 +141,7 @@ class BaseService:
 
         if service:
             # sp.terminal(self.command,self.terminal)
-            sp.shell("sudo","systemctl","reload-or-restart",service)
+            sp.sudo("systemctl","reload-or-restart",service)
             time.sleep(2) #FIXME: waiting time needed
         else:
             sp.shell(self.command)
@@ -443,17 +443,17 @@ class HttpServer(BaseService):
         """ run webapp within local Http server """
 
         if service:
-
             assert hasattr(self,'_mount_')
             mount = ',\n'.join(self._mount_)
 
             NginxUnit(self.config).load(f"""
+'''
+{ self.config.app_callable }
+auto-generated using sweetheart.services.HttpServer
+USER: { os.getuser() } DATE: { sp.stdout("date") }
+'''
 
-# auto-generated using sweetheart.services.HttpServer
-# { os.getuser(), sp.stdout("date") }
-
-from sweetheart import *
-from sweetheart.services import HttpServer
+from sweetheart.services import *
 
 config = set_config(
     # set here configuration of your sweetheart app

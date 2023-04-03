@@ -27,18 +27,19 @@ if not os.path.isfile(
         ).stdout.strip()
 
     sws_script = f"{HOME}/.local/bin/sws"
-    poetry = lambda: wh('poetry') or wh('~/.local/bin/poetry')
+    poetry = wh('poetry') or wh('~/.local/bin/poetry')
     sp_conf_file = f"{HOME}/.sweet/sweetheart/configuration/subproc.json"
 
-    if not poetry():
+    if not poetry:
         assert wh('curl') and wh('python3')
         sp.run("curl -sSL https://install.python-poetry.org | python3 -",shell=True)
-        assert poetry()
+        poetry = wh('poetry') or wh('~/.local/bin/poetry')
+        assert poetry
 
     # make required directories
     os.makedirs(f"{HOME}/.sweet/sweetheart/programs/my_python",exist_ok=True)
     os.makedirs(f"{HOME}/.sweet/sweetheart/configuration",exist_ok=True)
-    
+
     # build my_python directory
     os.chdir(f"{HOME}/.sweet/sweetheart/programs/my_python")
     sp.run(f"{poetry} init -n",shell=True)
@@ -91,7 +92,7 @@ if __name__ == "__main__":
 #############################################################################
 
 from sweetheart import *
-#NOTE: sp is replaced here by sp class of sweetheart
+#NOTE: sp (subprocess) is replaced here by sp class of sweetheart
 
 from zipfile import ZipFile
 from urllib.parse import urljoin
