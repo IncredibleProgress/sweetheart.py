@@ -58,6 +58,7 @@ class BaseService:
 
         # provide a ConfigParser for setting systemd
         sysd = self.sysd = configparser.ConfigParser()
+        sysd.optionxform = str # keep case of options 
         # set usual sections of systemd service file
         sysd.add_section('Unit')
         sysd.add_section('Service')
@@ -417,9 +418,10 @@ class HttpServer(BaseService):
 
         return self
 
-    def pre_mount(self,*list:str):
+    def pre_mount(self,*args:str):
         """ FIXME: only for tests """
-        self._mount_ = list
+        assert args
+        self._mount_ = args
 
     def app(self,*args) -> Starlette:
         """ mount(*args) and return related Starlette object """
@@ -430,7 +432,7 @@ class HttpServer(BaseService):
         if args_are(str):
             self.pre_mount(*args)
         
-        if hasattr(self,'_mount_'):
+        if getattr(self,'_mount_',None):
             self.mount([ eval(str) for str in self._mount_ ])
 
         elif self._mounted_ is False:
