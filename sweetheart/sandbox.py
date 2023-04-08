@@ -3,6 +3,8 @@ sandbox.py is dedicated for making tests and fast prototyping
 it allows getting usual objects you would need importing only one module
 """
 
+print("[SANDBOX] this module is given for tests not for production")
+
 # patch running within JupyterLab
 # import nest_asyncio
 # nest_asyncio.apply()
@@ -12,7 +14,8 @@ from sweetheart.install import BaseInstall
 from sweetheart.services import \
     RethinkDB,\
     HttpServer,\
-    JupyterLab
+    JupyterLab,\
+    NginxUnit
 
 from starlette.routing import *
 from starlette.staticfiles import *
@@ -20,3 +23,11 @@ from starlette.responses import *
 
 try: import pandas as pa
 except: pass
+
+# default_config = set_config({'run':'local'})
+
+# installer = BaseInstall(default_config)
+# httpserver = HttpServer(default_config)
+# rethinkdb = RethinkDB(default_config)
+# jupyterlab = JupyterLab(default_config)
+# nginxunit = NginxUnit(default_config)

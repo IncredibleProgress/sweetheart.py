@@ -202,7 +202,7 @@ def init(config:BaseConfig,add_pylibs=""):
     if "ipykernel" in PKG_INIT['pylibs']:
         # set python env into jupyter
         from sweetheart.services import JupyterLab
-        JupyterLab(config).set_ipykernel(set_pwd=False)
+        JupyterLab(config).set_ipykernel(pwd=False)
    
     try:
         # provide sweetheart html documentation    

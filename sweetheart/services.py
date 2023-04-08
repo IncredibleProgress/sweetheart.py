@@ -45,7 +45,28 @@ class BaseService:
         assert self.port not in BaseService.ports_register
         BaseService.ports_register.add(self.port)
 
-    def set_service_config(self,
+    def switch_port_to(self,port_number:int):
+        """ allow changing port number afterwards which can avoid conflicts
+            typically testing all services and servers on localhost
+            it will raise exception if port_number is already in use """
+
+        self.port = self.uargs['port'] = port_number
+        self.url = f"http://{self.host}:{self.port}"
+
+        # ensure that port_number is not in use
+        assert port_number not in BaseService.ports_register
+        BaseService.ports_register.add(port_number)
+
+    def cli_func(self,args):
+        """ this provides default function available from command line interface 
+            e.g. called within cli.py as follow: cli.set_service("RethinkDB") """
+
+        if getattr(args,"open_terminal",None):
+            self.run_local(terminal=True)
+
+        else: self.run_local(terminal=False)
+
+    def set_service(self,
         # [Unit]
         Description=None, After=None, Before=None,
         # [Service]
@@ -58,14 +79,15 @@ class BaseService:
 
         # provide a ConfigParser for setting systemd
         sysd = self.sysd = configparser.ConfigParser()
-        sysd.optionxform = str # keep case of options 
+        sysd.optionxform = str #! keep case of options 
         # set usual sections of systemd service file
         sysd.add_section('Unit')
         sysd.add_section('Service')
         sysd.add_section('Install')
 
         # [Unit] settings
-        if Description: sysd['Unit']['Description']= Description
+        descr = 'Description' # small test
+        if Description: sysd['Unit'][descr]= eval(descr)
         if After: sysd['Unit']['After']= After
         if Before: sysd['Unit']['Before']= Before
         # [Service] settings
@@ -77,7 +99,7 @@ class BaseService:
         if WantedBy: sysd['Service']['WantedBy']= WantedBy
         if RequiredBy: sysd['Service']['RequiredBy']= RequiredBy
 
-    def write_service_file(self,filename):
+    def write_service(self,filename):
         """ write service file for setting systemd
             will provide default value when not given """
 
@@ -111,7 +133,7 @@ class BaseService:
             self.sysd.write(file_out)
 
         sp.sudo("cp",tempfile,self.system_dir)
-        sp.sudo(f"systemctl reload-or-restart {tempfile}",getpass=False)
+        sp.sudo(f"systemctl enable {tempfile}")
 
         # # add service within subproc conf file
         # with open(self._.subproc_file) as file_in:
@@ -124,19 +146,7 @@ class BaseService:
         # with open(sp_conf_file,"w") as file_out:
         #     json.dump(sp_settings,file_out)
 
-    def switch_port_to(self,port_number:int):
-        """ allow changing port number afterwards which can avoid conflicts
-            typically testing all services and servers on localhost
-            it will raise exception if port_number is already in use """
-
-        self.port = self.uargs['port'] = port_number
-        self.url = f"http://{self.host}:{self.port}"
-
-        # ensure that port_number is not in use
-        assert port_number not in BaseService.ports_register
-        BaseService.ports_register.add(port_number)
-
-    def run_local(self,service=None):
+    def run_local(self,service=None,terminal=None):
         """ start and run the command attribute locally
             the 'command' attribute must be set previously """
 
@@ -144,16 +154,32 @@ class BaseService:
             # sp.terminal(self.command,self.terminal)
             sp.sudo("systemctl","reload-or-restart",service)
             time.sleep(2) #FIXME: waiting time needed
+
+        elif terminal:
+            sp.terminal(self.command,self.terminal)
+
+        else: sp.shell(self.command)
+
+    @BETA
+    def run_distant(self,service=None):
+        """ start and run the command attribute through ssh
+            the 'command' attribute must be set previously 
+            #FIXME: only for tests """
+
+        if service:
+            raise NotImplementedError
+
         else:
-            sp.shell(self.command)
+            assert self.protocol == "ssh"
 
-    def cli_func(self,args):
-        """ this provides default function available from command line interface 
-            e.g. called within cli.py as follow: cli.set_service("RethinkDB") """
+            host = self.host
+            key = self._.subproc['keypass']
+            usr = self._.subproc['user'][key]
+            pwd = sp.shell(f"{self._.HOME}/.local/bin/pass{key}")
+            cmd = self.command
 
-        echo(f"run service: {self.command}")
-        if getattr(args,"open_terminal",None): self.run_local(service=True)
-        else: self.run_local(service=False)
+            run = lambda cmd: sp.terminal(cmd,self.terminal)
+            run(f'export SSH_ASKPASS={pwd}; setsid ssh {usr}@{host} {cmd}')
 
     def set_websocket(self,dbname=None,set_encoding='json'):
         """ factory function for implementing starlette WebSocketEndpoint
@@ -279,9 +305,10 @@ class RethinkDB(BaseService):
         self.conn = self.client.connect(self.host,self.port,db=dbname)
         self.dbname = dbname
         return self.conn,self.dbname
-        
+    
+    @BETA
     async def fetch_endpoint(self,request):
-        """ #FIXME: unsecure, only for tests """
+        """ #FIXME: unsafe, only for tests """
 
         api = self.API(await request.json()).ensure({
             "header": { 
@@ -466,11 +493,12 @@ config = set_config(
     { mount })""" )
 
         else:
-            import uvicorn
-            os.chdir(self.config['working_dir'])
-            if hasattr(self,"data"): self.mount()
-            if self.config.is_webapp_open: webbrowser(self.url)
-            uvicorn.run(self.starlette,**self.uargs)
+            raise NotImplementedError
+            # import uvicorn
+            # os.chdir(self.config['working_dir'])
+            # if hasattr(self,"data"): self.mount()
+            # if self.config.is_webapp_open: webbrowser(self.url)
+            # uvicorn.run(self.starlette,**self.uargs)
 
 
 class JupyterLab(BaseService):
@@ -478,14 +506,15 @@ class JupyterLab(BaseService):
     def __init__(self,config:BaseConfig,run_local:bool=False):
         """ set JupyterLab as a service """
 
-        # auto set url from config
+        #NOTE: auto set url from config
         super().__init__(config.jupyter_host,config)
 
         self.command = \
             f"{config.python_bin} -m jupyterlab "+\
             f"--no-browser --notebook-dir={config['notebooks_dir']}"
 
-        if run_local: self.run_local(service=True)
+        if run_local:
+            self.run_local(service=True)
 
     def set_ipykernel(self,pwd:bool=False):
         """ set ipython kernel for running JupyterLab """
@@ -499,8 +528,13 @@ class JupyterLab(BaseService):
             # set required password for JupyterLab
             sp.python("-m","jupyter","notebook","password","-y")
 
+    def cli_func(self,args):
+        # enforce jupyter project for running server from cli
+        new_config = set_config(project='jupyter')
+        JupyterLab(new_config).run_local(terminal=False)
 
 
+@BETA
 class NginxUnit(UserDict):        
 
     def __init__(self,config:BaseConfig):
@@ -512,21 +546,11 @@ class NginxUnit(UserDict):
                     "pass": "routes"
                 }
             },
-            "routes": [
-                # {
-                #     "match": {
-                #         "uri": "/jupyter/*"
-                #     },
-                #     "action": {
-                #         "proxy": config.jupyter_host
-                #     }
-                # },
-                {
-                    "action": {
-                        "pass": "applications/starlette"
-                    }
+            "routes": [{
+                "action": {
+                    "pass": "applications/starlette"
                 }
-            ],
+            }],
             "applications": {
                 "starlette": {
                     "type": f"python {config.python_version}",
@@ -538,6 +562,17 @@ class NginxUnit(UserDict):
                 }
             }
           }
+
+    def add_proxy(self,route,target):
+
+        self["routes"].insert(0,{
+                "match": {
+                    "uri": f"/{route}/*"
+                },
+                "action": {
+                    "proxy": target
+                }
+            })
 
     def load(self,py_module_content:str=None):
 

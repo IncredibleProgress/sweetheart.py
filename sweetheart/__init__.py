@@ -43,13 +43,14 @@ class BaseConfig(UserDict):
     logg = []
     verbosity = 0
     label = MASTER_MODULE # printed with echo()
+    ALLOW_UNTRUSTED_CODE = True # reset by set_config()
 
     # get environment settings
     HOME = os.path.expanduser('~')
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
-    # set sws level into environment 
-    SWSLVL = os.environ['SWSLVL'] = f"{int(os.getenv('SWSLVL','0'))+1}"
-    assert int(SWSLVL) <= 2
+    # # set sws level into environment 
+    # SWSLVL = os.environ['SWSLVL'] = f"{int(os.getenv('SWSLVL','0'))+1}"
+    # assert int(SWSLVL) <= 2
 
     # default path settings
     poetry_bin = f"{HOME}/.local/bin/poetry"
@@ -57,8 +58,8 @@ class BaseConfig(UserDict):
     rust_crates = f"{HOME}/.cargo/bin"
 
     # default productive settings
-    async_host = "http://127.0.0.1:8000"# uvicorn
-    database_host = "rethinkdb://127.0.0.1:28015"
+    async_host = "http://127.0.0.1:8000"
+    database_host = "RethinkDB://127.0.0.1:28015"
     database_admin = "http://127.0.0.1:8180"
     jupyter_host = "http://127.0.0.1:8888"
     nginxunit_host = "http://localhost"
@@ -81,8 +82,8 @@ class BaseConfig(UserDict):
         self.subproc = {
             #  can be updated using load_json(subproc=True)
             'unit_listener': "*:80",
-            'python_version': "3.10",# for setting Nginx Unit
-            'node_version': "16.x",# for getting node from nodesource.com
+            'python_version': "3.10",# used for setting Nginx Unit
+            'node_version': "16.x",# used getting node from nodesource.com
             'stsyntax': r"<% %> % {% %}",
 
             # can not be updated within load_json(subproc=True)
@@ -178,6 +179,10 @@ def set_config(
         >>>     "db_name": "test",
         >>>     "db_path": "~/my_database/location" }) """
 
+    # allow setting project within dict values
+    if isinstance(values,dict) and values.get('project'):
+        project = values['project']
+
     config = BaseConfig(project)
 
     if config_file:
@@ -196,10 +201,16 @@ def set_config(
     config.update(values)
 
     # provide shortcut for setting running env
-    if config.get('run','local') == 'productive':
+    if config.get('run','testing') == 'productive':
+
         config.is_webapp_open = False
         config.is_rethinkdb_local = False
         config.is_jupyter_local = False
+        BaseConfig.ALLOW_UNTRUSTED_CODE = False
+        echo("INFO: running now for production")
+
+    else:
+        BaseConfig.ALLOW_UNTRUSTED_CODE = True
 
     if "init" not in sys.argv :
         # ensure python env setting if not given by subproc_file
@@ -526,3 +537,16 @@ def verbose(*args,level:int=1):
     if BaseConfig.verbosity >= level:
         print(f"sws:{BaseConfig.SWSLVL}:",*args)
 
+
+def BETA(callable,logging:bool=False):
+    """ decorator for tracking usage of beta code
+        indicated when code is not fully tested or fixed 
+        code execution is not possible running productive """
+    
+    assert BaseConfig.ALLOW_UNTRUSTED_CODE
+
+    msg = f"[BETA] {repr(callable)} has been called"
+    if logging: BaseConfig.logg.append(msg)
+    verbose(msg,level=1)
+
+    return callable

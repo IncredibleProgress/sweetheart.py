@@ -38,7 +38,7 @@ class CommandLineInterface:
 
         def func(args):
             exec(f"from sweetheart.services import {classname}")
-            eval(f"{classname}(BaseConfig._).cli_func(args)")
+            eval(f"{classname}.cli_func(args)")
 
         self.dict[self.cur].set_defaults(func=func)
 
@@ -90,6 +90,11 @@ if __name__ == "__main__":
     #$ sws build-css
     cli.sub("build-css",help="rebuild the tailwind.css file")
     cli.set_function( lambda args: build_css() )
+        
+    # #$ sws run-jupyter
+    # cli.sub("run-jupyter",help="run the JupyterLab server")
+    # cli.opt("-o","--open-terminal",action="store_true")
+    # cli.set_service("JupyterLab")
 
 
     # execute command line arguments
@@ -159,10 +164,6 @@ if __name__ == "__main__":
     # cli.sub("rethinkdb-server",help="run the Rethink-Database server")
     # cli.opt("-o","--open-terminal",action="store_true")
     # cli.set_service("RethinkDB")
-
-    # cli.sub("jupyter-server",help="run the JupyterLab server")
-    # cli.opt("-o","--open-terminal",action="store_true")
-    # cli.set_service("JupyterLab")
 
     # cli.sub("mongodb-server",help="run the Mongo-Database server")
     # cli.opt("-o","--open-terminal",action="store_true")
