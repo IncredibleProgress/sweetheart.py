@@ -4,6 +4,7 @@ build
 dist
 sweetheart.egg-info
 poetry.lock
+documentation/sweetbook
 documentation/sweetdoc/book
 *.Identifier
 *-checkpoint.ipynb

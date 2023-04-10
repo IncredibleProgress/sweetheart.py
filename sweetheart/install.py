@@ -100,25 +100,28 @@ from urllib.request import urlretrieve
 
 
 def init_project_env(project_name:str):
-    """ create and init new python env for new project """
+    """ create and init new python env for new project 
+        install *ipykernel* for basic jupyter features """
 
     assert project_name != MASTER_MODULE
+
     _path = f"{BaseConfig.HOME}/.sweet/{project_name}"
+    _my_python = f"{_path}/programs/my_python"
 
-    #os.makedirs(f"{_path}/documentation/notebooks",exist_ok=True)
+    os.makedirs(f"{_path}/documentation/notebooks",exist_ok=True)
     os.makedirs(f"{_path}/configuration",exist_ok=True)
-    os.makedirs(f"{_path}/programs",exist_ok=True)
+    os.makedirs(_my_python,exist_ok=True)
 
-    # init a new python env for new project
-    sp.poetry("new","my_python",cwd=f"{_path}/programs")
-    sp.poetry("add",MASTER_MODULE,cwd=f"{_path}/programs/my_python")
-    sp.set_python_env(cwd=f"{_path}/programs/my_python")
+    # init a new python env with *ipykernel* for new project 
+    sp.poetry("init","-n",cwd=_my_python)
+    sp.poetry("add","ipykernel",cwd=_my_python)
+    sp.set_python_env(cwd=_my_python)
 
     with open(f"{_path}/configuration/subproc.json","w") as fi:
         json.dump({ 'pyenv': BaseConfig.python_env },fi)
 
-        
-def init(config:BaseConfig,add_pylibs=""):
+   
+def init(config:BaseConfig,add_pylibs="",no_pkg_init=False):
     """ set require minimal features for working with sweetheart """
 
     # set python env with basic project settings
@@ -126,28 +129,27 @@ def init(config:BaseConfig,add_pylibs=""):
         init_project_env(config.project)
 
     if config.project.startswith("jupyter"):
-        
-        echo("INFO: init jupyter as a specific project")
+
         #FIXME: lead jupyter/jupyterlab/jupyterhub matter
+        echo("INFO: init jupyter as a specific project")
 
         config = set_config(project="jupyter")
-        sp.poetry("add",project_name)
+        sp.poetry("add","jupyterlab")
 
-        from sweetheart.heart import JupyterLab
-        JupyterLab(config).set_ipykernel(pwd=True)
+        from sweetheart.services import JupyterLab
+        jpy = JupyterLab(config)
+        jpy.set_ipykernel(set_passwd=True)
+        jpy.set_service("[SWEETHEART] JupyterLab server")
+        jpy.enable_service("jupyterlab.service")
 
+    if no_pkg_init or config.project.startswith("jupyter"):
+        # stop init process here
         return
 
-    # required directories
-    for basedir in [
-          #f"{config.root_path}/configuration",
-          f"{config.root_path}/database",
-          f"{config.root_path}/documentation/notebooks",
-          #f"{config.root_path}/programs/scripts",
-          f"{config.root_path}/webpages/templates",
-          f"{config.root_path}/webpages/resources" ]:
-        os.makedirs(basedir,exist_ok=True)
-
+    # required extra directories
+    os.makedirs(f"{config.root_path}/database",exist_ok=True)
+    os.makedirs(f"{config.root_path}/webpages/templates",exist_ok=True)
+    os.makedirs(f"{config.root_path}/webpages/resources",exist_ok=True)
 
     PKG_INIT = {
         # set minimum distro resources
@@ -202,7 +204,7 @@ def init(config:BaseConfig,add_pylibs=""):
     if "ipykernel" in PKG_INIT['pylibs']:
         # set python env into jupyter
         from sweetheart.services import JupyterLab
-        JupyterLab(config).set_ipykernel(pwd=False)
+        JupyterLab(config).set_ipykernel(set_passwd=False)
    
     try:
         # provide sweetheart html documentation    

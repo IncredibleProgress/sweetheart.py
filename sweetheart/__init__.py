@@ -54,7 +54,7 @@ class BaseConfig(UserDict):
 
     # default path settings
     poetry_bin = f"{HOME}/.local/bin/poetry"
-    python_bin = sys.executable # no python env set here
+    python_bin = sys.executable #! no python env set here
     rust_crates = f"{HOME}/.cargo/bin"
 
     # default productive settings
@@ -81,6 +81,7 @@ class BaseConfig(UserDict):
         # subprocess settings
         self.subproc = {
             #  can be updated using load_json(subproc=True)
+            'systemd': [],
             'unit_listener': "*:80",
             'python_version': "3.10",# used for setting Nginx Unit
             'node_version': "16.x",# used getting node from nodesource.com
@@ -143,21 +144,23 @@ class BaseConfig(UserDict):
         if os.path.isfile(self.config_file):
 
             with open(self.config_file) as file_in:
-                config.update(json.load(file_in))
-                verbose("config file:",self.config_file)
+                self.update(json.load(file_in))
+                verbose("load config file:",self.config_file)
 
-        if not subproc: return
+        if not subproc:
+            return
+
         elif os.path.isfile(self.subproc_file):
+            
             # update self.subproc for allowed keys
-
             with open(self.subproc_file) as file_in:
                 subproc_settings = json.load(file_in)
-                verbose("subproc file:",self.subproc_file)
+                verbose("load subproc file:",self.subproc_file)
 
             for key,value in subproc_settings.items():
 
                 if key.startswith('.'): 
-                    echo(f"WARNING: update of subproc setting '{key}' forbidden")
+                    echo(f"WARNING: update subproc setting '{key}' forbidden")
                     continue
                 if key == 'pyenv': 
                     BaseConfig.python_env = value
@@ -243,21 +246,24 @@ def quickstart(*args,_cli_args=None):
     
     if config.is_jupyter_local:
         # set and run Jupyterlab server
-        JupyterLab(config,run_local=True)
+        _path = "/etc/systemd/system/jupyterlab.service"
+        if os.isfile(_path): kwargs= {'service':'jupyterlab'}
+        else: kwargs= {'terminal':True}
+        JupyterLab(config).run_local(**kwargs)
 
     if args and isinstance(args[0],HttpServer):
-        # set webapp from given HttpServer instance
+        # set webapp from a given HttpServer instance
         webapp = args[0]
-        if hasattr(args[0],'data'): args[0].mount(*args[1:])
     else:
         # build new webapp from Route|Mount objects,html code or template
-        webapp = HttpServer(config)
-        if config.is_rethinkdb_local:
-            # set and run RethinkDB server
-            webapp.database = RethinkDB(config,run_local=True)
-            webapp.database.set_websocket()
-            webapp.database.set_client()
+        webapp = HttpServer(config,set_database=config.is_rethinkdb_local)
         webapp.mount(*args)
+        
+        # if config.is_rethinkdb_local:
+        #     # set and run RethinkDB server
+        #     webapp.database = RethinkDB(config,run_local=True)
+        #     webapp.database.set_websocket()
+        #     webapp.database.set_client()
         
     # start webapp within current bash
     webapp.run_local(service=False)
@@ -419,11 +425,12 @@ class sp(os):
         """ a Jupyter compliant sudo cmd that runs sudo -S """
 
         command = ' '.join(args)
+        askpass = lambda: os.getpass("sudo password")
 
         if getattr(cls,'_getpass_',False) is True: 
             sp.shell(f"sudo -S {command}")
         else:
-            sp.shell(f"echo {os.getpass()} | sudo -S {command}")
+            sp.shell(f"echo {askpass()} | sudo -S {command}")
             cls._getpass_ = True
 
     @classmethod
@@ -535,7 +542,7 @@ def verbose(*args,level:int=1):
         level set the intended level of verbosity """
 
     if BaseConfig.verbosity >= level:
-        print(f"sws:{BaseConfig.SWSLVL}:",*args)
+        print(f"sws:{level}:",*args)
 
 
 def BETA(callable,logging:bool=False):

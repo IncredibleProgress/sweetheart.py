@@ -33,14 +33,14 @@ class CommandLineInterface:
         """ set related function for the current parser or subparser """
         self.dict[self.cur].set_defaults(func=func)
 
-    def set_service(self,classname:str):
-        """ set related service for the current parser or subparser """
+    # def set_service(self,classname:str):
+    #     """ set related service for the current parser or subparser """
 
-        def func(args):
-            exec(f"from sweetheart.services import {classname}")
-            eval(f"{classname}.cli_func(args)")
+    #     def func(args):
+    #         exec(f"from sweetheart.services import {classname}")
+    #         eval(f"{classname}(BaseConfig._).cli_func(args)")
 
-        self.dict[self.cur].set_defaults(func=func)
+    #     self.dict[self.cur].set_defaults(func=func)
 
     def set_parser(self):
         self.args = self.parser.parse_args()
@@ -65,6 +65,9 @@ if __name__ == "__main__":
     cli.opt("-v","--verbose",action="count",default=0,
         help="get additional messages about on-going process")
 
+    cli.opt("-t","--open-terminal",action="store_true",
+        help="executes command within a detached terminal window if available")
+
     cli.opt("-p",dest="project",nargs=1,
         help="set a project name different of sweetheart")
 
@@ -78,10 +81,6 @@ if __name__ == "__main__":
     cli.opt("subargs",nargs=cli.REMAINDER,help="additionnal python modules to install")
     cli.set_function(sws_init)
 
-    #$ sws start
-    cli.sub("start",help="start webapp and required services")
-    cli.set_service("HttpServer")
-
     #$ sws test
     cli.sub("test",help="start the given html template as single webpage")
     cli.opt("template",nargs=1,help="filename of the template to test")
@@ -90,11 +89,42 @@ if __name__ == "__main__":
     #$ sws build-css
     cli.sub("build-css",help="rebuild the tailwind.css file")
     cli.set_function( lambda args: build_css() )
-        
-    # #$ sws run-jupyter
-    # cli.sub("run-jupyter",help="run the JupyterLab server")
-    # cli.opt("-o","--open-terminal",action="store_true")
-    # cli.set_service("JupyterLab")
+    
+    def sws_start(args):
+
+        service = args.service.lower()
+
+        if args.systemd and service == 'jupyter':
+            from sweetheart.services import JupyterLab
+            JupyterLab(BaseConfig._).run_local(service='jupyterlab')
+
+        elif service == 'jupyter': 
+            from sweetheart.services import JupyterLab
+            JupyterLab(BaseConfig._).run_local(terminal=args.open_terminal)
+
+        elif service == 'quickstart':
+            quickstart(_cli_args=args)
+
+        else: raise NotImplementedError
+
+    #$ sws start
+    cli.sub("start",help="start webapp and required services")
+    cli.set_function(sws_start)
+
+    cli.opt("-S","--systemd",action="store_true",
+        help="restart-or-reload the service for production via systemd")
+
+    cli.opt("-x","--db-disabled",action="store_true",
+        help="start without local Database server")
+
+    cli.opt("-j","--jupyter-lab",action="store_true",
+        help="start Jupyter Http server for enabling notebooks")
+
+    cli.opt("-s","--server-only",action="store_true",
+        help="start Http server without opening webbrowser")
+
+    cli.opt("service",nargs="?",default="quickstart",
+        help="provide here the nickname of the service to start")
 
 
     # execute command line arguments
@@ -107,10 +137,16 @@ if __name__ == "__main__":
         exit()
     
     if getattr(argv,"project",None):
-        set_config(project=argv.project[0])
-    else:
-        set_config()        
-    
+        project = argv.project[0]
+
+    elif getattr(argv,"service",None) == "jupyter":
+        project = argv.service
+
+    else: project = MASTER_MODULE
+
+    verbose("processed args:",argv,level=2)
+    verbose("current project:",project)
+    set_config(project=project)
     cli.apply_function()
 
 

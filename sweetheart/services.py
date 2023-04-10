@@ -14,6 +14,15 @@ class BaseService:
     ports_register = set()
     system_dir = "/etc/systemd/system"
 
+    allowed_sysd_options = {
+        '[Unit]':
+            ('Description','After','Before'),
+        '[Service]':
+            #NOTE: extented by default using set_service(**kwargs)
+            ('ExecStart','ExecReload','Restart','Type','User'),
+        '[Install]':
+            ('WantedBy','RequiredBy') }
+
     def __init__(self,url:str,config:BaseConfig):
         """ 
         set basic features of Sweeheart service objects :
@@ -57,103 +66,108 @@ class BaseService:
         assert port_number not in BaseService.ports_register
         BaseService.ports_register.add(port_number)
 
-    def cli_func(self,args):
-        """ this provides default function available from command line interface 
-            e.g. called within cli.py as follow: cli.set_service("RethinkDB") """
+    # def cli_func(self,args):
+    #     """ this provides default function available from command line interface 
+    #         e.g. called within cli.py as follow: cli.set_service("RethinkDB") """
 
-        if getattr(args,"open_terminal",None):
-            self.run_local(terminal=True)
+    #     if getattr(args,"open_terminal",None):
+    #         self.run_local(terminal=True)
 
-        else: self.run_local(terminal=False)
+    #     else: self.run_local(terminal=False)
 
-    def set_service(self,
-        # [Unit]
-        Description=None, After=None, Before=None,
-        # [Service]
-        ExecStart=None, ExecReload=None, Restart=None, Type=None,
-        # [Install]
-        WantedBy=None, RequiredBy=None ):
+    def set_service(self,Description:str=None,**kwargs):
 
         """ create and set config for new systemd service 
-            kwargs keys must be supported service parameters """
+            kwargs keys must be supported service options
+            
+            [Unit]
+              Description,After,Before
+            [Service]
+              ExecStart,ExecReload,Restart,Type,User,Group
+            [Install]
+              WantedBy,RequiredBy """
 
         # provide a ConfigParser for setting systemd
-        sysd = self.sysd = configparser.ConfigParser()
-        sysd.optionxform = str #! keep case of options 
-        # set usual sections of systemd service file
-        sysd.add_section('Unit')
-        sysd.add_section('Service')
-        sysd.add_section('Install')
+        self.sysd = configparser.ConfigParser()
+        self.sysd.optionxform = str #! keep case of options 
 
-        # [Unit] settings
-        descr = 'Description' # small test
-        if Description: sysd['Unit'][descr]= eval(descr)
-        if After: sysd['Unit']['After']= After
-        if Before: sysd['Unit']['Before']= Before
-        # [Service] settings
-        if ExecStart: sysd['Service']['ExecStart']= ExecStart
-        if ExecReload: sysd['Service']['ExecReload']= ExecReload
-        if Restart: sysd['Service']['Restart']= Restart
-        if Type: sysd['Service']['Type']= Type
-        # [Install] settings
-        if WantedBy: sysd['Service']['WantedBy']= WantedBy
-        if RequiredBy: sysd['Service']['RequiredBy']= RequiredBy
+        # set sections of systemd service file
+        self.sysd.add_section('Unit')
+        self.sysd.add_section('Service')
+        self.sysd.add_section('Install')
 
-    def write_service(self,filename):
-        """ write service file for setting systemd
-            will provide default value when not given """
+        if Description:
+            assert 'Description' not in kwargs
+            self.sysd['Unit']['Description'] = Description
 
-        assert filename.endswith(".service")
-        tempfile = f"{self.config.root_path}/configuration/{filename}"
+        # set given options within **kwargs
+        for option,value in kwargs.items():
 
-        def ensure_default(param,default_value):
-            """ ensure default values for main service parameters """
+            section = "Service" #! default value
+            for sctn in self.allowed_sysd_options:
+                if option in self.allowed_sysd_options[sctn]:
+                    section = sctn[1:-1]
+                    break
 
-            unit = ('Description','After')
-            serv = ('ExecStart','Type')
-            inst = ('WantedBy',)
+            self.sysd[section][option] = value
+        
+        # output messsage
+        verbose("set systemd service:",self.sysd,level=2)
 
-            if param in unit: section = 'Unit'
-            elif param in serv: section = 'Service'
-            elif param in inst: section = 'Install'
-            else: raise Exception
-            
-            if not self.sysd[section].get(param):
-                self.sysd[section][param] = default_value
+    def enable_service(self,filename):
+        """ write file and enable service within systemd
+            it will provide default values when not given """
 
-        # auto set service parameters when needed
-        ensure_default('Description',f'Service made with Sweetheart')
-        ensure_default('After',f'network.target')
-        ensure_default('ExecStart',self.command)
-        ensure_default('Type','simple')
-        ensure_default('WantedBy','default.target')
+        # provide some flexibility with filename
+        if filename.endswith(".service"): suffix = ""
+        else: suffix = ".service"
 
-        # write and set service file for systemd
+        default_settings = {
+            'Unit': {
+                'Description': '[SWEETHEART] Service',
+                'After': 'network.target' },
+            'Service': {
+                'Type': 'simple',
+                'User': os.getuser(),
+                'ExecStart': f'sh -c "{self.command}"' },
+            'Install': {
+                'WantedBy': 'default.target' }}
+        
+        # set the previous default settings if needed
+        for section,optdic in default_settings.items():
+            for option,value in optdic.items():
+                if not self.sysd[section].get(option):
+                    self.sysd[section][option] = value
+
+        # write file and enable service in systemd
+        tempfile = f"{self.config.root_path}/configuration/{filename}{suffix}"
+
         with open(tempfile,'w') as file_out:
-            self.sysd.write(file_out)
+            #! space_around_delimiters must be set at False
+            self.sysd.write(file_out, space_around_delimiters=False )
 
         sp.sudo("cp",tempfile,self.system_dir)
         sp.sudo(f"systemctl enable {tempfile}")
 
-        # # add service within subproc conf file
-        # with open(self._.subproc_file) as file_in:
-        #     sp_settings = json.load(file_in)
-        #FIXME
-        # system = sp_settings.get('system',[])
-        # system.append(f"/etc/systemd/system/{tempfile}")
-        # sp_settings['system'] = system
-        #
-        # with open(sp_conf_file,"w") as file_out:
-        #     json.dump(sp_settings,file_out)
+    # def update_subproc_file(self,dict):
+        #FIXME: add new service within subproc conf file
+        # should become a class method provided by sp/BaseConfig/BaseService?
+        self.config.subproc['systemd'].append(filename)
 
-    def run_local(self,service=None,terminal=None):
+        with open(self.config.subproc_file,'r') as file_in:
+            subproc_settings = json.load(file_in)
+            subproc_settings.update({'systemd':self._.systemd})
+
+        with open(self.config.subproc_file,'w') as file_out:
+            json.dump(file_out)
+
+    def run_local(self,service:str=None,terminal:bool=None):
         """ start and run the command attribute locally
             the 'command' attribute must be set previously """
 
         if service:
-            # sp.terminal(self.command,self.terminal)
             sp.sudo("systemctl","reload-or-restart",service)
-            time.sleep(2) #FIXME: waiting time needed
+            time.sleep(2) #FIXME: waiting time needed with rethinkdb
 
         elif terminal:
             sp.terminal(self.command,self.terminal)
@@ -164,7 +178,7 @@ class BaseService:
     def run_distant(self,service=None):
         """ start and run the command attribute through ssh
             the 'command' attribute must be set previously 
-            #FIXME: only for tests """
+            #FIXME: at the time being, only for tests """
 
         if service:
             raise NotImplementedError
@@ -493,12 +507,11 @@ config = set_config(
     { mount })""" )
 
         else:
-            raise NotImplementedError
-            # import uvicorn
-            # os.chdir(self.config['working_dir'])
-            # if hasattr(self,"data"): self.mount()
-            # if self.config.is_webapp_open: webbrowser(self.url)
-            # uvicorn.run(self.starlette,**self.uargs)
+            import uvicorn
+            os.chdir(self.config['working_dir'])
+            if not self._mounted_: self.mount()
+            if self.config.is_webapp_open: webbrowser(self.url)
+            uvicorn.run(self.starlette,**self.uargs)
 
 
 class JupyterLab(BaseService):
@@ -516,7 +529,7 @@ class JupyterLab(BaseService):
         if run_local:
             self.run_local(service=True)
 
-    def set_ipykernel(self,pwd:bool=False):
+    def set_ipykernel(self,set_passwd:bool=False):
         """ set ipython kernel for running JupyterLab """
 
         # get path,name of python env
@@ -527,11 +540,6 @@ class JupyterLab(BaseService):
         if pwd:
             # set required password for JupyterLab
             sp.python("-m","jupyter","notebook","password","-y")
-
-    def cli_func(self,args):
-        # enforce jupyter project for running server from cli
-        new_config = set_config(project='jupyter')
-        JupyterLab(new_config).run_local(terminal=False)
 
 
 @BETA
