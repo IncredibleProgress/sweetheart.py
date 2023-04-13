@@ -120,7 +120,8 @@ def init_project_env(project_name:str):
     with open(f"{_path}/configuration/subproc.json","w") as fi:
         json.dump({ 'pyenv': BaseConfig.python_env },fi)
 
-   
+
+@sudo
 def init(config:BaseConfig,add_pylibs="",no_pkg_init=False):
     """ set require minimal features for working with sweetheart """
 

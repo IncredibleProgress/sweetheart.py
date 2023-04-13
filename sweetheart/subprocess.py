@@ -31,7 +31,7 @@ class os:
     remove = _os.remove
     rmtree = shutil.rmtree
     listdir = _os.listdir
-    walk = _os.walk
+    #walk = _os.walk
 
     # provide distro infos
     os_release = platform.freedesktop_os_release()
@@ -42,6 +42,7 @@ class os:
     # shell features
     run = subprocess.run
     which = shutil.which
+    DEVNULL = subprocess.DEVNULL
 
     @staticmethod
     def enforced_symlink(source,dest):

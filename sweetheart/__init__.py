@@ -410,7 +410,7 @@ class sp(os):
         
         else: 
             # zip the args into a list given as first arg to run()
-            # allow shell("echo","hello") instead of shell(["echo","hello"])
+            # allow shell("echo","hello") rather than shell(["echo","hello"])
             return cls.run(args,**kwargs)
 
     @classmethod
@@ -421,17 +421,33 @@ class sp(os):
             cls.run(instruc.strip(),shell=True)
 
     @classmethod
-    def sudo(cls,*args,**kwargs):
-        """ a Jupyter compliant sudo cmd that runs sudo -S """
+    def sudo(sp,*args,**kwargs):
+        """ a Jupyter compliant sudo cmd that runs sudo -S
+            this will ask sudo password at the first call """
 
         command = ' '.join(args)
-        askpass = lambda: os.getpass("sudo password")
+        assert getattr(sp,'_ALLOW_SUDO_','NO')=='YES'
 
-        if getattr(cls,'_getpass_',False) is True: 
-            sp.shell(f"sudo -S {command}")
-        else:
-            sp.shell(f"echo {askpass()} | sudo -S {command}")
-            cls._getpass_ = True
+        if getattr(sp,'_getpass_',False) is True: 
+            # don't ask for sudo password here
+            return sp.shell(f"sudo -S {command}",**kwargs)
+
+        else: # ask for sudo password and avoid echo of it
+            sudopass= lambda passwd: f"echo {passwd} | sudo -S {command}"
+            askpass= lambda: os.getpass("sudo passwd required: ")
+
+            process= sp.shell(sudopass(askpass()),**kwargs)
+            process.args= sudopass("****")
+
+            sp._getpass_ = True
+            return process
+
+    @classmethod
+    def systemctl(cls,*args,**kwargs):
+
+        cls._ALLOW_SUDO_ = 'YES'
+        cls.sudo("systemctl",*args,**kwargs)
+        del cls._ALLOW_SUDO_
 
     @classmethod
     def overwrite_file(cls,content:str,file:str,cwd:str=None):
@@ -545,15 +561,24 @@ def verbose(*args,level:int=1):
         print(f"sws:{level}:",*args)
 
 
-def BETA(callable,logging:bool=False):
+def BETA(callable):
     """ decorator for tracking usage of beta code
         indicated when code is not fully tested or fixed 
         code execution is not possible running productive """
     
     assert BaseConfig.ALLOW_UNTRUSTED_CODE
-
-    msg = f"[BETA] {repr(callable)} has been called"
-    if logging: BaseConfig.logg.append(msg)
-    verbose(msg,level=1)
-
+    verbose(f"[BETA] {repr(callable)} has been called")
     return callable
+
+
+def sudo(function):
+    """ decorator that allows calling sp.sudo() 
+        intends to avoid an unwanted use of sudo """
+
+    def wrapper(*args,**kwargs):
+        sp._ALLOW_SUDO_ = 'YES'
+        function(*args,**kwargs)
+        del sp._ALLOW_SUDO_
+
+    verbose(f"[SUDO] allow {repr(function)}")
+    return wrapper

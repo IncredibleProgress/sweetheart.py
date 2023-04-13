@@ -12,13 +12,14 @@ from starlette.responses import HTMLResponse,FileResponse,JSONResponse,RedirectR
 class BaseService:
 
     ports_register = set()
+    server_class = 'NginxUnit'
     system_dir = "/etc/systemd/system"
 
     allowed_sysd_options = {
         '[Unit]':
             ('Description','After','Before'),
         '[Service]':
-            #NOTE: extented by default using set_service(**kwargs)
+            #NOTE: extended by default using set_service(**kwargs)
             ('ExecStart','ExecReload','Restart','Type','User'),
         '[Install]':
             ('WantedBy','RequiredBy') }
@@ -160,6 +161,22 @@ class BaseService:
 
         with open(self.config.subproc_file,'w') as file_out:
             json.dump(file_out)
+
+    def get_unit(self):
+        """ right way for getting NginxUnit instance via self.unit 
+            which is not available within BaseService.__init__()
+            this intends to avoid an unexpected use of NginxUnit() """
+
+        # ensure server_class set for unit
+        assert self.server_class == 'NginxUnit'
+
+        if not hasattr(self,'unit'):
+            verbose("set instance of:",self.server_class)
+            self.unit = eval(f"{self.server_class}(self.config)")
+            # get the current running config
+            self.unit.load()
+
+        return self.unit
 
     def run_local(self,service:str=None,terminal:bool=None):
         """ start and run the command attribute locally
@@ -540,13 +557,24 @@ class JupyterLab(BaseService):
         if pwd:
             # set required password for JupyterLab
             sp.python("-m","jupyter","notebook","password","-y")
+    
+    def set_proxy(self,route="/jupyter",put=False):
+
+        # create self.unit only if needed
+        unit = self.get_unit()
+        
+        unit.add_proxy(route,target=self.url)
+        if put: unit.build()
 
 
 @BETA
 class NginxUnit(UserDict):        
 
     def __init__(self,config:BaseConfig):
+
         self.config = self._ = config
+        tempfile = f"{self._.root_path}/configuration/unit.json"
+
         self.data =\
           {
             "listeners": {
@@ -554,53 +582,112 @@ class NginxUnit(UserDict):
                     "pass": "routes"
                 }
             },
-            "routes": [{
-                "action": {
-                    "pass": "applications/starlette"
-                }
-            }],
+            "routes": [
+
+            ],
             "applications": {
-                "starlette": {
-                    "type": f"python {config.python_version}",
-                    "path": config.module_path,
-                    "home": config.python_env,
-                    "module": config.app_module,
-                    "callable": config.app_callable,
-                    "user": os.getuser()
-                }
+
             }
           }
 
+    # def __repr__(self):
+    #     return "Nginx Unit server"
+
     def add_proxy(self,route,target):
 
-        self["routes"].insert(0,{
+        self["routes"].insert(0,
+            {
                 "match": {
-                    "uri": f"/{route}/*"
+                    "uri": f"{route}/*"
                 },
                 "action": {
                     "proxy": target
                 }
             })
 
-    def load(self,py_module_content:str=None):
+    def add_webapp(self,user=None,appname='starlette'):
+        """
+        autoset configured starlette webapp within unit config
+        this provides a simple way for only one application setting 
+        in other cases unit config has to be lead as follow
+        see https://unit.nginx.org/howto/starlette/ for details
 
-        host = self._.nginxunit_host
+            NginxUnit(config).update(
+                {
+                    'routes': [
+                        ...
+                    ],
+                    'applications': {
+                        ...
+                    }
+                })
+        """
+
+        # ensure only one application setting
+        assert self["applications"] != {}
+
+        self["routes"].append(
+            {
+                "action": {
+                    "pass": f"applications/{appname}"
+                }
+            })
+
+        self["applications"].update(
+            {
+                appname: {
+                    "type": f"python {self._.python_version}",
+                    "path": self._.module_path,
+                    "home": self._.python_env,
+                    "module": self._.app_module,
+                    "callable": self._.app_callable,
+                    "user": user or os.getuser()
+                }
+            })
+
+    @sudo
+    def load(self):
+
+        # provide unit config settings
+        host = self.config.nginxunit_host
         socket = "/var/run/control.unit.sock"
-        conf = f"{self._.root_path}/configuration/unit.json"
 
+        # get current unit config
+        json = eval(sp.sudo("curl","--unix-socket",socket,f"{host}/config/",
+            text=True,capture_output=True).stdout)
+
+        # set and return unit config
+        verbose("load unit config:",json,level=2)
+        assert isinstance(json,dict)
+        self.update(json)
+        return json
+
+    @sudo
+    def build(self,py_module_content:str=None):
+
+        # ensure existing data
+        assert self['listeners'] != {}
+        assert self['routes'] != []
+        assert self['applications'] != {}
+
+        # provide unit config settings
+        conf = self.tempfile
+        host = self.config.nginxunit_host
+        socket = "/var/run/control.unit.sock"
+
+        # write current unit config
         with open(conf,'w') as file_out:
             json.dump(self.data, file_out)
 
-        if isinstance(py_module_content,str):
+        # set python app if related script is given
+        if py_module_content is not None:
+            assert isinstance(py_module_content,str)
+
             sp.overwrite_file(
                 content= py_module_content,
-                file= self.config.app_module+'.py',
+                file= self.config.app_module+'.py',#!
                 cwd= self.config.module_path )
 
+        # put config and restart unit
         sp.sudo("curl","-X","PUT","-d",f"@{conf}","--unix-socket",socket,f"{host}/config/")
         sp.sudo("systemctl reload-or-restart unit")
-
-    def stop(self):
-
-        sp.sudo("systemctl stop unit")
-        
