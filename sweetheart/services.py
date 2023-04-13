@@ -178,15 +178,16 @@ class BaseService:
 
         return self.unit
 
-    def run_local(self,service:str=None,terminal:bool=None):
+    def run_local(self,service:str=None,terminal:bool|str=None):
         """ start and run the command attribute locally
             the 'command' attribute must be set previously """
 
         if service:
-            sp.sudo("systemctl","reload-or-restart",service)
-            time.sleep(2) #FIXME: waiting time needed with rethinkdb
+            sp.systemctl("reload-or-restart",service)
 
         elif terminal:
+            if isinstance(terminal,str): self.terminal=terminal
+            verbose("open in new terminal:",self.command)
             sp.terminal(self.command,self.terminal)
 
         else: sp.shell(self.command)
@@ -305,19 +306,13 @@ class RethinkDB(BaseService):
 
         #NOTE: url is auto set here from config
         super().__init__(config.database_host,config)
-        assert self.protocol == 'rethinkdb'
-
+        
         self.API = BaseAPI
+        assert self.protocol == 'rethinkdb'
+        self.command = f"rethinkdb --http-port 8180 -d {config['db_path']}"
 
-        self.command = \
-            f"rethinkdb --http-port 8180 -d {config['db_path']}"
-
-        # self.set_unit(
-        #     Description = "RethinkDB service made with Sweetheart",
-        #     ExecStart = self.command,
-        #     User = os.getuser() )
-
-        if run_local: self.run_local(service=True)
+        if run_local:
+            self.run_local(terminal=True)
 
     def set_client(self,dbname:str=None):
 
@@ -410,8 +405,11 @@ class HttpServer(BaseService):
             run_local = self.config.is_rethinkdb_local
             self.database = RethinkDB(config,run_local)
             # explicit error message calling set_client()
-            try: self.database.set_client()
-            except: raise Exception("Error, RethinkDB server not found")
+            try: 
+                time.sleep(2) #FIXME:
+                self.database.set_client()
+            except: 
+                raise Exception("Error, RethinkDB server not found")
 
     def mount(self,*args:Route) -> BaseService:
         """ mount given Route(s) and set facilities from config """
@@ -433,7 +431,7 @@ class HttpServer(BaseService):
                     <p><a href="/documentation/index.html">
                         Get Started Now!</a></p>
                     <p><br>or code immediately using 
-                        <a href="{BaseConfig.jupyter_host}">JupyterLab</a></p>
+                        <a href="{self._.jupyter_host}">JupyterLab</a></p>
                     <p><br><br><em>this message appears because there
                     was nothing else to render here</em></p>
                 </div> """)
@@ -478,8 +476,11 @@ class HttpServer(BaseService):
 
     def pre_mount(self,*args:str):
         """ FIXME: only for tests """
+
         assert args
         self._mount_ = args
+
+        return self
 
     def app(self,*args) -> Starlette:
         """ mount(*args) and return related Starlette object """
@@ -499,14 +500,19 @@ class HttpServer(BaseService):
         
         return self.starlette
 
-    def run_local(self,service:bool=False):
+    @BETA
+    def run_local(self,service=None):
         """ run webapp within local Http server """
 
         if service:
+            # mount webapp
             assert hasattr(self,'_mount_')
             mount = ',\n'.join(self._mount_)
 
-            NginxUnit(self.config).load(f"""
+            # set nginx unit
+            unit = self.get_unit()
+            unit.add_webapp(load_config=False)
+            unit.put_config(f"""
 '''
 { self.config.app_callable }
 auto-generated using sweetheart.services.HttpServer
@@ -533,18 +539,15 @@ config = set_config(
 
 class JupyterLab(BaseService):
 
-    def __init__(self,config:BaseConfig,run_local:bool=False):
+    def __init__(self,config:BaseConfig):
         """ set JupyterLab as a service """
 
         #NOTE: auto set url from config
         super().__init__(config.jupyter_host,config)
 
         self.command = \
-            f"{config.python_bin} -m jupyterlab "+\
+            f"{config.subproc['python_bin']} -m jupyterlab "+\
             f"--no-browser --notebook-dir={config['notebooks_dir']}"
-
-        if run_local:
-            self.run_local(service=True)
 
     def set_ipykernel(self,set_passwd:bool=False):
         """ set ipython kernel for running JupyterLab """
@@ -558,13 +561,13 @@ class JupyterLab(BaseService):
             # set required password for JupyterLab
             sp.python("-m","jupyter","notebook","password","-y")
     
-    def set_proxy(self,route="/jupyter",put=False):
+    def set_proxy(self,route="/jupyter",put_config:bool=False):
 
         # create self.unit only if needed
         unit = self.get_unit()
         
         unit.add_proxy(route,target=self.url)
-        if put: unit.build()
+        if put_config: unit.put_config()
 
 
 @BETA
@@ -573,7 +576,7 @@ class NginxUnit(UserDict):
     def __init__(self,config:BaseConfig):
 
         self.config = self._ = config
-        tempfile = f"{self._.root_path}/configuration/unit.json"
+        self.tempfile = f"{self._.root_path}/configuration/unit.json"
 
         self.data =\
           {
@@ -605,7 +608,7 @@ class NginxUnit(UserDict):
                 }
             })
 
-    def add_webapp(self,user=None,appname='starlette'):
+    def add_webapp(self,user:str=None,appname='starlette',load_config:bool=False):
         """
         autoset configured starlette webapp within unit config
         this provides a simple way for only one application setting 
@@ -624,7 +627,9 @@ class NginxUnit(UserDict):
         """
 
         # ensure only one application setting
-        assert self["applications"] != {}
+        assert self["applications"] == {}
+        # load the current unit config
+        if load_config: self.load_config()
 
         self["routes"].append(
             {
@@ -646,7 +651,7 @@ class NginxUnit(UserDict):
             })
 
     @sudo
-    def load(self):
+    def load_config(self):
 
         # provide unit config settings
         host = self.config.nginxunit_host
@@ -663,7 +668,7 @@ class NginxUnit(UserDict):
         return json
 
     @sudo
-    def build(self,py_module_content:str=None):
+    def put_config(self,py_module_content:str=None):
 
         # ensure existing data
         assert self['listeners'] != {}

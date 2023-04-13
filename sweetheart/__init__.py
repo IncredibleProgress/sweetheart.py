@@ -54,15 +54,8 @@ class BaseConfig(UserDict):
 
     # default path settings
     poetry_bin = f"{HOME}/.local/bin/poetry"
-    python_bin = sys.executable #! no python env set here
+    python_bin = sys.executable#! no python env set here
     rust_crates = f"{HOME}/.cargo/bin"
-
-    # default productive settings
-    async_host = "http://127.0.0.1:8000"
-    database_host = "RethinkDB://127.0.0.1:28015"
-    database_admin = "http://127.0.0.1:8180"
-    jupyter_host = "http://127.0.0.1:8888"
-    nginxunit_host = "http://localhost"
 
     def __init__(self,project):
 
@@ -79,8 +72,17 @@ class BaseConfig(UserDict):
         self.is_nginx_local = True
 
         # subprocess settings
-        self.subproc = {
-            #  can be updated using load_json(subproc=True)
+        self.subproc = self.init_subproc({
+            # default local servers settings
+            # can be updated using load_json(subproc=True)
+            "async_host": "http://127.0.0.1:8000",
+            "database_host": "RethinkDB://127.0.0.1:28015",
+            "database_admin": "http://127.0.0.1:8180",
+            "jupyter_host": "http://127.0.0.1:8888",
+            "nginxunit_host": "http://localhost",
+
+            # default low level settings
+            # can be updated using load_json(subproc=True)
             'systemd': [],
             'unit_listener': "*:80",
             'python_version': "3.10",# used for setting Nginx Unit
@@ -91,7 +93,7 @@ class BaseConfig(UserDict):
             # the settings are locked because key starts with .
             '.msedge.exe': f"cmd.exe /c start msedge --app=",
             '.brave.exe': f"cmd.exe /c start brave --app=",
-            '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css" }
+            '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css" })
 
         self.data = {
             # editable general settings
@@ -129,6 +131,21 @@ class BaseConfig(UserDict):
                 #FIXME: documentation to integrate better
             }}
 
+    def init_subproc(self,values:dict=None):
+        # allows exporting BaseConfig values to self.subproc 
+        # write: self.subproc = self.set_subproc({})
+
+        _dict = dict(
+            poetry_bin = BaseConfig.poetry_bin,
+            python_bin = BaseConfig.python_bin,
+            rust_crates = BaseConfig.rust_crates )
+
+        if hasattr(BaseConfig,'python_env'):
+            _dict.update({'python_env':BaseConfig.python_env})
+
+        if values: _dict.update(values)
+        return _dict
+
     def __getattr__(self,attr):
         """ search non-existing attribute into self.subproc and self.data
             example: config.db_name can be used instead of config['db_name'] """
@@ -138,6 +155,22 @@ class BaseConfig(UserDict):
         try: return self.subproc[attr]
         except: return self.data[attr]
 
+    def __enter__(self):
+        """
+        this allows context management with configs using set_config()
+        it should avoid misconfigurations when using more than 1 config
+
+            with set_config(project="jupyter") as cfg:
+                JupyterLab(cfg).run_local(terminal='wsl')
+        """
+        BaseConfig.__conf = BaseConfig._
+        return self
+
+    def __exit__(self,exc_type,exc_value,exc_tb):
+
+        BaseConfig._ = BaseConfig.__conf
+        del BaseConfig.__conf
+        
     def load_json(self,subproc:bool=False):
         """ update config object from given json file """
 
@@ -163,8 +196,11 @@ class BaseConfig(UserDict):
                     echo(f"WARNING: update subproc setting '{key}' forbidden")
                     continue
                 if key == 'pyenv': 
-                    BaseConfig.python_env = value
-                    BaseConfig.python_bin = f"{value}/bin/python"
+                    self.subproc.update(
+                        {
+                            "python_env": value,
+                            "python_bin": f"{value}/bin/python"
+                        })
                 else:
                     self.subproc[key] = value
 
@@ -186,7 +222,8 @@ def set_config(
     if isinstance(values,dict) and values.get('project'):
         project = values['project']
 
-    config = BaseConfig(project)
+    # BaseConfig._ is the last set config
+    config = BaseConfig._ = BaseConfig(project)
 
     if config_file:
         config.config_file = config_file
@@ -199,6 +236,11 @@ def set_config(
     # update config from json conf file
     try: config.load_json(subproc=True)
     except: echo("WARNING: json config files loading failed")
+
+    if "init" not in sys.argv :
+        # ensure python env setting if not given by subproc_file
+        if not hasattr(config,'python_env'): sp.set_python_env()
+        verbose("python env:",config.python_env)
 
     # then change config from given values
     config.update(values)
@@ -214,13 +256,7 @@ def set_config(
 
     else:
         BaseConfig.ALLOW_UNTRUSTED_CODE = True
-
-    if "init" not in sys.argv :
-        # ensure python env setting if not given by subproc_file
-        if not hasattr(BaseConfig,'python_env'): sp.set_python_env()
-        verbose("python env:",BaseConfig.python_env)
         
-    BaseConfig._ = config
     return config
 
 
@@ -231,15 +267,16 @@ def quickstart(*args,_cli_args=None):
         however for tests it can be a template or even Html code directly
         NOTE: this flexibility is provided by mount() method of HttpServer """
 
+    # extra imports
     from sweetheart.services import \
         RethinkDB,JupyterLab,HttpServer
 
     # allow auto config if missing
-    if hasattr(BaseConfig,"_"): config = BaseConfig._
-    else: config = set_config()
+    try: config = BaseConfig._
+    except: config = set_config()
 
     if _cli_args:
-        # update config from cli
+        # update current config from cli
         config.is_webapp_open = not _cli_args.server_only
         config.is_rethinkdb_local = not _cli_args.db_disabled
         config.is_jupyter_local = _cli_args.jupyter_lab
@@ -249,7 +286,9 @@ def quickstart(*args,_cli_args=None):
         _path = "/etc/systemd/system/jupyterlab.service"
         if os.isfile(_path): kwargs= {'service':'jupyterlab'}
         else: kwargs= {'terminal':True}
-        JupyterLab(config).run_local(**kwargs)
+
+        with set_config(project="jupyter") as cfg:
+            JupyterLab(cfg).run_local(**kwargs)
 
     if args and isinstance(args[0],HttpServer):
         # set webapp from a given HttpServer instance
@@ -266,7 +305,7 @@ def quickstart(*args,_cli_args=None):
         #     webapp.database.set_client()
         
     # start webapp within current bash
-    webapp.run_local(service=False)
+    webapp.run_local(service=None)
 
 
   #############################################################################
@@ -277,12 +316,9 @@ def HTMLTemplate(filename:str,**kwargs):
     """ provide a Starlette-like function for rendering templates
         including configuration data and some python magic stuff """
 
+    # extra imports
     from sweetheart.bottle import SimpleTemplate
     from starlette.responses import HTMLResponse
-
-    # if not hasattr(BaseConfig,"_"):
-    #     verbose("config is missing and autoset by HTMLTemplate")
-    #     set_config()
 
     # set templates dir as working dir
     os.chdir(BaseConfig._.working_dir)
@@ -426,7 +462,7 @@ class sp(os):
             this will ask sudo password at the first call """
 
         command = ' '.join(args)
-        assert getattr(sp,'_ALLOW_SUDO_','NO')=='YES'
+        assert getattr(sp,'_ALLOW_SUDO_','NO') == 'YES'
 
         if getattr(sp,'_getpass_',False) is True: 
             # don't ask for sudo password here
@@ -444,6 +480,11 @@ class sp(os):
 
     @classmethod
     def systemctl(cls,*args,**kwargs):
+
+        """ exec the systemctl shell cmd with sudo and
+            doesn't require allowing sudo previously 
+            this is made for executing a single shot
+            don't use it within @sudo decorated func """
 
         cls._ALLOW_SUDO_ = 'YES'
         cls.sudo("systemctl",*args,**kwargs)
@@ -497,14 +538,27 @@ class sp(os):
         if not kwargs.get('cwd') and hasattr(BaseConfig,'_'):
             kwargs['cwd'] = BaseConfig._['module_path']
 
-        return cls.shell(BaseConfig.poetry_bin,*args,**kwargs)
+        poetbin = BaseConfig._.subproc.get('poetry_bin') \
+            or BaseConfig.poetry_bin
+
+        return cls.shell(poetbin,*args,**kwargs)
 
     @classmethod
     def python(cls,*args,**kwargs):
 
-        # no python env given is forbidden here
-        assert hasattr(BaseConfig,'python_env')
-        return cls.shell(BaseConfig.python_bin,*args,**kwargs)
+        try:
+            _conf_ = BaseConfig._
+            pythbin = BaseConfig._.subproc['python_bin']
+        except:
+            verbose("WARN: python bin provided by BaseConfig")
+            # run sp.python() without provided config
+            _conf_ = BaseConfig
+            pythbin = BaseConfig.python_bin
+
+        # no env is forbidden here
+        assert hasattr(_conf_,"python_env")
+
+        return cls.shell(pythbin,*args,**kwargs)
 
     @classmethod
     def set_python_env(cls,**kwargs):
@@ -512,22 +566,36 @@ class sp(os):
             beware that Baseconfig._ or cwd kwargs has to be given 
             when current working dir doesn't include a poetry project """
 
-        env = cls.poetry("env","info","--path",
+        env:str = cls.poetry("env","info","--path",
             text=True,capture_output=True,**kwargs).stdout.strip()
-        if env == "": raise Exception("Error, no python env found")
 
-        BaseConfig.python_env = env
-        BaseConfig.python_bin = f"{env}/bin/python"
-        verbose("set python env:",BaseConfig.python_env)
+        if not env:
+            raise Exception("Error, no python env found")
+
+        if hasattr(BaseConfig,"_"):
+
+            # allows using 1 config and more                
+            BaseConfig._.subproc.update(
+                {
+                    "python_env": env,
+                    "python_bin": f"{env}/bin/python"
+                })
+            verbose("set python env:",BaseConfig._.subproc['python_env'])
+
+        else:
+            # for setting python env without config
+            BaseConfig.python_env = env
+            BaseConfig.python_bin = f"{env}/bin/python"
+            verbose("set python env:",BaseConfig.python_env)
 
 
 def install(*packages):
     """ easy way for installing whole packages with documentation,
         apt libs, rust libs, node libs, python libs, and files """
 
-    # allow auto config
-    if hasattr(BaseConfig,"_"): config = BaseConfig._
-    else: config = set_config()
+    # allow auto config if missing
+    try: config = BaseConfig._
+    except: config = set_config()
 
     from sweetheart.install import BaseInstall
     BaseInstall(config).install_packages(*packages)
@@ -573,7 +641,7 @@ def BETA(callable):
 
 def sudo(function):
     """ decorator that allows calling sp.sudo() 
-        intends to avoid an unwanted use of sudo """
+        intends to avoid unwanted uses of sudo """
 
     def wrapper(*args,**kwargs):
         sp._ALLOW_SUDO_ = 'YES'

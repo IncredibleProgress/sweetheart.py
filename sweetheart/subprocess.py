@@ -1,37 +1,37 @@
 
-import os as _os
+import os as _os_
 import platform,getpass,locale,subprocess,shutil
 
 
 class os:
 
     """ reimplements common tools of the python os module 
-        but extended with some foreign facilities for ease """
+        and extends it with some foreign facilities for ease """
 
-    env = environ = _os.environ
-    getenv = _os.getenv
-    putenv = _os.putenv
+    env = environ = _os_.environ
+    getenv = _os_.getenv
+    putenv = _os_.putenv
 
-    getcwd = _os.getcwd
+    getcwd = _os_.getcwd
     getuser = getpass.getuser
     getpass = getpass.getpass
-    get_exec_path = _os.get_exec_path
+    get_exec_path = _os_.get_exec_path
     getlocale = locale.getlocale
 
-    path = _os.path
-    isdir = _os.path.isdir
-    isfile = _os.path.isfile
-    islink = _os.path.islink
-    expanduser = _os.path.expanduser
+    path = _os_.path
+    isdir = _os_.path.isdir
+    isfile = _os_.path.isfile
+    islink = _os_.path.islink
+    expanduser = _os_.path.expanduser
 
-    chdir = _os.chdir
-    mkdir = _os.mkdir
-    makedirs = _os.makedirs
-    symlink = _os.symlink
-    remove = _os.remove
+    chdir = _os_.chdir
+    mkdir = _os_.mkdir
+    makedirs = _os_.makedirs
+    symlink = _os_.symlink
+    remove = _os_.remove
     rmtree = shutil.rmtree
-    listdir = _os.listdir
-    #walk = _os.walk
+    listdir = _os_.listdir
+    #walk = _os_.walk
 
     # provide distro infos
     os_release = platform.freedesktop_os_release()
@@ -52,7 +52,6 @@ class os:
         elif os.path.isdir(dest) : shutil.rmtree(dest)
         try: os.symlink(source,dest)
         except: pass
-
 
     # get os_release with Python <= 3.9 :
     # 
