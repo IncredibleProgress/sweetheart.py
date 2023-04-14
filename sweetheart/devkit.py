@@ -1,6 +1,13 @@
 
-from sweetheart.subprocess import os
+from sweetheart import *
 
+class git:
+    """ Coming Soon """
+    pass
+
+class poetry:
+    """ Coming Soon """
+    pass
 
 def enforce_dev_links():
 

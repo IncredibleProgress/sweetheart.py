@@ -48,13 +48,10 @@ class BaseConfig(UserDict):
     # get environment settings
     HOME = os.path.expanduser('~')
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
-    # # set sws level into environment 
-    # SWSLVL = os.environ['SWSLVL'] = f"{int(os.getenv('SWSLVL','0'))+1}"
-    # assert int(SWSLVL) <= 2
 
     # default path settings
+    python_bin = sys.executable
     poetry_bin = f"{HOME}/.local/bin/poetry"
-    python_bin = sys.executable#! no python env set here
     rust_crates = f"{HOME}/.cargo/bin"
 
     def __init__(self,project):
@@ -72,7 +69,7 @@ class BaseConfig(UserDict):
         self.is_nginx_local = True
 
         # subprocess settings
-        self.subproc = self.init_subproc({
+        self.subproc = {
             # default local servers settings
             # can be updated using load_json(subproc=True)
             "async_host": "http://127.0.0.1:8000",
@@ -93,7 +90,7 @@ class BaseConfig(UserDict):
             # the settings are locked because key starts with .
             '.msedge.exe': f"cmd.exe /c start msedge --app=",
             '.brave.exe': f"cmd.exe /c start brave --app=",
-            '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css" })
+            '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css" }
 
         self.data = {
             # editable general settings
@@ -130,21 +127,6 @@ class BaseConfig(UserDict):
                 #'/documentation': "sweetdoc",
                 #FIXME: documentation to integrate better
             }}
-
-    def init_subproc(self,values:dict=None):
-        # allows exporting BaseConfig values to self.subproc 
-        # write: self.subproc = self.set_subproc({})
-
-        _dict = dict(
-            poetry_bin = BaseConfig.poetry_bin,
-            python_bin = BaseConfig.python_bin,
-            rust_crates = BaseConfig.rust_crates )
-
-        if hasattr(BaseConfig,'python_env'):
-            _dict.update({'python_env':BaseConfig.python_env})
-
-        if values: _dict.update(values)
-        return _dict
 
     def __getattr__(self,attr):
         """ search non-existing attribute into self.subproc and self.data
@@ -196,11 +178,8 @@ class BaseConfig(UserDict):
                     echo(f"WARNING: update subproc setting '{key}' forbidden")
                     continue
                 if key == 'pyenv': 
-                    self.subproc.update(
-                        {
-                            "python_env": value,
-                            "python_bin": f"{value}/bin/python"
-                        })
+                    self.python_env = value
+                    self.python_bin = f"{value}/bin/python"
                 else:
                     self.subproc[key] = value
 
@@ -462,7 +441,7 @@ class sp(os):
             this will ask sudo password at the first call """
 
         command = ' '.join(args)
-        assert getattr(sp,'_ALLOW_SUDO_','NO') == 'YES'
+        assert getattr(sp,'_ALLOW_SUDO_','NO') == '__YES__'
 
         if getattr(sp,'_getpass_',False) is True: 
             # don't ask for sudo password here
@@ -486,7 +465,7 @@ class sp(os):
             this is made for executing a single shot
             don't use it within @sudo decorated func """
 
-        cls._ALLOW_SUDO_ = 'YES'
+        cls._ALLOW_SUDO_ = '__YES__'
         cls.sudo("systemctl",*args,**kwargs)
         del cls._ALLOW_SUDO_
 
@@ -538,8 +517,8 @@ class sp(os):
         if not kwargs.get('cwd') and hasattr(BaseConfig,'_'):
             kwargs['cwd'] = BaseConfig._['module_path']
 
-        poetbin = BaseConfig._.subproc.get('poetry_bin') \
-            or BaseConfig.poetry_bin
+        try: poetbin = BaseConfig._.poetry_bin
+        except: poetbin = BaseConfig.poetry_bin
 
         return cls.shell(poetbin,*args,**kwargs)
 
@@ -548,7 +527,7 @@ class sp(os):
 
         try:
             _conf_ = BaseConfig._
-            pythbin = BaseConfig._.subproc['python_bin']
+            pythbin = BaseConfig._.python_bin
         except:
             verbose("WARN: python bin provided by BaseConfig")
             # run sp.python() without provided config
@@ -561,7 +540,7 @@ class sp(os):
         return cls.shell(pythbin,*args,**kwargs)
 
     @classmethod
-    def set_python_env(cls,**kwargs):
+    def set_python_env(cls,**kwargs) -> str:
         """ get python venv path from poetry and set it within config
             beware that Baseconfig._ or cwd kwargs has to be given 
             when current working dir doesn't include a poetry project """
@@ -575,12 +554,9 @@ class sp(os):
         if hasattr(BaseConfig,"_"):
 
             # allows using 1 config and more                
-            BaseConfig._.subproc.update(
-                {
-                    "python_env": env,
-                    "python_bin": f"{env}/bin/python"
-                })
-            verbose("set python env:",BaseConfig._.subproc['python_env'])
+            BaseConfig._.python_env = env
+            BaseConfig._.python_bin = f"{env}/bin/python"
+            verbose("set python env:",BaseConfig._.python_env)
 
         else:
             # for setting python env without config
@@ -588,6 +564,7 @@ class sp(os):
             BaseConfig.python_bin = f"{env}/bin/python"
             verbose("set python env:",BaseConfig.python_env)
 
+        return env
 
 def install(*packages):
     """ easy way for installing whole packages with documentation,
@@ -644,7 +621,7 @@ def sudo(function):
         intends to avoid unwanted uses of sudo """
 
     def wrapper(*args,**kwargs):
-        sp._ALLOW_SUDO_ = 'YES'
+        sp._ALLOW_SUDO_ = '__YES__'
         function(*args,**kwargs)
         del sp._ALLOW_SUDO_
 

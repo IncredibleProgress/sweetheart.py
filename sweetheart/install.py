@@ -115,10 +115,10 @@ def init_project_env(project_name:str):
     # init a new python env with *ipykernel* for new project 
     sp.poetry("init","-n",cwd=_my_python)
     sp.poetry("add","ipykernel",cwd=_my_python)
-    sp.set_python_env(cwd=_my_python)
+    pyenv = sp.set_python_env(cwd=_my_python)
 
     with open(f"{_path}/configuration/subproc.json","w") as fi:
-        json.dump({ 'pyenv': BaseConfig.python_env },fi)
+        json.dump({ 'pyenv': pyenv },fi)
 
 
 @sudo

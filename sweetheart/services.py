@@ -546,14 +546,14 @@ class JupyterLab(BaseService):
         super().__init__(config.jupyter_host,config)
 
         self.command = \
-            f"{config.subproc['python_bin']} -m jupyterlab "+\
+            f"{config.python_bin} -m jupyterlab "+\
             f"--no-browser --notebook-dir={config['notebooks_dir']}"
 
     def set_ipykernel(self,set_passwd:bool=False):
         """ set ipython kernel for running JupyterLab """
 
         # get path,name of python env
-        path,name = os.path.split(BaseConfig.python_env)
+        path,name = os.path.split(self.config.python_env)
         sp.python("-m","ipykernel","install","--user",
             "--name",name,"--display-name",self.config.project,cwd=path)
 
