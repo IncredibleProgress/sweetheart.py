@@ -43,7 +43,6 @@ class BaseConfig(UserDict):
     logg = []
     verbosity = 0
     label = MASTER_MODULE # printed with echo()
-    ALLOW_UNTRUSTED_CODE = True # reset by set_config()
 
     # get environment settings
     HOME = os.path.expanduser('~')
@@ -57,6 +56,7 @@ class BaseConfig(UserDict):
     def __init__(self,project):
 
         # general settings
+        self.run = '__undefined__'
         self.project = self.label = project
         self.root_path = f"{self.HOME}/.sweet/{project}"
         self.config_file = f"{self.root_path}/configuration/config.json"
@@ -191,15 +191,12 @@ def set_config(
 
     """ set or reset sweetheart configuration with ease
         allow working with different projects and configs 
-        
-        >>> config = set_config({
-        >>>     "run": "local",
-        >>>     "db_name": "test",
-        >>>     "db_path": "~/my_database/location" }) """
+        BaseConfig._ provides a hook to the last set config """
 
     # allow setting project within dict values
     if isinstance(values,dict) and values.get('project'):
         project = values['project']
+        del values['project']#! avoid confusion
 
     # BaseConfig._ is the last set config
     config = BaseConfig._ = BaseConfig(project)
@@ -217,25 +214,29 @@ def set_config(
     except: echo("WARNING: json config files loading failed")
 
     if "init" not in sys.argv :
-        # ensure python env setting if not given by subproc_file
-        if not hasattr(config,'python_env'): sp.set_python_env()
+        # ensure python env setting when not given by subproc_file
+        try: config.python_env
+        except: sp.set_python_env()
         verbose("python env:",config.python_env)
 
-    # then change config from given values
-    config.update(values)
-
     # provide shortcut for setting running env
-    if config.get('run','testing') == 'productive':
+    if values.get('run'):
 
-        config.is_webapp_open = False
-        config.is_rethinkdb_local = False
-        config.is_jupyter_local = False
-        BaseConfig.ALLOW_UNTRUSTED_CODE = False
-        echo("INFO: running now for production")
+        config.run = values['run']
+        assert config.run in "testing|productive"
+        del values['run']#! avoid confusion
 
-    else:
-        BaseConfig.ALLOW_UNTRUSTED_CODE = True
-        
+        if config.run == "productive":
+
+            config.is_webapp_open = False
+            config.is_rethinkdb_local = False
+            config.is_jupyter_local = False
+
+            echo("INFO: running for production")
+            BaseConfig.untrusted_code_forbidden = True
+
+    # update config and return
+    config.update(values)
     return config
 
 
@@ -311,7 +312,7 @@ def HTMLTemplate(filename:str,**kwargs):
         # alternatively test the given string as template
         template = filename
 
-    else: raise TypeError
+    else: raise Exception
 
     for old,new in {
       # provide magic html rebase() syntax <!SWEETHEART html>
@@ -383,7 +384,7 @@ def webbrowser(url:str):
     """ start url within the webbrowser set in config 
         it allow running on the WSL with Windows 10/11 """
 
-    try: select = BaseConfig._['webbrowser']
+    try: select = BaseConfig._.webbrowser
     except: select = None
 
     if select and '.'+select in BaseConfig._.subproc:
@@ -465,6 +466,10 @@ class sp(os):
             this is made for executing a single shot
             don't use it within @sudo decorated func """
 
+        # try: run = BaseConfig._.run
+        # except: run = '__undefined__'
+
+        # assert run != '__undefined__'
         cls._ALLOW_SUDO_ = '__YES__'
         cls.sudo("systemctl",*args,**kwargs)
         del cls._ALLOW_SUDO_
@@ -610,8 +615,8 @@ def BETA(callable):
     """ decorator for tracking usage of beta code
         indicated when code is not fully tested or fixed 
         code execution is not possible running productive """
-    
-    assert BaseConfig.ALLOW_UNTRUSTED_CODE
+
+    assert not hasattr(BaseConfig,'untrusted_code_forbidden')
     verbose(f"[BETA] {repr(callable)} has been called")
     return callable
 

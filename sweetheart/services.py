@@ -115,6 +115,7 @@ class BaseService:
         # output messsage
         verbose("set systemd service:",self.sysd,level=2)
 
+    @sudo
     def enable_service(self,filename):
         """ write file and enable service within systemd
             it will provide default values when not given """
@@ -150,17 +151,18 @@ class BaseService:
         sp.sudo("cp",tempfile,self.system_dir)
         sp.sudo(f"systemctl enable {tempfile}")
 
-    # def update_subproc_file(self,dict):
+        # def update_subproc_file(self,dict):
         #FIXME: add new service within subproc conf file
         # should become a class method provided by sp/BaseConfig/BaseService?
         self.config.subproc['systemd'].append(filename)
 
         with open(self.config.subproc_file,'r') as file_in:
             subproc_settings = json.load(file_in)
-            subproc_settings.update({'systemd':self._.systemd})
+        
+        subproc_settings.update({'systemd':self._.systemd})
 
         with open(self.config.subproc_file,'w') as file_out:
-            json.dump(file_out)
+            json.dump(subproc_settings,file_out)
 
     def get_unit(self):
         """ right way for getting NginxUnit instance via self.unit 
@@ -183,9 +185,11 @@ class BaseService:
             the 'command' attribute must be set previously """
 
         if service:
-            sp.systemctl("reload-or-restart",service)
+            assert not terminal
+            # sp.systemctl("reload-or-restart",service)
 
         elif terminal:
+            assert not service
             if isinstance(terminal,str): self.terminal=terminal
             verbose("open in new terminal:",self.command)
             sp.terminal(self.command,self.terminal)
@@ -219,7 +223,7 @@ class BaseService:
             which is not implemented directly into BaseService """
         
         parent:BaseService = self
-        if dbname is None: dbname=self.config['db_name']
+        if not dbname: dbname=self.config['db_name']
 
         class WebSocket(WebSocketEndpoint):
             encoding = set_encoding
@@ -309,7 +313,8 @@ class RethinkDB(BaseService):
         
         self.API = BaseAPI
         assert self.protocol == 'rethinkdb'
-        self.command = f"rethinkdb --http-port 8180 -d {config['db_path']}"
+        _port = config._.database_admin.split(':')[2]
+        self.command = f"rethinkdb --http-port {_port} -d {config.db_path}"
 
         if run_local:
             self.run_local(terminal=True)
@@ -405,11 +410,11 @@ class HttpServer(BaseService):
             run_local = self.config.is_rethinkdb_local
             self.database = RethinkDB(config,run_local)
             # explicit error message calling set_client()
-            try: 
-                time.sleep(2) #FIXME:
-                self.database.set_client()
-            except: 
-                raise Exception("Error, RethinkDB server not found")
+            # try: 
+            time.sleep(2) #FIXME:
+            self.database.set_client()
+            # except: 
+            # raise Exception("Error, RethinkDB server not found")
 
     def mount(self,*args:Route) -> BaseService:
         """ mount given Route(s) and set facilities from config """
@@ -657,7 +662,7 @@ class NginxUnit(UserDict):
         host = self.config.nginxunit_host
         socket = "/var/run/control.unit.sock"
 
-        # get current unit config
+        # get current unit config as a dict
         json = eval(sp.sudo("curl","--unix-socket",socket,f"{host}/config/",
             text=True,capture_output=True).stdout)
 

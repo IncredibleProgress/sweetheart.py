@@ -1,5 +1,5 @@
 # Sweetheart **0.1.2**
-*innovative foundations for low-code and no-code solutions*
+*innovative foundations for building enterprise-grade solutions*
 
 ## A supercharged heart for the non-expert hands
 
@@ -7,7 +7,7 @@ What about safety, big-data, realtime databases, responsive interfaces and AI? S
 
 Since Ubuntu and RHEL based operating systems can be installed as usual softwares within Windows 10/11, it provides an incredible way for any organization to develop, deploy, and administrate powerful responsive webapps including AI on its own local network keeping high capabilities of integration with the already existing tools like databases, MS-Excel, and SAP.
 
-Sweetheart provides a simple Python/Html centric approach leading you implementing best components and best coding practices. Due to the top-rated place of the Python language regarding to data processing, calculations and AI, this makes `sweetheart` a fast and ideal toolkit for innovative ideas.
+Sweetheart provides a simple Python/Html centric approach leading you implementing best components and best practices. Due to the top-rated place of the Python language regarding to data processing, calculations and AI, this makes `sweetheart` a fast and ideal toolkit for innovative ideas.
 
 Sweetheart is shared under the [CeCILL-C FREE SOFTWARE LICENSE AGREEMENT](https://github.com/IncredibleProgress/sweetheart.py/blob/master/LICENSE).
 
@@ -20,25 +20,23 @@ Sweetheart supports you getting coding full power from scratch:
 - built-in responsive user interfaces
 - quick and clean prototyping
 - quick and clean deployment
-- ready for maintenable great code quality
-- ready for datacenters, big-data and AI
-- ready for high performances, innovation and creativity
+- made for maintainable great code quality
+- made for calculations, big-data and AI
+- made for high performances and innovation
 
 ## Stick to good standards without thinking about it
 
-Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. It just intends to transform you stepwise in a good driver and maybe in a pilot! Due to provided components, configuration and documentation **you will learn quickly to make great python/html code** including up-to-date best practices and patterns. You won't learn Sweetheart itself, you will learn Python/Html real programming life like any other developer, but gradually and under control. Meaning that you don't need any kind of expertise to use the good things in the right way.
+Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. It intends to transform you stepwise in a good driver and maybe in a pilot! Due to provided high quality components, a hardened configuration and the included documentation you will **learn quickly to make great python/html code** including up-to-date best practices and patterns. You won't learn Sweetheart itself, you will learn Python/Html real coding-life like any other developer, but skipping tedious considerations. That means especially you don't need any kind of expertise to use good things in the right way. Be quite, Sweetheart is made for low resources consumption, high security level, and best performances.
 
 ## Rock-solid components for supporting innovative capabilities
 
-Sweetheart delivers a stock of ready-to-use features:
+Sweetheart allows you to do all what you need with only 1 Python file and 1 Html file, that's it! Even more, it leads you writing in a natural low-code and minimalistic way. Behind the proposed Python/Html centric approach a stock of ready-to-use features are delivered. Under the hood it integrates the most powerful and innovative features at the time being:
 
-**NGINX Unit - RethinkDB - Starlette - TailwindCss - Vue - WebSocket - Python/Html - Rust Crates**
+**NGINX Unit - RethinkDB - Jupyter - TailwindCss - Vue - WebSocket - Rust Crates**
 
-And all other nice things you wish using [poetry](https://python-poetry.org/), [npm](https://docs.npmjs.com/about-npm/), [apt](https://en.wikipedia.org/wiki/APT_(software)) and [cargo](https://doc.rust-lang.org/cargo/): Sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider for starting new projects.
+Nevertheless you can add any other nice things you wish using [poetry](https://python-poetry.org/), [npm](https://docs.npmjs.com/about-npm/), [apt](https://en.wikipedia.org/wiki/APT_(software)) and [cargo](https://doc.rust-lang.org/cargo/). Sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider before starting new projects.
 
 ## Realistic code examples
-
-Sweetheart allows you to do all what you need with only 1 Python file and 1 Html file, that's it! Even more, it leads you writing in a natural low-code and minimalistic way. Nevertheless under the hood it integrates the most powerful and innovative features at the time being like Ubuntu, Rust, RethinkDB, Jupyter, TailwindCss and Vue.
 
 ### typical webpage controller written in Python
 
@@ -123,7 +121,7 @@ Discovering what is the WSL, have a look at the [Microsoft documentation](https:
 
 1. start setting the prerequisites
 ``` bash
-curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/get-sweetheart.py | python3 -
+curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/sweetheart/install.py | python3 -
 ```
 
 2. then (re)start bash and get initial components
