@@ -313,29 +313,34 @@ class RethinkDB(BaseService):
         
         self.API = BaseAPI
         assert self.protocol == 'rethinkdb'
-        _port = config._.database_admin.split(':')[2]
-        self.command = f"rethinkdb --http-port {_port} -d {config.db_path}"
+        adport = config._.database_admin.split(':')[2]
+
+        self.command = f"rethinkdb --http-port {adport} -d {config.db_path}"
 
         if run_local:
             self.run_local(terminal=True)
 
     def set_client(self,dbname:str=None):
 
-        # import rethinkdb only if needed
+        # extra import
         from rethinkdb import r
 
-        if dbname is None: dbname=self.config['db_name']
-        self.conn = r.connect(self.host,self.port,db=dbname)
-        self.client, self.dbname = r, dbname
-        return self.client,self.conn
-
-    def connect(self,dbname:str=None):
-
         if hasattr(self,'conn'): self.conn.close()
-        if dbname is None: dbname=self.config['db_name']
-        self.conn = self.client.connect(self.host,self.port,db=dbname)
+        if not dbname: dbname= self.config.db_name
+
         self.dbname = dbname
-        return self.conn,self.dbname
+        self.client = self.r = r
+        self.conn = r.connect(self.host,self.port,db=dbname)
+
+        return self.client
+
+    # def connect(self,dbname:str=None):
+
+    #     if hasattr(self,'conn'): self.conn.close()
+    #     if dbname is None: dbname=self.config['db_name']
+    #     self.conn = self.client.connect(self.host,self.port,db=dbname)
+    #     self.dbname = dbname
+    #     return self.conn,self.dbname
     
     @BETA
     async def fetch_endpoint(self,request):
@@ -562,7 +567,7 @@ class JupyterLab(BaseService):
         sp.python("-m","ipykernel","install","--user",
             "--name",name,"--display-name",self.config.project,cwd=path)
 
-        if pwd:
+        if set_passwd:
             # set required password for JupyterLab
             sp.python("-m","jupyter","notebook","password","-y")
     

@@ -231,8 +231,8 @@ def set_config(
             config.is_webapp_open = False
             config.is_rethinkdb_local = False
             config.is_jupyter_local = False
-
-            echo("INFO: running for production")
+            #FIXME: productive settings not fully implemented
+            echo("WARN: !! run productive not yet available !!")
             BaseConfig.untrusted_code_forbidden = True
 
     # update config and return
@@ -630,5 +630,5 @@ def sudo(function):
         function(*args,**kwargs)
         del sp._ALLOW_SUDO_
 
-    verbose(f"[SUDO] allow {repr(function)}")
+    verbose(f"[SUDO] exec: {repr(function)}")
     return wrapper

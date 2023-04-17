@@ -82,8 +82,8 @@ if __name__ == "__main__":
         # autostart init process for full install
         sp.run('bash -c "sws init ipykernel"',shell=True)
 
-    # STOP install module execution here
-    # a sweetheart config is required for next utilities
+    # STOP install.py module execution here
+    # a sweetheart config is required for using next utilities
     exit()
 
 
@@ -95,8 +95,13 @@ from sweetheart import *
 #NOTE: sp (subprocess) is replaced here by sp class of sweetheart
 
 from zipfile import ZipFile
-from urllib.parse import urljoin
 from urllib.request import urlretrieve
+from urllib.parse import urljoin as __urljoin
+
+def urljoin(base,*args,**kwargs):
+    # avoid unexpected behavior with urljoin
+    if not base.endswith('/'): base+='/'
+    return __urljoin(base,*args,**kwargs)
 
 
 def init_project_env(project_name:str):
@@ -151,6 +156,7 @@ def init(config:BaseConfig,add_pylibs="",no_pkg_init=False):
     os.makedirs(f"{config.root_path}/database",exist_ok=True)
     os.makedirs(f"{config.root_path}/webpages/templates",exist_ok=True)
     os.makedirs(f"{config.root_path}/webpages/resources",exist_ok=True)
+    os.makedirs(f"{config.root_path}/documentation/notebooks",exist_ok=True)
 
     PKG_INIT = {
         # set minimum distro resources
@@ -340,7 +346,7 @@ class BaseInstall:
 
             # unzip doc when given
             pth,file = os.path.split(relpath)
-            if pth.startswith("documentation") and pth.endswith(".zip"):
+            if pth.startswith("documentation") and file.endswith(".zip"):
                 self.unzip_doc(file)
 
     def unzip_doc(self,zipfile:str,remove:bool=True):

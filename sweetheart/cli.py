@@ -74,11 +74,11 @@ if __name__ == "__main__":
 
     def sws_init(args):
         from sweetheart.install import init
-        init(BaseConfig._,add_pylibs=args.subargs)
+        init(BaseConfig._,add_pylibs=args.pylibs)
 
     #$ sws init
     cli.sub("init",help="launch init process for building sweetheart")
-    cli.opt("subargs",nargs=cli.REMAINDER,help="additionnal python modules to install")
+    cli.opt("pylibs",nargs=cli.REMAINDER,help="additionnal python modules to install")
     cli.set_function(sws_init)
 
     #$ sws test
@@ -95,8 +95,9 @@ if __name__ == "__main__":
         service = args.service.lower()
 
         if args.systemd and service == 'jupyter':
-            from sweetheart.services import JupyterLab
-            JupyterLab(BaseConfig._).run_local(service='jupyterlab')
+            sp.systemctl("reload-or-restart jupyterlab")
+            # from sweetheart.services import JupyterLab
+            # JupyterLab(BaseConfig._).run_local(service='jupyterlab')
 
         elif service == 'jupyter': 
             from sweetheart.services import JupyterLab
@@ -136,11 +137,18 @@ if __name__ == "__main__":
         print(MASTER_MODULE,__version__)
         exit()
     
+    # set the relevant project for config
     if getattr(argv,"project",None):
         project = argv.project[0]
 
     elif getattr(argv,"service",None) == "jupyter":
-        project = argv.service
+        # intends starting jupyter service
+        project = "jupyter"
+
+    elif getattr(argv,"pylibs",None) \
+    and [lib.startswith("jupyter") for lib in argv.pylibs]:
+        # intends installing jupyter python libs
+        project = "jupyter"
 
     else: project = MASTER_MODULE
 
