@@ -60,8 +60,8 @@ class BaseService:
             typically testing all services and servers on localhost
             it will raise exception if port_number is already in use """
 
-        self.port = self.uargs['port'] = port_number
-        self.url = f"http://{self.host}:{self.port}"
+        self.port = port_number
+        self.url = f"{self.protocol}://{self.host}:{self.port}"
 
         # ensure that port_number is not in use
         assert port_number not in BaseService.ports_register
@@ -76,7 +76,10 @@ class BaseService:
 
     #     else: self.run_local(terminal=False)
 
-    def set_service(self,Description:str=None,**kwargs):
+    def set_service(self,
+            Description:str = None,
+            # filename:str = None,
+            **kwargs ) -> configparser.ConfigParser :
 
         """ create and set config for new systemd service 
             kwargs keys must be supported service options
@@ -112,8 +115,14 @@ class BaseService:
 
             self.sysd[section][option] = value
         
-        # output messsage
+        # debugging output messsage
         verbose("set systemd service:",self.sysd,level=2)
+
+        # if filename:
+        #     # enable service when given filename
+        #     self.enable_service(filename)
+        
+        return self.sysd
 
     @sudo
     def enable_service(self,filename):
@@ -164,28 +173,33 @@ class BaseService:
         with open(self.config.subproc_file,'w') as file_out:
             json.dump(subproc_settings,file_out)
 
-    def get_unit(self):
+    @classmethod
+    def get_unit(cls):
         """ right way for getting NginxUnit instance via self.unit 
             which is not available within BaseService.__init__()
             this intends to avoid an unexpected use of NginxUnit() """
 
         # ensure server_class set for unit
-        assert self.server_class == 'NginxUnit'
+        assert cls.server_class == 'NginxUnit'
 
-        if not hasattr(self,'unit'):
-            verbose("set instance of:",self.server_class)
-            self.unit = eval(f"{self.server_class}(self.config)")
-            # get the current running config
-            self.unit.load()
+        try:
+            cls.unit
+            verbose("get BaseService.unit which is already set")
+        except:
+            verbose("set instance of:",cls.server_class)
+            BaseService.unit = eval(f"{cls.server_class}(BaseConfig._)")
 
-        return self.unit
+        return cls.unit
 
-    def run_local(self,service:str=None,terminal:bool|str=None):
+    def run_local(self,service:str=None,terminal:bool|str=None,timer:int=None):
         """ start and run the command attribute locally
             the 'command' attribute must be set previously """
 
         if service:
             assert not terminal
+            if service.endswith(".service"): suffix = ""
+            else: suffix = ".service"
+            assert os.isfile(f"{self.system_dir}/{service}.{suffix}")
             # sp.systemctl("reload-or-restart",service)
 
         elif terminal:
@@ -195,6 +209,8 @@ class BaseService:
             sp.terminal(self.command,self.terminal)
 
         else: sp.shell(self.command)
+
+        if timer: time.sleep(timer)
 
     @BETA
     def run_distant(self,service=None):
@@ -305,7 +321,7 @@ class BaseAPI(UserDict):
 
 class RethinkDB(BaseService):
 
-    def __init__(self,config:BaseConfig,run_local:bool=False):
+    def __init__(self,config:BaseConfig):
         """ set RethinkDB as a service """
 
         #NOTE: url is auto set here from config
@@ -316,9 +332,6 @@ class RethinkDB(BaseService):
         adport = config._.database_admin.split(':')[2]
 
         self.command = f"rethinkdb --http-port {adport} -d {config.db_path}"
-
-        if run_local:
-            self.run_local(terminal=True)
 
     def set_client(self,dbname:str=None):
 
@@ -387,6 +400,7 @@ class RethinkDB(BaseService):
         
         api.locals = dict(r=self.client,conn=self.conn)
         api.update({ "log": api.eval(reql) })
+
         return websocket.send_json(api.response)
 
     def __del__(self):
@@ -396,7 +410,7 @@ class RethinkDB(BaseService):
 
 class HttpServer(BaseService):
 
-    def __init__(self,config:BaseConfig,set_database=False):
+    def __init__(self,config:BaseConfig,set_database:bool|str=False):
         """ set Starlette web-app as a service """
         
         # autoset url from config
@@ -404,22 +418,21 @@ class HttpServer(BaseService):
         self._mounted_ = False
         self.data = []
 
-        # set default uvivorn server args
-        self.uargs = {
-            "host": self.host,
-            "port": self.port,
-            "log_level": "info" }
+        if set_database:
+            
+            if set_database is True: DBclass= RethinkDB
+            else: DBclass= eval(set_database)
+            assert issubclass(DBclass,BaseService)
 
-        if set_database == True: 
-            # set RethinkDB enabling websocket
-            run_local = self.config.is_rethinkdb_local
-            self.database = RethinkDB(config,run_local)
-            # explicit error message calling set_client()
-            # try: 
-            time.sleep(2) #FIXME:
-            self.database.set_client()
-            # except: 
-            # raise Exception("Error, RethinkDB server not found")
+            self.database = DBclass(config)
+            self.database.set_websocket()
+
+            if self.config.is_rethinkdb_local:
+                try: self.database.run_local(service='rethinkdb')
+                except: self.database.run_local(terminal=True,timer=1)
+
+            try: self.database.set_client()
+            except: raise Exception("RethinkDB server not found")
 
     def mount(self,*args:Route) -> BaseService:
         """ mount given Route(s) and set facilities from config """
@@ -434,14 +447,14 @@ class HttpServer(BaseService):
 
             WelcomeMessage = lambda: HTMLResponse(f"""
                 <div style="text-align:center;font-size:1.1em;">
-                    <h1><br><br>Welcome !<br><br></h1>
+                    <h1><br><br>Welcome {os.getenv('USER').capitalize()} !<br><br></h1>
                     <h2>sweetheart</h2>
                     <p>a supercharged heart for the non-expert hands</p>
                     <p>which will give you coding full power at the light speed</p>
                     <p><a href="/documentation/index.html">
                         Get Started Now!</a></p>
                     <p><br>or code immediately using 
-                        <a href="{self._.jupyter_host}">JupyterLab</a></p>
+                        <a href="{self._.jupyter_url}">Jupyter</a></p>
                     <p><br><br><em>this message appears because there
                     was nothing else to render here</em></p>
                 </div> """)
@@ -463,8 +476,8 @@ class HttpServer(BaseService):
 
         if hasattr(self,'database'):
             # set websocket if not already done
-            if not hasattr(self.database,'WebSocketEndpoint'):
-                self.database.set_websocket()
+            # if not hasattr(self.database,'WebSocketEndpoint'):
+            #     self.database.set_websocket()
             # mount fetch and websocket endpoints
             self.data.extend([
                 Route("/data",self.database.fetch_endpoint,methods=["POST"]),
@@ -481,14 +494,6 @@ class HttpServer(BaseService):
         # set the webapp Starlette object
         self.starlette = Starlette(routes=self.data)
         self._mounted_ = True
-
-        return self
-
-    def pre_mount(self,*args:str):
-        """ FIXME: only for tests """
-
-        assert args
-        self._mount_ = args
 
         return self
 
@@ -510,41 +515,82 @@ class HttpServer(BaseService):
         
         return self.starlette
 
-    @BETA
-    def run_local(self,service=None):
-        """ run webapp within local Http server """
+    def pre_mount(self,*args:str):
+        """ FIXME: only for tests """
 
-        if service:
-            # mount webapp
-            assert hasattr(self,'_mount_')
-            mount = ',\n'.join(self._mount_)
+        assert args
+        self._mount_ = args
 
-            # set nginx unit
-            unit = self.get_unit()
-            unit.add_webapp(load_config=False)
-            unit.put_config(f"""
-'''
-{ self.config.app_callable }
+        return self
+
+    def get_python_script(self):
+
+        assert hasattr(self,'_mount_')
+        mount = ',\n'.join(self._mount_)
+
+        return f'''
+"""
+{ self.config.app_callable }.py
 auto-generated using sweetheart.services.HttpServer
 USER: { os.getuser() } DATE: { sp.stdout("date") }
-'''
-
+"""
 from sweetheart.services import *
 
-config = set_config(
-    # set here configuration of your sweetheart app
-    { self.config.data })
+config = set_config({{  
+    # sweetheart settings:
+    "run": "productive",
+    "project": "{self._.project}",
+
+    # authorized access settings:
+    "db_name": "{self._.db_name}",
+    "working_dir": "{self._.working_dir}",
+    "static_dirs": {self._.static_dirs},
+
+    # html templates rendering settings:
+    "templates_base": "{self._.templates_base}",
+    "templates_dir": "{self._.templates_dir}",
+    "templates_settings": {{
+        "lang": "{self._.templates_settings['lang']}",
+        "host": "{self._.nginxunit_host}",
+        "load": "{self._.templates_settings['load']}" }},
+    }})
 
 { self.config.app_callable } = HttpServer(config).app(
     # set here url routing of your sweetheart app
-    { mount })""" )
+    { mount } )
+
+'''
+
+    def set_service(self,put_config=False,update_unit=False):
+
+        unit = self.get_unit()
+        if update_unit: unit.load_config()
+        unit.add_webapp(self.get_python_script())
+        if put_config: unit.put_config()
+        
+    def enable_service(self,*args,**kwargs):
+        raise Exception("not available for HttpServer")
+
+    def run_local(self,service=None,terminal=None):
+        """ run webapp within local Http server """
+
+        if service:
+            super().run_local(service=True)
+
+        elif terminal:
+            raise NotImplementedError
 
         else:
             import uvicorn
             os.chdir(self.config['working_dir'])
             if not self._mounted_: self.mount()
             if self.config.is_webapp_open: webbrowser(self.url)
-            uvicorn.run(self.starlette,**self.uargs)
+
+            uvicorn.run(
+                self.starlette,
+                host=self.host,
+                port=self.port,
+                log_level="info" )
 
 
 class JupyterLab(BaseService):
@@ -572,10 +618,9 @@ class JupyterLab(BaseService):
             sp.python("-m","jupyter","notebook","password","-y")
     
     def set_proxy(self,route="/jupyter",put_config:bool=False):
+        """ set jupyter as a proxy into the unit config """
 
-        # create self.unit only if needed
         unit = self.get_unit()
-        
         unit.add_proxy(route,target=self.url)
         if put_config: unit.put_config()
 
@@ -586,12 +631,18 @@ class NginxUnit(UserDict):
     def __init__(self,config:BaseConfig):
 
         self.config = self._ = config
-        self.tempfile = f"{self._.root_path}/configuration/unit.json"
+        self.socket = "/var/run/control.unit.sock"
+        self.tempfile = f"{config.root_path}/configuration/unit.json"
+
+        _split = config.nginxunit_host.rsplit(':',maxsplit=1)
+        verbose("nginx unit [host,port]:",_split,level=2)
+        self.host = _split[0]
+        self.port = _split[1]
 
         self.data =\
           {
             "listeners": {
-                config.unit_listener: {
+                f"*:{self.port}": {
                     "pass": "routes"
                 }
             },
@@ -606,7 +657,7 @@ class NginxUnit(UserDict):
     # def __repr__(self):
     #     return "Nginx Unit server"
 
-    def add_proxy(self,route,target):
+    def add_proxy(self,route:str,target:str):
 
         self["routes"].insert(0,
             {
@@ -618,7 +669,11 @@ class NginxUnit(UserDict):
                 }
             })
 
-    def add_webapp(self,user:str=None,appname='starlette',load_config:bool=False):
+    def add_webapp(self,
+            script:str = None,
+            user:str = None,
+            match:str = None,
+            appname:str = "starlette" ):
         """
         autoset configured starlette webapp within unit config
         this provides a simple way for only one application setting 
@@ -627,27 +682,35 @@ class NginxUnit(UserDict):
 
             NginxUnit(config).update(
                 {
-                    'routes': [
+                    "routes": [
                         ...
                     ],
-                    'applications': {
+                    "applications": {
                         ...
                     }
                 })
         """
 
-        # ensure only one application setting
-        assert self["applications"] == {}
-        # load the current unit config
-        if load_config: self.load_config()
+        # write new script for starting webapp
+        if script:
+            sp.overwrite_file(
+                content= script,
+                file= self.config.app_module+'.py',#!
+                cwd= self.config.module_path )
 
-        self["routes"].append(
-            {
-                "action": {
-                    "pass": f"applications/{appname}"
-                }
-            })
+        # route webapp w/wo a matching pattern
+        route = {
+            "action": {
+                "pass": f"applications/{appname}" }}
 
+        if match:
+            route.update({
+                "match": {
+                    "uri": f"{match}/*" } })
+
+        self["routes"].append(route)
+
+        # set the app within unit applications 
         self["applications"].update(
             {
                 appname: {
@@ -661,48 +724,48 @@ class NginxUnit(UserDict):
             })
 
     @sudo
-    def load_config(self):
-
-        # provide unit config settings
-        host = self.config.nginxunit_host
-        socket = "/var/run/control.unit.sock"
+    def load_config(self) -> dict :
 
         # get current unit config as a dict
-        json = eval(sp.sudo("curl","--unix-socket",socket,f"{host}/config/",
+        json = eval(sp.sudo("curl","--unix-socket",self.socket,f"{self.host}/config/",
             text=True,capture_output=True).stdout)
 
-        # set and return unit config
-        verbose("load unit config:",json,level=2)
         assert isinstance(json,dict)
-        self.update(json)
-        return json
+
+        if json.get('listeners'):
+            # update with existing unit config
+            verbose("load existing unit config:",json,level=2)
+            self.update(json)
+        else:
+            # exiting unit config missing
+            echo("INFO: enforce setting new unit config")
+
+        return self
 
     @sudo
-    def put_config(self,py_module_content:str=None):
+    def put_config(self) -> dict :
 
-        # ensure existing data
+        # ensure no missing data
         assert self['listeners'] != {}
         assert self['routes'] != []
         assert self['applications'] != {}
 
-        # provide unit config settings
-        conf = self.tempfile
-        host = self.config.nginxunit_host
-        socket = "/var/run/control.unit.sock"
-
         # write current unit config
-        with open(conf,'w') as file_out:
-            json.dump(self.data, file_out)
-
-        # set python app if related script is given
-        if py_module_content is not None:
-            assert isinstance(py_module_content,str)
-
-            sp.overwrite_file(
-                content= py_module_content,
-                file= self.config.app_module+'.py',#!
-                cwd= self.config.module_path )
+        with open(self.tempfile,'w') as file_out:
+            json.dump(self.data,file_out,indent=4)
 
         # put config and restart unit
-        sp.sudo("curl","-X","PUT","-d",f"@{conf}","--unix-socket",socket,f"{host}/config/")
+
+        stdout = eval(sp.sudo("curl","-X","PUT","-d",f"@{self.tempfile}",
+            "--unix-socket",self.socket,f"{self.host}/config/",
+            text=True,capture_output=True).stdout)
+
+        assert isinstance(stdout,dict)
+        verbose("unit:",stdout.get('success',''),stdout.get('error',''))
         sp.sudo("systemctl reload-or-restart unit")
+
+        return stdout
+
+    def achieve_host(self):
+        """ reach the unit server within webbrowser """
+        webbrowser(f"{self.host}:{self.port}")

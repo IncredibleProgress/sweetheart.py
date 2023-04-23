@@ -5,7 +5,7 @@
 
 I'm happy that you look interested by the Sweetheart project. I spent many hours on my free time to provide the best of what coding can offer. I thank a lot my wife and my children also very much for their understanding and long patience. Now discover what you really can do with computers and furthermore at the light speed!
 
- *Nicolas Champion, the Sweetheart creator*
+ *Nicolas Champion, sweetheart creator*
 
  ## getting started
 

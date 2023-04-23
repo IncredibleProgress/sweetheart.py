@@ -1,44 +1,47 @@
 <%
-# PYTHON optionnal args:
-# load = "py|pylibs tailwind vue reql d3"
-load = get('load',get('__load__',''))
-lang = get('lang',get('__lang__','en'))
-dbname = get('dbname',get('__db__','test'))
+# must be set at server side
+# __dbnm__ must be provided
+__host__ = get('host',__host__)
+
+# autoset default values
+__lang__ = get('lang','en')
+__load__ = get('load','pylibs')
 %>
 <!DOCTYPE html>
-<html lang="{% lang %}">
+<html lang="{%__lang__%}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 %#
-% if "tailwind" in load:
+% if "tailwind" in __load__:
   <link rel="stylesheet" href="/resources/tailwind.css">
 % end
 %#
-% if "pylibs" in load:
+% if "pylibs" in __load__:
   <script src="/resources/node_modules/brython/brython.js"></script>
   <script src="/resources/node_modules/brython/brython_stdlib.js"></script>
-% elif "py" in load: 
+% elif "py" in __load__: 
   <script src="/resources/node_modules/brython/brython.js"></script>
 % end
 %#
-% if "d3" in load:
+% if "d3" in __load__:
   <script src="/resources/node_modules/d3/dist/d3.min.js"></script>
 % end
 %#
-% if "vue" in load:
+% if "vue" in __load__:
   <style>[v-cloak]{display:none;}</style>
   <script src="/resources/node_modules/vue/dist/vue.global.js"></script>
 % end
 %#
-% if "vue" in load and "reql" in load:
+% if "vue" in __load__ and "reql" in __load__:
   <script>
     // provide data exchange capabilities
     class DataHub {
       constructor(dbname) {
         this.apiversion = "0.1.0";
         this.route = `/data/${dbname}`;
-        this.websocket = new WebSocket(`ws://{%__host__%}${this.route}`);
+        const host = "{%__host__%}".replace("https","ws").replace("http","ws");
+        this.websocket = new WebSocket(`${host}${this.route}`);
         document.addEventListener("unload",()=>this.websocket.close());
         this.websocket.onmessage = (event) => this.onmessage(event);
       }
@@ -116,7 +119,7 @@ dbname = get('dbname',get('__db__','test'))
         };
       }
     }
-    r = new RethinkDB("{% dbname %}");
+    r = new RethinkDB("{%__dbnm__%}");
 
     // set default Vue3 utilities
 
@@ -163,8 +166,8 @@ dbname = get('dbname',get('__db__','test'))
 % end
 %#
 </head>
-% if "py" in load:
-<body onload="brython({% get('__debug__',0) %})">
+% if "py" in __load__:
+<body onload="brython(1)">
 % else:
 <body>
 % end

@@ -76,12 +76,11 @@ class BaseConfig(UserDict):
             "database_host": "RethinkDB://127.0.0.1:28015",
             "database_admin": "http://127.0.0.1:8180",
             "jupyter_host": "http://127.0.0.1:8888",
-            "nginxunit_host": "http://localhost",
+            "nginxunit_host": "http://localhost:80",
 
             # default low level settings
             # can be updated using load_json(subproc=True)
             'systemd': [],
-            'unit_listener': "*:80",
             'python_version': "3.10",# used for setting Nginx Unit
             'node_version': "16.x",# used getting node from nodesource.com
             'stsyntax': r"<% %> % {% %}",
@@ -112,10 +111,9 @@ class BaseConfig(UserDict):
 
             # editable html rendering settings
             "templates_settings": {
-                #'__lang__': self.LANG,
-                '__host__': self.async_host[7:],
-                '__load__': "pylibs tailwind vue+reql",
-                '__debug__': 1,# brython() debug argument
+                "lang": "en",
+                "load": "pylibs tailwind vue+reql",
+                "debug": 1,# brython() debug argument
             },
             "static_files": {
                 '/favicon.ico': "resources/favicon.ico",
@@ -124,8 +122,7 @@ class BaseConfig(UserDict):
             },
             "static_dirs": {
                 '/resources': f"resources",
-                #'/documentation': "sweetdoc",
-                #FIXME: documentation to integrate better
+                '/documentation': "sweetdoc",
             }}
 
     def __getattr__(self,attr):
@@ -145,13 +142,18 @@ class BaseConfig(UserDict):
             with set_config(project="jupyter") as cfg:
                 JupyterLab(cfg).run_local(terminal='wsl')
         """
-        BaseConfig.__conf = BaseConfig._
+        # __conf must be set by set_config()
+        assert hasattr(BaseConfig,'_old')
         return self
 
     def __exit__(self,exc_type,exc_value,exc_tb):
 
-        BaseConfig._ = BaseConfig.__conf
-        del BaseConfig.__conf
+        if BaseConfig._old is not None:
+            # this recovers a pre-existing config
+            # None value is set within set_config()
+            BaseConfig._ = BaseConfig._old
+        
+        del BaseConfig._old
         
     def load_json(self,subproc:bool=False):
         """ update config object from given json file """
@@ -199,6 +201,7 @@ def set_config(
         del values['project']#! avoid confusion
 
     # BaseConfig._ is the last set config
+    BaseConfig._old = getattr(BaseConfig,'_',None)
     config = BaseConfig._ = BaseConfig(project)
 
     if config_file:
@@ -211,13 +214,12 @@ def set_config(
 
     # update config from json conf file
     try: config.load_json(subproc=True)
-    except: echo("WARNING: json config files loading failed")
+    except: echo("WARN: failed loading json config files")
 
     if "init" not in sys.argv :
         # ensure python env setting when not given by subproc_file
         try: config.python_env
         except: sp.set_python_env()
-        verbose("python env:",config.python_env)
 
     # provide shortcut for setting running env
     if values.get('run'):
@@ -263,12 +265,10 @@ def quickstart(*args,_cli_args=None):
     
     if config.is_jupyter_local:
         # set and run Jupyterlab server
-        _path = "/etc/systemd/system/jupyterlab.service"
-        if os.isfile(_path): kwargs= {'service':'jupyterlab'}
-        else: kwargs= {'terminal':True}
-
         with set_config(project="jupyter") as cfg:
-            JupyterLab(cfg).run_local(**kwargs)
+            jupy = JupyterLab(cfg)
+            try: jupy.run_local(service='jupyterlab')
+            except: jupy.run_local(terminal=True)
 
     if args and isinstance(args[0],HttpServer):
         # set webapp from a given HttpServer instance
@@ -278,14 +278,8 @@ def quickstart(*args,_cli_args=None):
         webapp = HttpServer(config,set_database=config.is_rethinkdb_local)
         webapp.mount(*args)
         
-        # if config.is_rethinkdb_local:
-        #     # set and run RethinkDB server
-        #     webapp.database = RethinkDB(config,run_local=True)
-        #     webapp.database.set_websocket()
-        #     webapp.database.set_client()
-        
     # start webapp within current bash
-    webapp.run_local(service=None)
+    webapp.run_local(service=None,terminal=None)
 
 
   #############################################################################
@@ -346,7 +340,10 @@ def createVueApp(dict):
     # render html from template and config
     template = SimpleTemplate(template)
     return HTMLResponse(template.render(
-        __db__ = BaseConfig._.db_name,
+        # enforced default values
+        __dbnm__ = BaseConfig._.db_name,
+        __host__ = BaseConfig._.nginxunit_host,
+        # allow setting custom values
         **BaseConfig._.templates_settings,
         **kwargs ))
 
@@ -520,7 +517,9 @@ class sp(os):
     def poetry(cls,*args,**kwargs):
 
         if not kwargs.get('cwd') and hasattr(BaseConfig,'_'):
+            #FIXME: doesn't work within jupyter
             kwargs['cwd'] = BaseConfig._['module_path']
+            verbose("poetry cwd:",kwargs['cwd'])
 
         try: poetbin = BaseConfig._.poetry_bin
         except: poetbin = BaseConfig.poetry_bin
@@ -556,18 +555,18 @@ class sp(os):
         if not env:
             raise Exception("Error, no python env found")
 
-        if hasattr(BaseConfig,"_"):
+        if hasattr(BaseConfig,'_'):
 
             # allows using 1 config and more                
             BaseConfig._.python_env = env
             BaseConfig._.python_bin = f"{env}/bin/python"
-            verbose("set python env:",BaseConfig._.python_env)
+            verbose("python env:",BaseConfig._.python_env)
 
         else:
             # for setting python env without config
             BaseConfig.python_env = env
             BaseConfig.python_bin = f"{env}/bin/python"
-            verbose("set python env:",BaseConfig.python_env)
+            verbose("BaseConfig.python_env:",BaseConfig.python_env)
 
         return env
 

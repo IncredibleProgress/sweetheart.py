@@ -12,7 +12,7 @@ import subprocess as sp
 
 HOME = os.environ['HOME']
 PATH = os.environ['PATH']
-raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"# / at end
+raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"
 
 
 # ensure prerequisites for sweetheart
