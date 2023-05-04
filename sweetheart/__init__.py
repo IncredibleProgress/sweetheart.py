@@ -12,8 +12,8 @@ About __init__.py :
     the python os module is replaced by an os class
     (non-exhaustive)
 
- Sweetheart 0.1.x includes an adapted version of bottle.py,
- which is not a part of the sweetheart project itself. Info:
+Sweetheart 0.1.x includes an adapted version of bottle.py,
+which is not a part of the sweetheart project itself. Info:
 
     Homepage and documentation: http://bottlepy.org/
     Copyright (c) 2016, Marcel Hellkamp.
@@ -46,6 +46,7 @@ class BaseConfig(UserDict):
 
     # get environment settings
     HOME = os.path.expanduser('~')
+    LANG = os.getlocale()[0].split('_')[0]
     WSL_DISTRO_NAME = os.getenv('WSL_DISTRO_NAME')
 
     # default path settings
@@ -87,7 +88,7 @@ class BaseConfig(UserDict):
 
             # can not be updated within load_json(subproc=True)
             # the settings are locked because key starts with .
-            '.msedge.exe': f"cmd.exe /c start msedge --app=",
+            '.msedge.exe': "cmd.exe /c start msedge --app=",
             '.brave.exe': f"cmd.exe /c start brave --app=",
             '.tailwindcss': "npx tailwindcss -i tailwind.base.css -o tailwind.css" }
 
@@ -111,7 +112,6 @@ class BaseConfig(UserDict):
 
             # editable html rendering settings
             "templates_settings": {
-                "lang": "en",
                 "load": "pylibs tailwind vue+reql",
                 "debug": 1,# brython() debug argument
             },
@@ -341,6 +341,7 @@ def createVueApp(dict):
     template = SimpleTemplate(template)
     return HTMLResponse(template.render(
         # enforced default values
+        __lang__ = BaseConfig.LANG,
         __dbnm__ = BaseConfig._.db_name,
         __host__ = BaseConfig._.nginxunit_host,
         # allow setting custom values
@@ -385,10 +386,10 @@ def webbrowser(url:str):
     except: select = None
 
     if select and '.'+select in BaseConfig._.subproc:
-        sp.shell(BaseConfig._.subproc['.'+select]+url)
+        sp.shell(f"{BaseConfig._.subproc['.'+select]}{url}")
 
     elif BaseConfig._.WSL_DISTRO_NAME:
-        sp.shell(BaseConfig._.subproc['.msedge.exe']+url)
+        sp.shell(f"{BaseConfig._.subproc['.msedge.exe']}{url}")
 
     else: sp.python("-m","webbrowser",url)
 
@@ -398,62 +399,30 @@ def webbrowser(url:str):
 #############################################################################
 
 class sp(os):
-    """
-    namespace providing basic subprocess features 
-    beware that it uses BaseConfig and not config 
-        
-    >>> sp.stdout("which python3")
-    >>> sp.is_executable("cargo")
-    """
+    """ namespace providing basic subprocess features 
+        beware that it uses BaseConfig and not config """
 
-    # provide a direct way for getting the shell stdout 
-    stdout = lambda *args,**kwargs:\
-        sp.shell(*args,text=True,capture_output=True,**kwargs).stdout.strip()
+    # @classmethod
+    # def read_sh(cls,script:str):
+    #     """ excec line by line a long string as a shell script """
+
+    #     for instruc in script.splitlines():
+    #         cls.run(instruc.strip(),shell=True)
 
     @classmethod
-    def shell(cls,*args,**kwargs):
-        """ run bash command providing some flexibility with args """
-
-        if len(args)==1 and isinstance(args[0],str):
-            kwargs.update({ 'shell':True })
-            return cls.run(args[0],**kwargs)
-
-        elif len(args)==1 and isinstance(args[0],list):
-            return cls.run(args[0],**kwargs)
-        
-        else: 
-            # zip the args into a list given as first arg to run()
-            # allow shell("echo","hello") rather than shell(["echo","hello"])
-            return cls.run(args,**kwargs)
-
-    @classmethod
-    def read_sh(cls,script:str):
-        """ excec line by line a long string as a shell script """
-
-        for instruc in script.splitlines():
-            cls.run(instruc.strip(),shell=True)
-
-    @classmethod
-    def sudo(sp,*args,**kwargs):
+    def sudo(cls,*args,**kwargs):
         """ a Jupyter compliant sudo cmd that runs sudo -S
             this will ask sudo password at the first call """
 
-        command = ' '.join(args)
-        assert getattr(sp,'_ALLOW_SUDO_','NO') == '__YES__'
+        assert getattr(cls,'_ALLOW_SUDO_','NO') == '__YES__'
 
-        if getattr(sp,'_getpass_',False) is True: 
-            # don't ask for sudo password here
-            return sp.shell(f"sudo -S {command}",**kwargs)
-
-        else: # ask for sudo password and avoid echo of it
-            sudopass= lambda passwd: f"echo {passwd} | sudo -S {command}"
-            askpass= lambda: os.getpass("sudo passwd required: ")
-
-            process= sp.shell(sudopass(askpass()),**kwargs)
-            process.args= sudopass("****")
-
-            sp._getpass_ = True
-            return process
+        if getattr(cls,'_getpass_',False) is True: 
+            # don't ask for the sudo password here
+            return cls.shell("sudo","-S",*args,**kwargs)
+        else: 
+            cls._getpass_ = True
+            return cls.shell("sudo","-S",*args,text=True,
+                input=cls.getpass("sudo passwd required: "),**kwargs)
 
     @classmethod
     def systemctl(cls,*args,**kwargs):
@@ -463,10 +432,6 @@ class sp(os):
             this is made for executing a single shot
             don't use it within @sudo decorated func """
 
-        # try: run = BaseConfig._.run
-        # except: run = '__undefined__'
-
-        # assert run != '__undefined__'
         cls._ALLOW_SUDO_ = '__YES__'
         cls.sudo("systemctl",*args,**kwargs)
         del cls._ALLOW_SUDO_
@@ -501,17 +466,17 @@ class sp(os):
         cmd in sp.list_executables(cmd)
 
 
-    @classmethod
-    def terminal(cls,cmd:str,select:str,**kwargs):
-        """ run cmd within selected terminal 
-            select must be in xterm|winterm|wsl """
+    # @classmethod
+    # def terminal(cls,cmd:str,select:str,**kwargs):
+    #     """ run cmd within selected terminal 
+    #         select must be in xterm|winterm|wsl """
 
-        wsl = f"cmd.exe /c start wsl {cmd} &"
-        winterm = f"cmd.exe /c start wt wsl {cmd} &"
-        xterm = f"xterm -C -geometry 190x19 -e {cmd} &"
+    #     wsl = f"cmd.exe /c start wsl {cmd} &"
+    #     winterm = f"cmd.exe /c start wt wsl {cmd} &"
+    #     xterm = f"xterm -C -geometry 190x19 -e {cmd} &"
 
-        assert select in "xterm|winterm|wsl"
-        cls.shell(eval(select),**kwargs)
+    #     assert select in "xterm|winterm|wsl"
+    #     cls.shell(eval(select),**kwargs)
         
     @classmethod
     def poetry(cls,*args,**kwargs):
@@ -610,7 +575,7 @@ def verbose(*args,level:int=1):
         print(f"sws:{level}:",*args)
 
 
-def BETA(callable):
+def beta(callable):
     """ decorator for tracking usage of beta code
         indicated when code is not fully tested or fixed 
         code execution is not possible running productive """

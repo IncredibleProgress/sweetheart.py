@@ -9,6 +9,25 @@ class poetry:
     """ Coming Soon """
     pass
 
+def enforced_symlink(source,dest):
+
+    if os.path.islink(dest): print(f"WARN: existing link {dest}")
+    elif os.path.isfile(dest): os.remove(dest)
+    elif os.path.isdir(dest) : shutil.rmtree(dest)
+    try: os.symlink(source,dest)
+    except: pass
+
+# get os_release with Python <= 3.9 :
+# 
+#     import csv
+#     os_release = {}
+#     with open("/etc/os-release") as fi:
+#          reader = csv.reader(fi,delimiter="=")
+#          for line in reader:
+#             if line==[]: continue # this can happen...
+#             os_release[line[0]] = line[1]
+#
+
 def enforce_dev_links():
 
     src = f"{BaseConfig.HOME}/{MASTER_MODULE}.py"# source dir

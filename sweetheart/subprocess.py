@@ -1,6 +1,9 @@
 
 import os as _os_
-import platform,getpass,locale,subprocess,shutil
+import shlex as _shlex_
+import tempfile as _tempfile_
+import subprocess as _subprocess_
+import platform,getpass,locale,shutil
 
 
 class os:
@@ -39,27 +42,50 @@ class os:
     distbase = os_release['ID_LIKE'].lower()
     codename = os_release['UBUNTU_CODENAME'].lower()
 
+    # tempfiles utilities
+    TemporaryFile = _tempfile_.TemporaryFile
+    SpooledTemporaryFile = _tempfile_.SpooledTemporaryFile
+
     # shell features
-    run = subprocess.run
     which = shutil.which
-    DEVNULL = subprocess.DEVNULL
+    DEVNULL = _subprocess_.DEVNULL
 
     @staticmethod
-    def enforced_symlink(source,dest):
+    def run(*args,**kwargs):
+        """
+        hardened subprocess.run 
+        protect against shell injection
+        """
+        if kwargs.get('shell'):
+            raise Exception("running shell is not allowed")
+        else:
+            assert len(args) == 1
+            return _subprocess_.run(*args,**kwargs)
 
-        if os.path.islink(dest): print(f"Warning, existing link {dest}")
-        elif os.path.isfile(dest): os.remove(dest)
-        elif os.path.isdir(dest) : shutil.rmtree(dest)
-        try: os.symlink(source,dest)
-        except: pass
+    @staticmethod
+    def shell(*args,**kwargs):
+        """ 
+        run given args as a command providing some flexibility with args
+        it will accept simple shell-like commands/args separated by spaces
+        but THIS IS NOT shell and usual shell features are not available
+        it uses os.run() behind and shell=True is not allowed within for security reason 
+        meaning that in any case it won't never pass through the real shell subprocess
+        instead the args given with os.run() are directly committed to the linux kernel
+        """
 
-    # get os_release with Python <= 3.9 :
-    # 
-    #     import csv
-    #     os_release = {}
-    #     with open("/etc/os-release") as fi:
-    #          reader = csv.reader(fi,delimiter="=")
-    #          for line in reader:
-    #             if line==[]: continue # this can happen...
-    #             os_release[line[0]] = line[1]
-    #
+        if len(args)==1 and isinstance(args[0],str):
+            # split given str but doesn't pass shell=True
+            return os.run(_shlex_.split(args[0]),**kwargs)
+
+        elif len(args)==1 and isinstance(args[0],list):
+            return os.run(args[0],**kwargs)
+        
+        else: 
+            # zip the args into a list given as first arg to run()
+            # allow shell("echo","hello") rather than shell(["echo","hello"])
+            return os.run(args,**kwargs)
+
+    # provide a direct way for getting the stdout
+    stdout = lambda *args,**kwargs:\
+        sp.shell(*args,text=True,capture_output=True,**kwargs).stdout.strip()
+            

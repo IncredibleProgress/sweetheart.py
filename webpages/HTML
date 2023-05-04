@@ -1,11 +1,11 @@
 <%
-# must be set at server side
-# __dbnm__ must be provided
+# set at server side:
+# __dbnm__ enforced by HTMLTemplate()
 __host__ = get('host',__host__)
-
-# autoset default values
-__lang__ = get('lang','en')
-__load__ = get('load','pylibs')
+__lang__ = get('lang',__lang__)
+# autoset here default values:
+__load__ = get('load','pylibs tailwind')
+__dbug__ = get('debug',1)
 %>
 <!DOCTYPE html>
 <html lang="{%__lang__%}">
@@ -167,7 +167,7 @@ __load__ = get('load','pylibs')
 %#
 </head>
 % if "py" in __load__:
-<body onload="brython(1)">
+<body onload="brython({%__dbug__%})">
 % else:
 <body>
 % end

@@ -3,7 +3,7 @@
 
 ## A supercharged heart for the non-expert hands
 
-What about safety, big-data, realtime databases, responsive interfaces and AI? Sweetheart comes with the highest quality components widely used by GAFAM and others, also the best coding practices, and makes the hard stuff for you. Start from scratch, and create with ease and efficiency the apps you really need embedding reliable open-source code for processing at full power data which remains yours!
+What about security, big-data, realtime databases, responsive interfaces and AI? Sweetheart comes with the highest quality components widely used by GAFAM and others, also the best coding practices, and makes the hard stuff for you. Start from scratch, and create with ease and efficiency the apps you really need embedding reliable open-source code for processing at full power data which remains yours!
 
 Since Ubuntu and RHEL based operating systems can be installed as usual softwares within Windows 10/11, it provides an incredible way for any organization to develop, deploy, and administrate powerful responsive webapps including AI on its own local network keeping high capabilities of integration with the already existing tools like databases, MS-Excel, and SAP.
 
@@ -26,7 +26,13 @@ Sweetheart supports you getting coding full power from scratch:
 
 ## Stick to good standards without thinking about it
 
-Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. It intends to transform you stepwise in a good driver and maybe in a pilot! Due to provided high quality components, a hardened configuration and the included documentation you will **learn quickly to make great python/html code** including up-to-date best practices and patterns. You won't learn Sweetheart itself, you will learn Python/Html real coding-life like any other developer, but skipping tedious considerations. That means especially you don't need any kind of expertise to use good things in the right way. Be quite, Sweetheart is made for low resources consumption, high security level, and best performances.
+Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. It intends to transform you stepwise in a good driver and maybe in a pilot! Due to provided high quality components, a hardened configuration and the included documentation you will **learn quickly to make great python/html code** including up-to-date best practices and patterns. You won't learn Sweetheart itself, you will learn Python/Html real coding-life like any other developer, but skipping tedious considerations. That means especially you don't need any kind of expertise to use good things in the right way. Be quite, Sweetheart is made for low resources consumption, high security level, and best performances:
+
+- it ensures an enterprise-grade security level
+- it ensures code reliability and performances
+- it ensures ruggedness of the committed libraries
+- it ensures the efficiency of your coding effort
+- it allows you running without cloud services
 
 ## Rock-solid components for supporting innovative capabilities
 
@@ -127,7 +133,7 @@ curl -sSL https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/mas
 2. then (re)start bash and get initial components
 ``` bash
 bash
-sws --init
+sws init
 ```
 
 3. at last run sweetheart for tests
@@ -135,7 +141,7 @@ sws --init
 sws start
 ```
 
-### get power with many additionnal resources
+<!-- ### get power with many additionnal resources
 
 ``` bash
 # interested for calculation, machine-learning, ms-excel
@@ -143,7 +149,7 @@ sws install science
 
 # interested for processing or scraping the web
 sws install web
-```
+``` -->
 
 ## Epilogue: a new life starts now
 

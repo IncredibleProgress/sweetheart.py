@@ -212,7 +212,7 @@ class BaseService:
 
         if timer: time.sleep(timer)
 
-    @BETA
+    @beta
     def run_distant(self,service=None):
         """ start and run the command attribute through ssh
             the 'command' attribute must be set previously 
@@ -329,9 +329,9 @@ class RethinkDB(BaseService):
         
         self.API = BaseAPI
         assert self.protocol == 'rethinkdb'
-        adport = config._.database_admin.split(':')[2]
+        adport = config.database_admin.split(':')[2]
 
-        self.command = f"rethinkdb --http-port {adport} -d {config.db_path}"
+        self.command = f"rethinkdb --daemon --http-port {adport} -d {config.db_path}"
 
     def set_client(self,dbname:str=None):
 
@@ -355,7 +355,7 @@ class RethinkDB(BaseService):
     #     self.dbname = dbname
     #     return self.conn,self.dbname
     
-    @BETA
+    @beta
     async def fetch_endpoint(self,request):
         """ #FIXME: unsafe, only for tests """
 
@@ -550,7 +550,7 @@ config = set_config({{
     "templates_base": "{self._.templates_base}",
     "templates_dir": "{self._.templates_dir}",
     "templates_settings": {{
-        "lang": "{self._.templates_settings['lang']}",
+        "lang": "{self._.templates_settings.get('lang',self._.LANG)}",
         "host": "{self._.nginxunit_host}",
         "load": "{self._.templates_settings['load']}" }},
     }})
@@ -617,7 +617,7 @@ class JupyterLab(BaseService):
             # set required password for JupyterLab
             sp.python("-m","jupyter","notebook","password","-y")
     
-    def set_proxy(self,route="/jupyter",put_config:bool=False):
+    def set_proxy(self,route="/jupyter/*",put_config:bool=False):
         """ set jupyter as a proxy into the unit config """
 
         unit = self.get_unit()
@@ -625,7 +625,7 @@ class JupyterLab(BaseService):
         if put_config: unit.put_config()
 
 
-@BETA
+@beta
 class NginxUnit(UserDict):        
 
     def __init__(self,config:BaseConfig):
@@ -662,7 +662,7 @@ class NginxUnit(UserDict):
         self["routes"].insert(0,
             {
                 "match": {
-                    "uri": f"{route}/*"
+                    "uri": f"{route}"
                 },
                 "action": {
                     "proxy": target

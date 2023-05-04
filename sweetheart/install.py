@@ -22,8 +22,8 @@ if not os.path.isfile(
 
     # provide which as python func
     wh = lambda command: sp.run(
-        f"which {command}",
-        shell=True,text=True,capture_output=True,
+        "which",command,
+        text=True,capture_output=True,
         ).stdout.strip()
 
     sws_script = f"{HOME}/.local/bin/sws"
@@ -42,7 +42,7 @@ if not os.path.isfile(
 
     # build my_python directory
     os.chdir(f"{HOME}/.sweet/sweetheart/programs/my_python")
-    sp.run(f"{poetry} init -n",shell=True)
+    sp.run([poetry,"init","-n"])
 
     if "--github" in sys.argv:
         # install sweetheart from github repository
@@ -50,12 +50,12 @@ if not os.path.isfile(
         sp.run(f"{poetry} add git+{src}",shell=True)
     else:
         # install sweetheart from pypi repository
-        sp.run(f"{poetry} add sweetheart",shell=True)
+        sp.run([poetry,"add","sweetheart"])
 
     # set python env
     venv = sp.run(
-        f"{poetry} env info --path",
-        shell=True,text=True,capture_output=True,
+        [poetry,"env","info","--path"],
+        text=True,capture_output=True,
         ).stdout.strip()
 
     # provide subroc.conf file
@@ -91,6 +91,7 @@ if __name__ == "__main__":
  ## Sweetheart Installation Tools ############################################
 #############################################################################
 
+import requests
 from sweetheart import *
 #NOTE: sp (subprocess) is replaced here by sp class of sweetheart
 
@@ -255,7 +256,7 @@ class BaseInstall:
             libs.remove("*unit")
 
         # install other packages
-        return sp.sudo("apt-get","install",*libs,**kwargs)
+        return sp.sudo("apt-get","install","-y",*libs,**kwargs)
 
     def dnf(self,*libs:str,**kwargs):
         """ FIXME: coming soon !
@@ -358,7 +359,7 @@ class BaseInstall:
         assert ext == ".zip"
 
         with ZipFile(zipfile,"r") as zf: zf.extractall()
-        sp.shell(f"{self.config.rust_crates}/mdbook build {name}")
+        sp.shell(f"{self.config.rust_crates}/mdbook","build",name)
         if remove: os.remove(zipfile)
 
     def install_packages(self,*packages:str):
@@ -379,9 +380,10 @@ class BaseInstall:
 
         # set official repository and install nodejs
         if "node" not in exe and "npm" not in exe:
+            script = requests.get(f"https://deb.nodesource.com/setup_{ver}").text
             verbose(f"set NodeJS {ver} LTS repository from nodesource.com")
-            sp.shell(f"curl -fsSL https://deb.nodesource.com/setup_{ver} | sudo -E bash - && apt-get install -y nodejs")
-
+            sp.shell("sudo","-E","bash",text=True,input=script)
+            sp.shell("sudo","apt-get","install","-y","nodejs")
 
     def apt_install_unit(self):
         """ install Nginx Unit on debian/ubuntu systems 
