@@ -22,7 +22,7 @@ if not os.path.isfile(
 
     # provide which as python func
     wh = lambda command: sp.run(
-        "which",command,
+        ["which",command],
         text=True,capture_output=True,
         ).stdout.strip()
 
@@ -91,18 +91,24 @@ if __name__ == "__main__":
  ## Sweetheart Installation Tools ############################################
 #############################################################################
 
-import requests
 from sweetheart import *
-#NOTE: sp (subprocess) is replaced here by sp class of sweetheart
+#NOTE: os,sp modules replaced here by os,sp class of sweetheart
+
+# try: import requests
+# except: verbose("[WARN] resquests python module not available")
 
 from zipfile import ZipFile
-from urllib.request import urlretrieve
 from urllib.parse import urljoin as __urljoin
+from urllib.request import urlopen,urlretrieve
 
 def urljoin(base,*args,**kwargs):
     # avoid unexpected behavior with urljoin
     if not base.endswith('/'): base+='/'
     return __urljoin(base,*args,**kwargs)
+
+def urlget(url):
+    with urlopen(url) as file_like_object:
+        return file_like_object.read()
 
 
 def init_project_env(project_name:str):
@@ -371,7 +377,6 @@ class BaseInstall:
         for pkg in packages:
             self.install_libs(json_pkg[pkg])
 
-
     def apt_install_nodejs(self):
         """ install nodejs and npm on debian/ubuntu systems """
 
@@ -380,9 +385,10 @@ class BaseInstall:
 
         # set official repository and install nodejs
         if "node" not in exe and "npm" not in exe:
-            script = requests.get(f"https://deb.nodesource.com/setup_{ver}").text
+            script = urlget(f"https://deb.nodesource.com/setup_{ver}")
             verbose(f"set NodeJS {ver} LTS repository from nodesource.com")
-            sp.shell("sudo","-E","bash",text=True,input=script)
+            assert isinstance(script,bytes)
+            sp.shell("sudo","-E","bash",input=script,stdout=os.DEVNULL)
             sp.shell("sudo","apt-get","install","-y","nodejs")
 
     def apt_install_unit(self):
@@ -393,33 +399,38 @@ class BaseInstall:
         assert self.config.python_env.endswith(self.config.python_version)
 
         if not sp.stdout("apt policy unit"):
-            # set official Nginx Unit repository
-            sp.read_sh(f"""
-echo "set Nginx Unit repository from nginx.org"
-echo "deb https://packages.nginx.org/unit/{os.distrib}/ {os.codename} unit" | sudo tee /etc/apt/sources.list.d/unit.list
-wget -qO- https://unit.nginx.org/keys/nginx-keyring.gpg | sudo apt-key add - 
-            """.strip() )
+
+            echo("set Nginx Unit repository from nginx.org")
+            key = urlget("https://unit.nginx.org/keys/nginx-keyring.gpg")
+
+            sp.shell("sudo","tee","/etc/apt/sources.list.d/unit.list",text=True,
+                input=f"deb https://packages.nginx.org/unit/{os.distrib}/ {os.codename} unit")
+
+            assert isinstance(key,bytes)
+            sp.shell("sudo","apt-key","add",input=key,stdout=os.DEVNULL)
 
         if not sp.is_executable("unitd"):
             # install Nginx Unit packages
             version = self.config.python_version
-            sp.sudo("apt-get update")
-            sp.sudo(f"apt-get install unit unit-python{version}") 
-
+            sp.sudo("apt-get update",stdout=os.DEVNULL)
+            sp.sudo(f"apt-get install -y unit unit-python{version}") 
 
     def apt_install_rethinkdb(self):
         """ install rethinkdb on debian/ubuntu systems
             will set official RethinkDB repository if needed """
 
         if not sp.stdout("apt policy rethinkdb"):
-            # set offical RethinkDB repository
-            sp.read_sh(f"""
-echo "set RethinkDB repository from rethinkdb.com"
-echo "deb https://download.rethinkdb.com/repository/{os.distrib}-{os.codename} {os.codename} main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
-wget -qO- https://download.rethinkdb.com/repository/raw/pubkey.gpg | sudo apt-key add -
-            """.strip() )
+
+            echo("set RethinkDB repository from rethinkdb.com")
+            key = urlget("https://download.rethinkdb.com/repository/raw/pubkey.gpg")
+
+            sp.shell("sudo","tee","/etc/apt/sources.list.d/rethinkdb.list",text=True,
+                input=f"deb https://download.rethinkdb.com/repository/{os.distrib}-{os.codename} {os.codename} main")
+
+            assert isinstance(key,bytes)
+            sp.shell("sudo","apt-key","add",input=key,stdout=os.DEVNULL)
 
         if not sp.is_executable("rethinkdb"):
             # install rethinkdb package
-            sp.sudo("apt-get update")
-            sp.sudo(f"apt-get install rethinkdb")
+            sp.sudo("apt-get update",stdout=os.DEVNULL)
+            sp.sudo(f"apt-get install -y rethinkdb")

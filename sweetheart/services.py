@@ -331,7 +331,7 @@ class RethinkDB(BaseService):
         assert self.protocol == 'rethinkdb'
         adport = config.database_admin.split(':')[2]
 
-        self.command = f"rethinkdb --daemon --http-port {adport} -d {config.db_path}"
+        self.command = f"rethinkdb --http-port {adport} -d {config.db_path}"
 
     def set_client(self,dbname:str=None):
 

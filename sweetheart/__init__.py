@@ -1,12 +1,17 @@
 """
 SWEETHEART 0.1.x 'new age rising'
-Rock-solid pillars for innovative and enterprise-grade apps.
+rock-solid pillars for building innovative enterprise-grade apps
 
-*Start from scratch and create with ease and efficiency the apps you really need
-embedding reliable open-source code, highest quality components, best practices.*
+Start from scratch and create with ease and efficiency the apps you really need
+embedding reliable open-source code, highest quality components, best practices.
+
+Foreword
+    I'm happy that you look interested by the Sweetheart project.
+    I spent many hours on my free time to provide the best of what coding can offer.
+    I thank a lot my wife and my children also very much for their understanding and long patience.
+    Now discover what you can really do with computers and furthermore at the light speed!
 
 About __init__.py :
-
     imports python modules: sys, json
     provides: set_config, quickstart, HTMLTemplate
     the python os module is replaced by an os class
@@ -14,7 +19,6 @@ About __init__.py :
 
 Sweetheart 0.1.x includes an adapted version of bottle.py,
 which is not a part of the sweetheart project itself. Info:
-
     Homepage and documentation: http://bottlepy.org/
     Copyright (c) 2016, Marcel Hellkamp.
     License: MIT (see LICENSE for details)
@@ -28,7 +32,7 @@ __version__ = "0.1.2"
 __license__ = "CeCILL-C FREE SOFTWARE LICENSE AGREEMENT"
 __author__ = "Nicolas Champion <champion.nicolas@gmail.com>"
 
-# default dir/module name of master project
+# default dir and module name of master project
 #FIXME: allow replacing sweetheart by a fork of it
 MASTER_MODULE = "sweetheart"
 
@@ -37,7 +41,7 @@ class BaseConfig(UserDict):
     """ configuration settings base class
 
         use the get_config() func for getting a new instance 
-        BaseConfig._ return the last config created with it """
+        BaseConfig._ returns the last config created with it """
 
     # stdout messages settings
     logg = []
@@ -95,7 +99,7 @@ class BaseConfig(UserDict):
         self.data = {
             # editable general settings
             "db_name": "test",
-            "app_module": "start",#! no .py suffix here
+            "app_module": "start",# no .py suffix here
             "app_callable": "webapp",
             "templates_base": "HTML",
             "templates_dir": "templates",
@@ -142,7 +146,7 @@ class BaseConfig(UserDict):
             with set_config(project="jupyter") as cfg:
                 JupyterLab(cfg).run_local(terminal='wsl')
         """
-        # __conf must be set by set_config()
+        # _old must be set by set_config()
         assert hasattr(BaseConfig,'_old')
         return self
 
@@ -156,7 +160,7 @@ class BaseConfig(UserDict):
         del BaseConfig._old
         
     def load_json(self,subproc:bool=False):
-        """ update config object from given json file """
+        """ update config object from given json file(s) """
 
         if os.path.isfile(self.config_file):
 
@@ -247,7 +251,7 @@ def quickstart(*args,_cli_args=None):
     """ build and run webapp for the current config (autoset when not given)
         usually args should be a HttpServer instance or Route|Mount objects
         however for tests it can be a template or even Html code directly
-        NOTE: this flexibility is provided by mount() method of HttpServer """
+        NOTE: this flexibility is provided by the mount() method of HttpServer """
 
     # extra imports
     from sweetheart.services import \
@@ -277,9 +281,9 @@ def quickstart(*args,_cli_args=None):
         # build new webapp from Route|Mount objects,html code or template
         webapp = HttpServer(config,set_database=config.is_rethinkdb_local)
         webapp.mount(*args)
-        
-    # start webapp within current bash
-    webapp.run_local(service=None,terminal=None)
+    
+    #FIXME: start webapp within current bash
+    webapp.run_local(service=None,terminal=True)
 
 
   #############################################################################
@@ -380,7 +384,7 @@ def test_template(template:str):
 
 def webbrowser(url:str):
     """ start url within the webbrowser set in config 
-        it allow running on the WSL with Windows 10/11 """
+        it allows running on the WSL with Windows 10/11 """
 
     try: select = BaseConfig._.webbrowser
     except: select = None
@@ -398,29 +402,32 @@ def webbrowser(url:str):
  ## Subprocesses handling ####################################################
 #############################################################################
 
-class sp(os):
+class sp:
     """ namespace providing basic subprocess features 
         beware that it uses BaseConfig and not config """
 
-    # @classmethod
-    # def read_sh(cls,script:str):
-    #     """ excec line by line a long string as a shell script """
-
-    #     for instruc in script.splitlines():
-    #         cls.run(instruc.strip(),shell=True)
+    shell = os.shell
+    stdout = os.stdout
 
     @classmethod
     def sudo(cls,*args,**kwargs):
-        """ a Jupyter compliant sudo cmd that runs sudo -S
-            this will ask sudo password at the first call """
+        """
+        a Jupyter compliant sudo cmd that runs sudo -S
+        this asks sudo password with new or expired sudo session
+        in this case text and input arguments can not be given
+        """
 
-        assert getattr(cls,'_ALLOW_SUDO_','NO') == '__YES__'
-
-        if getattr(cls,'_getpass_',False) is True: 
+        assert getattr(cls,'_ALLOW_SUDO_','__NO__') == '__YES__'
+        passwd_ok = cls.shell("sudo -n true",stderr=os.DEVNULL).returncode
+        
+        if passwd_ok:
             # don't ask for the sudo password here
             return cls.shell("sudo","-S",*args,**kwargs)
         else: 
-            cls._getpass_ = True
+            # text and input arguments can not be given here
+            assert 'text' not in kwargs
+            assert 'input' not in kwargs
+
             return cls.shell("sudo","-S",*args,text=True,
                 input=cls.getpass("sudo passwd required: "),**kwargs)
 
@@ -428,13 +435,14 @@ class sp(os):
     def systemctl(cls,*args,**kwargs):
 
         """ exec the systemctl shell cmd with sudo and
-            doesn't require allowing sudo previously 
-            this is made for executing a single shot
-            don't use it within @sudo decorated func """
+            doesn't require allowing sudo previously with @sudo
+            this allows doing a 'single shot' within Jupyter """
 
+        hold = getattr(cls,'_ALLOW_SUDO_ ',None)
         cls._ALLOW_SUDO_ = '__YES__'
         cls.sudo("systemctl",*args,**kwargs)
-        del cls._ALLOW_SUDO_
+        if hold: cls._ALLOW_SUDO_ = hold
+        else: del cls._ALLOW_SUDO_
 
     @classmethod
     def overwrite_file(cls,content:str,file:str,cwd:str=None):
@@ -466,18 +474,25 @@ class sp(os):
         cmd in sp.list_executables(cmd)
 
 
-    # @classmethod
-    # def terminal(cls,cmd:str,select:str,**kwargs):
-    #     """ run cmd within selected terminal 
-    #         select must be in xterm|winterm|wsl """
+    @classmethod
+    def terminal(cls,cmd:str,select:str,**kwargs) -> os.Process:
+        """ run cmd within selected terminal 
+            select must be in xterm|winterm|wsl """
 
-    #     wsl = f"cmd.exe /c start wsl {cmd} &"
-    #     winterm = f"cmd.exe /c start wt wsl {cmd} &"
-    #     xterm = f"xterm -C -geometry 190x19 -e {cmd} &"
-
-    #     assert select in "xterm|winterm|wsl"
-    #     cls.shell(eval(select),**kwargs)
+        assert select in "xterm|winterm|wsl"
         
+        wsl = f"cmd.exe /c start wsl {cmd}"
+        winterm = f"cmd.exe /c start wt wsl {cmd}"
+        xterm = f"xterm -C -geometry 190x19 -e {cmd}"
+        
+        cmd = eval(select)
+        kwargs['stdout'] = os.DEVNULL
+
+        process = os.Process(target=lambda:cls.shell(cmd,**kwargs))
+        process.start()
+
+        return process
+    
     @classmethod
     def poetry(cls,*args,**kwargs):
 
@@ -566,7 +581,6 @@ def echo(*args,mode:str="default",blank:bool=False):
 
     if "exit" in mode: exit()
 
-
 def verbose(*args,level:int=1):
     """ convenient function for verbose messages 
         level set the intended level of verbosity """
@@ -576,7 +590,7 @@ def verbose(*args,level:int=1):
 
 
 def beta(callable):
-    """ decorator for tracking usage of beta code
+    """ @decorator for tracking usage of beta code
         indicated when code is not fully tested or fixed 
         code execution is not possible running productive """
 
@@ -584,9 +598,8 @@ def beta(callable):
     verbose(f"[BETA] {repr(callable)} has been called")
     return callable
 
-
 def sudo(function):
-    """ decorator that allows calling sp.sudo() 
+    """ @decorator that allows calling sp.sudo() 
         intends to avoid unwanted uses of sudo """
 
     def wrapper(*args,**kwargs):

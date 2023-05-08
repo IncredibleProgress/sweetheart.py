@@ -1,23 +1,27 @@
 
+import platform,locale,shutil
+
 import os as _os_
 import shlex as _shlex_
+import getpass as _getpass_
 import tempfile as _tempfile_
 import subprocess as _subprocess_
-import platform,getpass,locale,shutil
+import multiprocessing as _multiprocessing_
 
 
 class os:
 
-    """ reimplements common tools of the python os module 
-        and extends it with some foreign facilities for ease """
+    """ reimplements common tools of the python os module
+        and extends it with some foreign facilities for ease 
+        it intends to ensure best practices using standard libs"""
 
     env = environ = _os_.environ
     getenv = _os_.getenv
     putenv = _os_.putenv
 
     getcwd = _os_.getcwd
-    getuser = getpass.getuser
-    getpass = getpass.getpass
+    getuser = _getpass_.getuser
+    getpass = _getpass_.getpass
     get_exec_path = _os_.get_exec_path
     getlocale = locale.getlocale
 
@@ -40,11 +44,14 @@ class os:
     os_release = platform.freedesktop_os_release()
     distrib = os_release['ID'].lower()
     distbase = os_release['ID_LIKE'].lower()
-    codename = os_release['UBUNTU_CODENAME'].lower()
+    codename = os_release.get('UBUNTU_CODENAME').lower()
 
     # tempfiles utilities
     TemporaryFile = _tempfile_.TemporaryFile
     SpooledTemporaryFile = _tempfile_.SpooledTemporaryFile
+
+    # multiprocessing features
+    Process = _multiprocessing_.Process
 
     # shell features
     which = shutil.which
@@ -52,25 +59,21 @@ class os:
 
     @staticmethod
     def run(*args,**kwargs):
-        """
-        hardened subprocess.run 
-        protect against shell injection
-        """
+        """ securized subprocess.run() function
+            protects against shell injection attacks """
+
         if kwargs.get('shell'):
             raise Exception("running shell is not allowed")
         else:
-            assert len(args) == 1
+            assert len(args)==1
             return _subprocess_.run(*args,**kwargs)
 
     @staticmethod
     def shell(*args,**kwargs):
         """ 
-        run given args as a command providing some flexibility with args
-        it will accept simple shell-like commands/args separated by spaces
-        but THIS IS NOT shell and usual shell features are not available
-        it uses os.run() behind and shell=True is not allowed within for security reason 
-        meaning that in any case it won't never pass through the real shell subprocess
-        instead the args given with os.run() are directly committed to the linux kernel
+        it will run given args as a command providing some flexibility with args 
+        accepts simple shell-like commands and args separated by spaces in a string
+        THIS IS NOT shell and usual shell and bash features are not available here
         """
 
         if len(args)==1 and isinstance(args[0],str):
@@ -85,7 +88,13 @@ class os:
             # allow shell("echo","hello") rather than shell(["echo","hello"])
             return os.run(args,**kwargs)
 
-    # provide a direct way for getting the stdout
-    stdout = lambda *args,**kwargs:\
-        sp.shell(*args,text=True,capture_output=True,**kwargs).stdout.strip()
-            
+    @staticmethod
+    def stdout(*args,**kwargs):
+        """ provide a direct way for getting the stdout """
+        
+        assert 'text' not in kwargs
+        assert 'input' not in kwargs
+
+        return os.shell(
+            *args,text=True,capture_output=True,**kwargs
+            ).stdout.strip()
