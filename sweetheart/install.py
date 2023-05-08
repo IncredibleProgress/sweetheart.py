@@ -1,14 +1,28 @@
 """
-installation tools for getting
-sweetheart requirements and resources
+install sweetheart requirements and resources
 
-available options to provide within argv :
+available options:
  --github   get sweetheart from github instead of pypi
  --init     autostart the initialization process 
 """
 
+import subprocess
 import os,sys,json,stat
-import subprocess as sp
+
+from zipfile import ZipFile
+from urllib.parse import urljoin as __urljoin
+from urllib.request import urlopen,urlretrieve
+
+def urljoin(base:str,*args,**kwargs) -> str:
+    # avoid unexpected behavior with urljoin
+    if not base.endswith('/'): base+='/'
+    return __urljoin(base,*args,**kwargs)
+
+def urlget(url:str) -> bytes:
+    with urlopen(url) as file_like_object:
+        #FIXME: should return bytes in most cases
+        return file_like_object.read()
+
 
 HOME = os.environ['HOME']
 PATH = os.environ['PATH']
@@ -21,7 +35,7 @@ if not os.path.isfile(
     f"{HOME}/.sweet/sweetheart/programs/my_python/pyproject.toml" ):
 
     # provide which as python func
-    wh = lambda command: sp.run(
+    which = wh = lambda command: subprocess.run(
         ["which",command],
         text=True,capture_output=True,
         ).stdout.strip()
@@ -31,8 +45,8 @@ if not os.path.isfile(
     sp_conf_file = f"{HOME}/.sweet/sweetheart/configuration/subproc.json"
 
     if not poetry:
-        assert wh('curl') and wh('python3')
-        sp.run("curl -sSL https://install.python-poetry.org | python3 -",shell=True)
+        python3 = which('python3')
+        subprocess.run([python3],input=urlget("https://install.python-poetry.org"))
         poetry = wh('poetry') or wh('~/.local/bin/poetry')
         assert poetry
 
@@ -42,18 +56,18 @@ if not os.path.isfile(
 
     # build my_python directory
     os.chdir(f"{HOME}/.sweet/sweetheart/programs/my_python")
-    sp.run([poetry,"init","-n"])
+    subprocess.run([poetry,"init","-n"])
 
     if "--github" in sys.argv:
         # install sweetheart from github repository
         src = "https://github.com/IncredibleProgress/sweetheart.py.git"
-        sp.run(f"{poetry} add git+{src}",shell=True)
+        subprocess.run([poetry,"add",f"git+{src}"])
     else:
         # install sweetheart from pypi repository
-        sp.run([poetry,"add","sweetheart"])
+        subprocess.run([poetry,"add","sweetheart"])
 
     # set python env
-    venv = sp.run(
+    venv = subprocess.run(
         [poetry,"env","info","--path"],
         text=True,capture_output=True,
         ).stdout.strip()
@@ -80,7 +94,7 @@ if __name__ == "__main__":
 
     if "--init" in sys.argv:
         # autostart init process for full install
-        sp.run('bash -c "sws init ipykernel"',shell=True)
+        subprocess.run(["bash","-c","sws init ipykernel"])
 
     # STOP install.py module execution here
     # a sweetheart config is required for using next utilities
@@ -91,24 +105,8 @@ if __name__ == "__main__":
  ## Sweetheart Installation Tools ############################################
 #############################################################################
 
+del os,stat,subprocess
 from sweetheart import *
-#NOTE: os,sp modules replaced here by os,sp class of sweetheart
-
-# try: import requests
-# except: verbose("[WARN] resquests python module not available")
-
-from zipfile import ZipFile
-from urllib.parse import urljoin as __urljoin
-from urllib.request import urlopen,urlretrieve
-
-def urljoin(base,*args,**kwargs):
-    # avoid unexpected behavior with urljoin
-    if not base.endswith('/'): base+='/'
-    return __urljoin(base,*args,**kwargs)
-
-def urlget(url):
-    with urlopen(url) as file_like_object:
-        return file_like_object.read()
 
 
 def init_project_env(project_name:str):
@@ -142,8 +140,7 @@ def init(config:BaseConfig,add_pylibs="",no_pkg_init=False):
         init_project_env(config.project)
 
     if config.project.startswith("jupyter"):
-
-        #FIXME: lead jupyter/jupyterlab/jupyterhub matter
+        #TODO: lead jupyter/jupyterlab/jupyterhub matter
         echo("INFO: init jupyter as a specific project")
 
         config = set_config(project="jupyter")
@@ -168,13 +165,13 @@ def init(config:BaseConfig,add_pylibs="",no_pkg_init=False):
     PKG_INIT = {
         # set minimum distro resources
         'aptlibs': ["*unit","*rethinkdb","*nodejs","cargo"],
-        'dnflibs': [],#FIXME: rhel not yet implemented
+        'dnflibs': [],#TODO: rhel not yet implemented
         # set minimum rust resources
         'cargolibs': ["cargo-binstall"],
         'cargobin': ["mdbook"],
         # set minimum js and python resources
         # ipykernel allows working with jupyter e.g. within VS-Code      
-        'npmlibs': ["brython","tailwindcss","daisyui","vue@latest"],# Vue3
+        'npmlibs': ["brython","tailwindcss","vue@latest"],# Vue3
         'pylibs': ["rethinkdb","starlette","ipykernel"],
         # set documentation and further resources
         'files': [
@@ -221,11 +218,11 @@ def init(config:BaseConfig,add_pylibs="",no_pkg_init=False):
         JupyterLab(config).set_ipykernel(set_passwd=False)
    
     try:
-        # provide sweetheart html documentation    
+        # provide sweetheart html documentation within webpages
         os.symlink(f"{config.root_path}/documentation/sweetdoc/book",
             f"{config.root_path}/webpages/sweetdoc")
     except:
-        verbose("WARNING: symlink to sweetdoc already existing?")
+        verbose("WARN: symlink to sweetdoc already existing ?")
     
     echo("installation process completed",blank=True)
 
@@ -383,10 +380,11 @@ class BaseInstall:
         ver = self.config.node_version
         exe = sp.list_executables("node npm")
 
-        # set official repository and install nodejs
         if "node" not in exe and "npm" not in exe:
+            # set official repository and install nodejs
             script = urlget(f"https://deb.nodesource.com/setup_{ver}")
             verbose(f"set NodeJS {ver} LTS repository from nodesource.com")
+
             assert isinstance(script,bytes)
             sp.shell("sudo","-E","bash",input=script,stdout=os.DEVNULL)
             sp.shell("sudo","apt-get","install","-y","nodejs")

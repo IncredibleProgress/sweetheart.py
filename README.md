@@ -36,15 +36,13 @@ Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. I
 
 ## Rock-solid components for supporting innovative capabilities
 
-Sweetheart allows you to do all what you need with only 1 Python file and 1 Html file, that's it! Even more, it leads you writing in a natural low-code and minimalistic way. Behind the proposed Python/Html centric approach a stock of ready-to-use features are delivered. Under the hood it integrates the most powerful and innovative features at the time being:
-
-  **Nginx Unit - RethinkDB - Jupyter - TailwindCss - Vue - WebSocket - Rust Crates**
+Sweetheart allows you to do all what you need with only 1 Python file and 1 Html file, that's it! Even more, it leads you writing in a natural low-code and minimalistic way. Behind the proposed Python/Html centric approach a stock of ready-to-use features are delivered. Under the hood it integrates the most powerful and innovative features at the time being: **Nginx Unit - RethinkDB - Jupyter - TailwindCss - Vue - WebSocket - Rust Crates**
 
 Nevertheless it remains feasible to add any other nice things you wish using dedicated tools like [poetry](https://python-poetry.org/), [npm](https://docs.npmjs.com/about-npm/), [apt](https://en.wikipedia.org/wiki/APT_(software)) and [cargo](https://doc.rust-lang.org/cargo/). Sweetheart comes with the above mentioned package to support you saving huge amount of time and strengthen the foundations of your project. Your are not forced to use these components, but these are what you should highly consider before starting new developments.
 
-### Why the RethinkDB database server ?
+### why the RethinkDB database server ?
 
-Maybe some of you can be surprised with regards to RethinkDB, because this not currently the best known database server. Believe it will become one of these within next years. Sweetheart intends to provide a NoSQL and JSON-based database for performances and versatility purposes as MongoDB can be today. In comparison RethinkDB won't support big binaries like MongoDB can do, but this is not a concern for enterprise solutions. On the other hand collaborative work between people must be considered at the highest level in any enterprise and organization. Meaning that working together on same data using several devices has to be the normal way, not a big challenge. Usually implementing real-time capabilities on database systems is technically sophisticated. Because originally the involved technologies were not made for such expectations. RethinkDB is designed for it. Furthermore administration interface is great, queries with ReQL are great, no need of any ORM, and no SQL injection attacks risk. What else required?
+Maybe some of you can be surprised with regards to RethinkDB, because this not currently the best known database server. Believe it will become one of these within next years. Sweetheart intends to provide a NoSQL and JSON-based database for performances and versatility purposes as MongoDB can be today. In comparison RethinkDB won't support big binaries like MongoDB can do, but this is not a concern for considered enterprise solutions here. On the other hand collaborative work between people must be considered at the highest level in any enterprise and organization. Meaning that working together on same data using several devices has to be the normal way, not a big challenge. Usually implementing real-time capabilities on database systems is technically sophisticated. Because originally the involved technologies were not made for such expectations. RethinkDB is designed for it. Furthermore admin interface is great, queries made with ReQL are great, no need of any ORM, and no SQL injection attacks risk. What else required?
 
 ## Realistic code examples
 
