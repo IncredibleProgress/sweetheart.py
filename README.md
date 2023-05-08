@@ -1,13 +1,13 @@
 # Sweetheart **0.1.2**
-*innovative foundations for building enterprise-grade solutions*
+*innovative foundations for rugged enterprise-grade solutions*
 
 ## A supercharged heart for the non-expert hands
 
-What about security, big-data, realtime databases, responsive interfaces and AI? Sweetheart comes with the highest quality components widely used by GAFAM and others, also the best coding practices, and makes the hard stuff for you. Start from scratch, and create with ease and efficiency the apps you really need embedding reliable open-source code for processing at full power data which remains yours!
+What about security, big-data, real-time databases, responsive interfaces and AI? Sweetheart comes with the highest quality components widely used by GAFAM and others, also the best coding practices, and makes the hard stuff for you. Start from scratch, and create with ease and efficiency the apps you really need embedding reliable open-source code for processing at full power data which remains yours!
 
-Since Ubuntu and RHEL based operating systems can be installed as usual softwares within Windows 10/11, it provides an incredible way for any organization to develop, deploy, and administrate powerful responsive webapps including AI on its own local network keeping high capabilities of integration with the already existing tools like databases, MS-Excel, and SAP.
+Since Ubuntu and RHEL based operating systems can be installed as usual software within Windows 10/11, it provides an incredible way for any organization to develop, deploy, and administrate powerful responsive apps including AI on its own local network keeping high capabilities of integration with the already existing tools like databases, MS-Excel, and SAP.
 
-Sweetheart provides a simple Python/Html centric approach leading you implementing best components and best practices. Due to the top-rated place of the Python language regarding to data processing, calculations and AI, this makes `sweetheart` a fast and ideal toolkit for innovative ideas.
+Sweetheart provides a simple Python/Html centric approach leading you implementing best components and best practices. Due to the top-rated place of the Python language regarding to data processing, calculations and AI, this makes sweetheart a fast and ideal toolkit for innovative ideas.
 
 Sweetheart is shared under the [CeCILL-C FREE SOFTWARE LICENSE AGREEMENT](https://github.com/IncredibleProgress/sweetheart.py/blob/master/LICENSE).
 
@@ -15,32 +15,36 @@ Sweetheart is shared under the [CeCILL-C FREE SOFTWARE LICENSE AGREEMENT](https:
 
 Sweetheart supports you getting coding full power from scratch:
 
-- easy to learn, easy to use
-- full documentation provided
-- built-in responsive user interfaces
-- quick and clean prototyping
-- quick and clean deployment
-- made for maintainable great code quality
-- made for calculations, big-data and AI
-- made for high performances and innovation
+  - easy to learn, easy to use
+  - full documentation provided
+  - built-in responsive user interfaces
+  - quick and clean prototyping
+  - quick and clean deployment
+  - made for maintainable great code quality
+  - made for calculations, big-data and AI
+  - made for high performances and innovation
 
 ## Stick to good standards without thinking about it
 
-Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. It intends to transform you stepwise in a good driver and maybe in a pilot! Due to provided high quality components, a hardened configuration and the included documentation you will **learn quickly to make great python/html code** including up-to-date best practices and patterns. You won't learn Sweetheart itself, you will learn Python/Html real coding-life like any other developer, but skipping tedious considerations. That means especially you don't need any kind of expertise to use good things in the right way. Be quite, Sweetheart is made for low resources consumption, high security level, and best performances:
+Sweetheart is a thin-layer for going efficient and doesn't reinvent the wheel. It intends to transform you stepwise in a good driver and maybe in a pilot! Due to provided high quality components, a hardened configuration and the included documentation you will **learn quickly to make great python/html code** including up-to-date best practices and patterns. You won't learn Sweetheart itself, you will learn Python/Html real coding-life like any other developer, but skipping some tedious considerations. That means especially you don't need any kind of expertise to use good things in the right way. Be quite, Sweetheart is made for low resources consumption, high security level, and best performances:
 
-- it ensures an enterprise-grade security level
-- it ensures code reliability and performances
-- it ensures ruggedness of the committed libraries
-- it ensures the efficiency of your coding effort
-- it allows you running without cloud services
+  - it ensures code reliability and maintainability
+  - it ensures an enterprise-grade security level
+  - it ensures ruggedness of the committed libraries
+  - it ensures the efficiency of your coding effort
+  - it even allows you to operate without cloud services
 
 ## Rock-solid components for supporting innovative capabilities
 
 Sweetheart allows you to do all what you need with only 1 Python file and 1 Html file, that's it! Even more, it leads you writing in a natural low-code and minimalistic way. Behind the proposed Python/Html centric approach a stock of ready-to-use features are delivered. Under the hood it integrates the most powerful and innovative features at the time being:
 
-**NGINX Unit - RethinkDB - Jupyter - TailwindCss - Vue - WebSocket - Rust Crates**
+  **Nginx Unit - RethinkDB - Jupyter - TailwindCss - Vue - WebSocket - Rust Crates**
 
-Nevertheless you can add any other nice things you wish using [poetry](https://python-poetry.org/), [npm](https://docs.npmjs.com/about-npm/), [apt](https://en.wikipedia.org/wiki/APT_(software)) and [cargo](https://doc.rust-lang.org/cargo/). Sweetheart comes with the above mentioned package to support you saving time. Your are not forced to use these components, but these are what you should highly consider before starting new projects.
+Nevertheless it remains feasible to add any other nice things you wish using dedicated tools like [poetry](https://python-poetry.org/), [npm](https://docs.npmjs.com/about-npm/), [apt](https://en.wikipedia.org/wiki/APT_(software)) and [cargo](https://doc.rust-lang.org/cargo/). Sweetheart comes with the above mentioned package to support you saving huge amount of time and strengthen the foundations of your project. Your are not forced to use these components, but these are what you should highly consider before starting new developments.
+
+### Why the RethinkDB database server ?
+
+Maybe some of you can be surprised with regards to RethinkDB, because this not currently the best known database server. Believe it will become one of these within next years. Sweetheart intends to provide a NoSQL and JSON-based database for performances and versatility purposes as MongoDB can be today. In comparison RethinkDB won't support big binaries like MongoDB can do, but this is not a concern for enterprise solutions. On the other hand collaborative work between people must be considered at the highest level in any enterprise and organization. Meaning that working together on same data using several devices has to be the normal way, not a big challenge. Usually implementing real-time capabilities on database systems is technically sophisticated. Because originally the involved technologies were not made for such expectations. RethinkDB is designed for it. Furthermore administration interface is great, queries with ReQL are great, no need of any ORM, and no SQL injection attacks risk. What else required?
 
 ## Realistic code examples
 
@@ -62,8 +66,8 @@ webapp = HttpServer(config, set_database=True).app(
 <!SWEETHEART html>
 
 <python>
-# some nice python code can be given here (many thanks to Brython!)
-# SweetHeart preset RethinkDB/WebSocket/Vue3 capabilities for you
+# this is brython here, waiting stable releases of py-script
+# sweetheart preset RethinkDB/WebSocket/Vue3 capabilities for you
 
 def on_update(event):
 
@@ -93,7 +97,7 @@ def vue_created(data):
     r.table("grid").setVueAttr("table")
 
 createVueApp({
-    "table": [],
+    "table": [],# content comes within vue_created()
     "headers": ["col1","col2","col3"]
 })
 </python>
@@ -141,7 +145,7 @@ sws init
 sws start
 ```
 
-<!-- ### get power with many additionnal resources
+<!-- ### get power with many additional resources
 
 ``` bash
 # interested for calculation, machine-learning, ms-excel
@@ -153,4 +157,4 @@ sws install web
 
 ## Epilogue: a new life starts now
 
-Even at this BETA stage, Sweetheart allows you to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using amazing raw materials widely used by GAFAM and others!
+Even at this beta stage, Sweetheart allows you to make a lot by yourself. Enjoy discovering and learning how coding can help and support you, using amazing raw materials widely used by GAFAM and others!
