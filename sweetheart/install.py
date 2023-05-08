@@ -1,9 +1,14 @@
 """
-install sweetheart requirements and resources
+install.py
+install the sweetheart requirements and resources
 
-available options:
- --github   get sweetheart from github instead of pypi
- --init     autostart the initialization process 
+available command line options:
+    --github   get sweetheart from github instead of pypi
+    --init     autostart the initialization process 
+
+#FIXME: rust crates sourcing
+    install.py implements 2 diffrent ways for installing rust crates
+    one using cargo and one using cargo-binstall (currently for tests)
 """
 
 import subprocess
@@ -28,26 +33,25 @@ HOME = os.environ['HOME']
 PATH = os.environ['PATH']
 raw_github = "https://raw.githubusercontent.com/IncredibleProgress/sweetheart.py/master/"
 
-
 # ensure prerequisites for sweetheart
 # this installs poetry and sws with minimum capabilities
 if not os.path.isfile(
     f"{HOME}/.sweet/sweetheart/programs/my_python/pyproject.toml" ):
 
     # provide which as python func
-    which = wh = lambda command: subprocess.run(
+    which = lambda command: subprocess.run(
         ["which",command],
         text=True,capture_output=True,
         ).stdout.strip()
 
     sws_script = f"{HOME}/.local/bin/sws"
-    poetry = wh('poetry') or wh('~/.local/bin/poetry')
+    poetry = which('poetry') or which('~/.local/bin/poetry')
     sp_conf_file = f"{HOME}/.sweet/sweetheart/configuration/subproc.json"
 
     if not poetry:
         python3 = which('python3')
         subprocess.run([python3],input=urlget("https://install.python-poetry.org"))
-        poetry = wh('poetry') or wh('~/.local/bin/poetry')
+        poetry = which('poetry') or which('~/.local/bin/poetry')
         assert poetry
 
     # make required directories

@@ -516,7 +516,7 @@ class HttpServer(BaseService):
         return self.starlette
 
     def pre_mount(self,*args:str):
-        """ FIXME: only for tests """
+        """ FIXME: for tests """
 
         assert args
         self._mount_ = args
@@ -572,7 +572,7 @@ config = set_config({{
         raise Exception("not available for HttpServer")
 
     def run_local(self,service=None,terminal=None):
-        """ run webapp within local Http server """
+        """ run webapp within local http server """
 
         if service:
             super().run_local(service=True)
@@ -625,7 +625,6 @@ class JupyterLab(BaseService):
         if put_config: unit.put_config()
 
 
-@beta
 class NginxUnit(UserDict):        
 
     def __init__(self,config:BaseConfig):
@@ -635,7 +634,7 @@ class NginxUnit(UserDict):
         self.tempfile = f"{config.root_path}/configuration/unit.json"
 
         _split = config.nginxunit_host.rsplit(':',maxsplit=1)
-        verbose("nginx unit [host,port]:",_split,level=2)
+        verbose("nginx unit host/port:",*_split)
         self.host = _split[0]
         self.port = _split[1]
 

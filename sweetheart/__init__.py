@@ -283,7 +283,7 @@ def quickstart(*args,_cli_args=None):
         webapp.mount(*args)
     
     #FIXME: start webapp within current bash
-    webapp.run_local(service=None,terminal=True)
+    webapp.run_local(service=None,terminal=None)
 
 
   #############################################################################
