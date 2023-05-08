@@ -429,7 +429,7 @@ class sp:
             assert 'input' not in kwargs
 
             return cls.shell("sudo","-S",*args,text=True,
-                input=cls.getpass("sudo passwd required: "),**kwargs)
+                input=os.getpass("sudo passwd required: "),**kwargs)
 
     @classmethod
     def systemctl(cls,*args,**kwargs):
