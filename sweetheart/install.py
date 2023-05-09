@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
     if "--init" in sys.argv:
         # autostart init process for full install
-        subprocess.run(["bash","-c","sws init ipykernel"])
+        subprocess.run(["bash","-c","sws init"])
 
     # STOP install.py module execution here
     # a sweetheart config is required for using next utilities
@@ -135,7 +135,6 @@ def init_project_env(project_name:str):
         json.dump({ 'pyenv': pyenv },fi)
 
 
-@sudo
 def init(config:BaseConfig,add_pylibs="",no_pkg_init=False):
     """ set require minimal features for working with sweetheart """
 
@@ -145,7 +144,7 @@ def init(config:BaseConfig,add_pylibs="",no_pkg_init=False):
 
     if config.project.startswith("jupyter"):
         #TODO: lead jupyter/jupyterlab/jupyterhub matter
-        echo("INFO: init jupyter as a specific project")
+        echo("init a jupyter specific project for running jupyter",blank=True)
 
         config = set_config(project="jupyter")
         sp.poetry("add","jupyterlab")
@@ -240,7 +239,8 @@ class BaseInstall:
 
         self.config = self._ = config
         self.packages_file = f"{config.root_path}/configuration/packages.json"
-        
+    
+    @sudo
     def apt(self,*libs:str,**kwargs):
         """ install distro packages using 'apt install'
             this leads specific treatments for given *libs 
@@ -265,6 +265,7 @@ class BaseInstall:
         # install other packages
         return sp.sudo("apt-get","install","-y",*libs,**kwargs)
 
+    @sudo
     def dnf(self,*libs:str,**kwargs):
         """ FIXME: coming soon !
             install distro packages using 'dnf install'
@@ -378,6 +379,7 @@ class BaseInstall:
         for pkg in packages:
             self.install_libs(json_pkg[pkg])
 
+    @sudo
     def apt_install_nodejs(self):
         """ install nodejs and npm on debian/ubuntu systems """
 
@@ -393,6 +395,7 @@ class BaseInstall:
             sp.shell("sudo","-E","bash",input=script,stdout=os.DEVNULL)
             sp.shell("sudo","apt-get","install","-y","nodejs")
 
+    @sudo
     def apt_install_unit(self):
         """ install Nginx Unit on debian/ubuntu systems 
             will set official Nginx repository if needed """
@@ -417,6 +420,7 @@ class BaseInstall:
             sp.sudo("apt-get update",stdout=os.DEVNULL)
             sp.sudo(f"apt-get install -y unit unit-python{version}") 
 
+    @sudo
     def apt_install_rethinkdb(self):
         """ install rethinkdb on debian/ubuntu systems
             will set official RethinkDB repository if needed """

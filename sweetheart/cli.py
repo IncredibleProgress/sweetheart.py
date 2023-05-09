@@ -138,17 +138,18 @@ if __name__ == "__main__":
         print(MASTER_MODULE,__version__)
         exit()
     
-    # set the relevant project for config
     if getattr(argv,"project",None):
+        # set the given project to config
         project = argv.project[0]
 
     elif getattr(argv,"service",None) == "jupyter":
-        # intends starting jupyter service
+        # intends starting jupyter service with start
         project = "jupyter"
 
-    elif getattr(argv,"pylibs",None) \
-    and [lib.startswith("jupyter") for lib in argv.pylibs]:
-        # intends installing jupyter python libs
+    elif getattr(argv,"pylibs",None) and True in\
+        [m.startswith("jupyter") for m in argv.pylibs]:
+        # intends installing jupyter python libs with init
+        #TODO: lead jupyter/jupyterlab/jupyterhub matter
         project = "jupyter"
 
     else: project = MASTER_MODULE
