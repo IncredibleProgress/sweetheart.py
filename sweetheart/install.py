@@ -234,9 +234,6 @@ class BaseInstall:
 
     def __init__(self,config:BaseConfig):
 
-        assert sp.is_executable('npm')
-        assert sp.is_executable('cargo')
-
         self.config = self._ = config
         self.packages_file = f"{config.root_path}/configuration/packages.json"
     
