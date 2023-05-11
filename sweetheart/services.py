@@ -158,7 +158,7 @@ class BaseService:
             self.sysd.write(file_out, space_around_delimiters=False )
 
         sp.sudo("cp",tempfile,self.system_dir)
-        sp.sudo(f"systemctl enable {tempfile}")
+        sp.sudo("systemctl","enable",tempfile)
 
         # def update_subproc_file(self,dict):
         #FIXME: add new service within subproc conf file
@@ -761,7 +761,7 @@ class NginxUnit(UserDict):
 
         assert isinstance(stdout,dict)
         verbose("unit:",stdout.get('success',''),stdout.get('error',''))
-        sp.sudo("systemctl reload-or-restart unit")
+        sp.sudo("systemctl","reload-or-restart","unit")
 
         return stdout
 

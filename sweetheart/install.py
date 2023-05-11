@@ -414,8 +414,8 @@ class BaseInstall:
         if not sp.is_executable("unitd"):
             # install Nginx Unit packages
             version = self.config.python_version
-            sp.sudo("apt-get update",stdout=os.DEVNULL)
-            sp.sudo(f"apt-get install -y unit unit-python{version}") 
+            sp.sudo("apt-get","update",stdout=os.DEVNULL)
+            sp.sudo("apt-get","install","-y","unit",f"unit-python{version}") 
 
     @sudo
     def apt_install_rethinkdb(self):
@@ -435,5 +435,5 @@ class BaseInstall:
 
         if not sp.is_executable("rethinkdb"):
             # install rethinkdb package
-            sp.sudo("apt-get update",stdout=os.DEVNULL)
-            sp.sudo(f"apt-get install -y rethinkdb")
+            sp.sudo("apt-get","update",stdout=os.DEVNULL)
+            sp.sudo("apt-get","install","-y","rethinkdb")

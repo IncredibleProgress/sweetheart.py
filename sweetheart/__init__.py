@@ -419,6 +419,9 @@ class sp:
 
         assert getattr(cls,'_ALLOW_SUDO_','__NO__') == '__YES__'
         passwd_ok = cls.shell("sudo -n true",stderr=os.DEVNULL).returncode
+
+        #NOTE:
+        # shell-like syntax sp.sudo("apt-get install nginx") not allowed 
         
         if passwd_ok:
             # don't ask for the sudo password here
