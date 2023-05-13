@@ -295,7 +295,7 @@ def HTMLTemplate(filename:str,**kwargs):
         including configuration data and some python magic stuff """
 
     # extra imports
-    from sweetheart.bottle import SimpleTemplate
+    from sweetheart.stemplate import SimpleTemplate
     from starlette.responses import HTMLResponse
 
     # set templates dir as working dir
@@ -417,11 +417,11 @@ class sp:
         in this case text and input arguments can not be given
         """
 
-        assert getattr(cls,'_ALLOW_SUDO_','__NO__') == '__YES__'
-        passwd_ok = cls.shell("sudo -n true",stderr=os.DEVNULL).returncode
-
         #NOTE:
         # shell-like syntax sp.sudo("apt-get install nginx") not allowed 
+
+        assert getattr(cls,'_ALLOW_SUDO_','__NO__')=='__YES__'
+        passwd_ok= cls.shell("sudo","-n","true",stderr=os.DEVNULL).returncode
         
         if passwd_ok:
             # don't ask for the sudo password here
