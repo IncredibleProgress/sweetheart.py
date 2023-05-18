@@ -13,18 +13,19 @@ Foreword
 
 About __init__.py :
     imports python modules: sys, json
-    provides: set_config, quickstart, HTMLTemplate
+    provides: set_config, quickstart, TemplateResponse
     the python os module is replaced by an os class
     (non-exhaustive)
 
-Sweetheart 0.1.x includes an adapted version of bottle.py,
-which is not a part of the sweetheart project itself. Info:
-    Homepage and documentation: http://bottlepy.org/
-    Copyright (c) 2016, Marcel Hellkamp.
-    License: MIT (see LICENSE for details)
+About stemplate.py
+    this currently includes an adapted version of bottle.py,
+    which is not part of the sweetheart project itself. Info:
+        Homepage and documentation: http://bottlepy.org/
+        Copyright (c) 2016, Marcel Hellkamp.
+        License: MIT (see LICENSE for details)
 """
 
-import sys,json
+import re,sys,json
 from collections import UserDict
 from sweetheart.subprocess import os
 
@@ -44,7 +45,6 @@ class BaseConfig(UserDict):
         BaseConfig._ returns the last config created with it """
 
     # stdout messages settings
-    logg = []
     verbosity = 0
     label = MASTER_MODULE # printed with echo()
 
@@ -86,9 +86,9 @@ class BaseConfig(UserDict):
             # default low level settings
             # can be updated using load_json(subproc=True)
             'systemd': [],
+            'stsyntax': r"<% %> % {% %}",
             'python_version': "3.10",# used for setting Nginx Unit
             'node_version': "16.x",# used getting node from nodesource.com
-            'stsyntax': r"<% %> % {% %}",
 
             # can not be updated within load_json(subproc=True)
             # the settings are locked because key starts with .
@@ -101,7 +101,7 @@ class BaseConfig(UserDict):
             "db_name": "test",
             "app_module": "start",# no .py suffix here
             "app_callable": "webapp",
-            "templates_base": "HTML",
+            "templates_base": "HTML_BASE",
             "templates_dir": "templates",
             
             "working_dir": f"{self.root_path}/webpages",
@@ -122,7 +122,7 @@ class BaseConfig(UserDict):
             "static_files": {
                 '/favicon.ico': "resources/favicon.ico",
                 '/tailwind.css': "resources/tailwind.css",
-                '/vue.js': "resources/node_modules/vue/dist/vue.global.js",
+                '/vue.js': "resources/node_modules/vue/dist/vue.global.prod.js",
             },
             "static_dirs": {
                 '/resources': f"resources",
@@ -290,96 +290,94 @@ def quickstart(*args,_cli_args=None):
  ## HTML handling ############################################################
 #############################################################################
 
-def HTMLTemplate(filename:str,**kwargs):
-    """ provide a Starlette-like function for rendering templates
-        including configuration data and some python magic stuff """
+class HtmlTemplate:
+    """ TODO: new template system leading with security """
 
-    # extra imports
-    from sweetheart.stemplate import SimpleTemplate
-    from starlette.responses import HTMLResponse
-
-    # set templates dir as working dir
-    os.chdir(BaseConfig._.working_dir)
-
-    if os.path.isfile(f"{BaseConfig._.templates_dir}/{filename}"):
-        # load template from filename if exists
-        with open(f"{BaseConfig._.templates_dir}/{filename}","r") as tpl:
-            template = tpl.read()
-
-    elif isinstance(filename,str):
-        # alternatively test the given string as template
-        template = filename
-
-    else: raise Exception
-
-    for old,new in {
-      # provide magic html rebase() syntax <!SWEETHEART html>
-      f'<!{MASTER_MODULE.upper()} html>': \
-          f'%rebase("{BaseConfig._.templates_base}")',
-
-      # provide magic html facilities
-      ' s-style>': ' class="sw">',
-      ' s-style="': ' class="sw ', # switch for tailwindcss
-      '<vue': '<div v-cloak id="VueApp"',
-      '</vue>': '</div>',
-
-      # provide magic <python></python> syntax
-      '</python>': "</script>",
-      '<python>': """<script type="text/python">
+    pscript  = """
 import json
 from browser import window, document
 console, r = window.console, window.r
+
 def try_exec(code:str):
     try: exec(code)
     except: pass
+
 def createVueApp(dict):
     try_exec("r.onupdate = on_update")
     try_exec("r.onmessage = on_message")
     try_exec("window.vuecreated = vue_created")
-    window.createVueApp(json.dumps(dict))\n""",
+    window.createVueApp(json.dumps(dict))\n"""
 
-      }.items():
-        template = template.replace(old,new)
-    
-    # render html from template and config
-    template = SimpleTemplate(template)
-    return HTMLResponse(template.render(
-        # enforced default values
-        __lang__ = BaseConfig.LANG,
-        __dbnm__ = BaseConfig._.db_name,
-        __host__ = BaseConfig._.nginxunit_host,
-        # allow setting custom values
-        **BaseConfig._.templates_settings,
-        **kwargs ))
+    def __init__(self,config:BaseConfig):
+
+        self.config = config
+
+        self.path =\
+            f"{config.working_dir}/{config.templates_dir}"
+
+        self.html_overwrite = {
+            # provide magic syntax <!SWEETHEART html>
+            f'<!{MASTER_MODULE.upper()} html>': \
+                f'%rebase("{config.templates_base}")',
+            # provide magic html facilities
+            '<vue': '<div v-cloak id="VueApp"',
+            '</vue>': '</div>',
+            # provide magic <python></python> syntax
+            '<python>': f'<script type="text/python">{self.pscript}',
+            '</python>': '</script>' }
+
+    def render(self,filename):
+
+        from sweetheart.stemplate import template
+
+        with open(f"{self.path}/{filename}") as tpl:
+            template_string = tpl.read()
+
+        # html injection forbidden in template_string
+        tok1,tok2 = self.config.stsyntax[-2:]
+        if re.search(tok1+r" *!.* *"+tok2,template_string):
+            raise Exception("html injection using !value is not allowed")
+
+        for old,new in self.html_overwrite.items():
+            #TODO: use regex instead of replacements
+            template_string= template_string.replace(old,new)
+
+        return template(
+            template_string,
+            # enforced default values
+            __lang__ = self.config.LANG,
+            __dbnm__ = self.config.db_name,
+            __host__ = self.config.nginxunit_host,
+            # allow setting custom values
+            **self.config.templates_settings )
+
+    def run_for_test(self,filename,build_css=True):
+
+        from starlette.routing import Route
+        from starlette.responses import HTMLResponse
+        
+        self.config.verbosity = 1
+        self.config.is_webapp_open = True
+        self.config.is_rethinkdb_local = False
+        self.config.is_jupyter_local = False
+
+        if build_css:
+            sp.shell(self.config.subproc['.tailwindcss'],
+                cwd=f"{self.config.working_dir}/resources")
+
+        content = HtmlTemplate(self.config).render(filename)
+        quickstart( Route("/",HTMLResponse(content)) )
 
 
-def build_css():
-    """ build or rebuild tailwind.css file """
-    
-    sp.shell(BaseConfig._.subproc['.tailwindcss'],
-        cwd=f"{BaseConfig._.root_path}/webpages/resources")
+def TemplateResponse(filename):
 
+    from starlette.responses import HTMLResponse
 
-def test_template(template:str):
-
-    from sweetheart.services import HttpServer,Route
-
-    BaseConfig.verbosity = 1
-    assert hasattr(BaseConfig,'_')
-    
-    BaseConfig._.is_webapp_open = True
-    BaseConfig._.is_rethinkdb_local = False
-    BaseConfig._.is_jupyter_local = False
-
-    path = f"{BaseConfig._.working_dir}/{BaseConfig._.templates_dir}"
-    if not os.path.isfile(path) and not os.path.islink(path):
-        echo("Error, the given template is not existing")
-        exit()
-
-    webapp = HttpServer(BaseConfig._,set_database=False).mount(
-        Route("/",HTMLTemplate(template)) )
-
-    quickstart(webapp)
+    try: config = BaseConfig._
+    except: config = set_config()
+        
+    content = HtmlTemplate(config).render(filename)
+    return HTMLResponse(content)
 
 
 def webbrowser(url:str):
@@ -569,20 +567,15 @@ def install(*packages):
  ## logging functions ########################################################
 #############################################################################
 
-def echo(*args,mode:str="default",blank:bool=False):
+def echo(*args,blank:bool=False):
     """ convenient function for printing admin messages
-        the mode attribute must be in blank|logg|exit """
+        the mode attribute must be in blank|exit """
 
     mode = mode.lower()
-    if blank or "blank" in mode: print()
-
-    if "logg" in mode:
-        BaseConfig.logg.append(" ".join(args))
-
-    else:
-        print("[%s]"% BaseConfig.label.upper(),*args)
-
+    if blank: print()
+    print("[%s]"% BaseConfig.label.upper(),*args)
     if "exit" in mode: exit()
+
 
 def verbose(*args,level:int=1):
     """ convenient function for verbose messages 
@@ -600,6 +593,7 @@ def beta(callable):
     assert not hasattr(BaseConfig,'untrusted_code_forbidden')
     verbose(f"[BETA] {repr(callable)} has been called")
     return callable
+
 
 def sudo(function):
     """ @decorator that allows calling sp.sudo() 

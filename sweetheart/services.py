@@ -468,7 +468,7 @@ class HttpServer(BaseService):
         elif len(args)==1 and isinstance(args[0],str):
             # route given template as a simple page for tests
             self.config.is_webapp_open = True
-            self.data.append( Route("/",HTMLTemplate(args[0])) )
+            self.data.append( Route("/",TemplateResponse(args[0])) )
 
         else:
             # it assumes that args are Route objects

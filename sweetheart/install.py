@@ -182,11 +182,11 @@ def init(config:BaseConfig,add_pylibs="",no_pkg_init=False):
             "documentation/sweetdoc.zip",
             # set the other needed files
             "configuration/packages.json",
-            "webpages/HTML",
+            "webpages/templates/HTML_BASE",
             "webpages/resources/favicon.ico",
+            #"webpages/resources/sweetheart.js",
             "webpages/resources/tailwind.base.css",
             "webpages/resources/tailwind.config.js" ]}
-
 
     if config.project != MASTER_MODULE:
         # unset global libs installation

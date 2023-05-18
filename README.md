@@ -1,5 +1,5 @@
 # Sweetheart **0.1.2**
-*innovative foundations for rugged enterprise-grade solutions*
+*innovative foundations for rugged and enterprise-grade solutions*
 
 ## A supercharged heart for the non-expert hands
 
@@ -55,7 +55,7 @@ config = set_config({
     "db_name": "test" })
 
 webapp = HttpServer(config, set_database=True).app(
-    Route("/", HTMLTemplate("table_example.htm")) )
+    Route("/", TemplateResponse("table_example.htm")) )
 ```
 
 ### typical Html webpage template

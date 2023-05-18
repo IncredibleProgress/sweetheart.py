@@ -1,12 +1,12 @@
 """
 stemplate.py
 adapted template system from bottle.py 0.12.19
-TODO: intends to lead html security matters here
+this allows sweetheart provides its own config
 
-bottle.py
-    Homepage and documentation: http://bottlepy.org/
-    Copyright (c) 2016, Marcel Hellkamp.
-    License: MIT (see LICENSE for details)
+About bottle.py 
+  Homepage and documentation: http://bottlepy.org/
+  Copyright (c) 2016, Marcel Hellkamp.
+  License: MIT (see LICENSE for details)
 """
 
 
@@ -21,7 +21,7 @@ try:
     SWEETHEART_SYNTAX = BaseConfig._.stsyntax
     verbose(f"set SimpleTemplate syntax from given config: {SWEETHEART_SYNTAX}")
 
-    TEMPLATE_PATH = [f'./{BaseConfig._.templates_dir}']
+    TEMPLATE_PATH = [f'{BaseConfig._.working_dir}/{BaseConfig._.templates_dir}']
     TEMPLATES = {}
     DEBUG = False
     
@@ -42,7 +42,7 @@ class TemplateError(Exception):
  ## Template Adapters ########################################################
 #############################################################################
 
-# Template system get from bottle.py 0.12.19
+# Template system adapted from bottle.py 0.12.19
 # Homepage and documentation: http://bottlepy.org/
 # Copyright (c) 2016, Marcel Hellkamp.
 # License: MIT (see LICENSE for details)
@@ -57,7 +57,7 @@ def depr(message, hard=False):
     warnings.warn(message, DeprecationWarning, stacklevel=3)
 
 def abort(code=500, text='Unknown Error.'):
-    """FIXME: Aborts execution and causes a HTTP error. """
+    """ Aborts execution and causes a HTTP error. """
     raise TemplateError(code, text)
 
 

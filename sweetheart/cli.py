@@ -84,12 +84,20 @@ if __name__ == "__main__":
     #$ sws test
     cli.sub("test",help="start the given html template as single webpage")
     cli.opt("template",nargs=1,help="filename of the template to test")
-    cli.set_function( lambda args: test_template(args.template[0]) )
+    cli.set_function( lambda args:
+        HtmlTemplate(BaseConfig._).run_for_test(args.template[0]) )
 
     #$ sws build-css
     cli.sub("build-css",help="rebuild the tailwind.css file")
-    cli.set_function( lambda args: build_css() )
+    cli.set_function( lambda args: sp.shell(
+        BaseConfig._.subproc['.tailwindcss'],
+        cwd= f"{BaseConfig._.working_dir}/resources" ))
 
+    #$ sws sh
+    # cli.sub("sh",help="provides secured shell-like capabilities")
+    # cli.opt("command",nargs=1,help="command to execute within the linux kernel")
+    # cli.set_function(lambda args:print(args.command[0]))
+    
     
     def sws_start(args):
 
