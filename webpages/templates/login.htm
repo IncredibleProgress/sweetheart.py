@@ -1,28 +1,21 @@
 <!SWEETHEART html>
 
-<%
-#cls_h_color = "text-pink-500"
-#cls_a_colors = "text-pink-300 hover:text-pink-500"
-#cls_btn_colors = "bg-pink-400 hover:bg-pink-500"
-#cls_input = "border focus:outline-none focus:border-pink-600"
-%>
-
 <form class="p-14 space-y-2 max-w-lg m-auto" method="POST">
-  <h1 class="text-4xl italic text-center mt-3 mb-9">Sweetheart</h1>
+  <h1 class="text-4xl italic text-center mt-3 mb-9 text-pink-500">Sweetheart</h1>
 
   <input id="email-address" name="email" type="email" autocomplete="email" required placeholder="Email address"
-    class="w-full border rounded-t-md px-3 py-2" />
+    class="w-full border rounded-t-md px-3 py-2 focus:outline-none focus:border-pink-600" />
 
   <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Password"
-    class="w-full border rounded-b-md px-3 py-2" />
+    class="w-full border rounded-b-md px-3 py-2 focus:outline-none focus:border-pink-600" />
 
   <input id="remember_me" name="remember_me" type="checkbox" class="h-6 w-4 float-left" />
   <label for="remember_me" class="float-left ml-1 text-gray-900"> Remember me </label>
-  <a href="#" class="float-right"> Forgot your password? </a>
+  <a href="#" class="float-right text-pink-300 hover:text-pink-500"> Forgot your password? </a>
 
   <div>
     <button type="submit" 
-      class="w-full mt-7 py-2 px-4 rounded-md text-white">
+      class="w-full mt-7 py-2 px-4 rounded-md text-white bg-pink-400 hover:bg-pink-500">
       Sign in</button>
   </div>
 </form>

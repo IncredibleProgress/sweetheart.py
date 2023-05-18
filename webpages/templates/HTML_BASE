@@ -1,10 +1,16 @@
 <%
-# set at server side:
+"""
+HTML_BASE
+master template for building valid html webpage
+this includes features provided by sweetheart
+"""
+
+# set values by the server side:
 # __dbnm__ given by TemplateResponse()
 __host__ = get('host',__host__)
 __lang__ = get('lang',__lang__)
 
-# autoset default values:
+# autoset other optionnal values:
 __load__ = get('load','pylibs tailwind')
 __dbug__ = get('debug',1)
 %>
@@ -171,7 +177,11 @@ function createVueApp(vuedata, options={
 % else:
 <body>
 % end
+%#
+%# html template content is inserted here
+%# WARN: base must be trusted code only 
 {% !base %}
+%#
 <p style="margin-top:1.5rem;font-size:0.875rem;line-height:1.25rem;font-weight:200;text-align:center;--tw-text-opacity:1;color:rgb(185, 185, 185);">
   <em>- made with Sweetheart -</em></p>
 <script>

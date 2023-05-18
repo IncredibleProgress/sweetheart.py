@@ -1,17 +1,12 @@
 @tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* @tailwind components; */
+/* @tailwind utilities; */
 
 @layer base {
     body {@apply m-2;}
-
-    h1 {@apply text-4xl text-pink-500;}
+    h1 {@apply text-4xl;}
     h2 {@apply text-3xl mt-8 mb-4;}
     h3 {@apply text-2xl mt-6 mb-3;}
     h4 {@apply text-xl;}
     h5 {@apply text-lg;}
-
-    a {@apply text-pink-300 hover:text-pink-500;}
-    input {@apply focus:outline-none focus:border-pink-600;}
-    button {@apply bg-pink-400 hover:bg-pink-500;}
 }

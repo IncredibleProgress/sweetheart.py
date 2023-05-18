@@ -83,9 +83,10 @@ if __name__ == "__main__":
 
     #$ sws test
     cli.sub("test",help="start the given html template as single webpage")
+    cli.opt("-b","--build-css",action="store_true",help="rebuild the tailwind.css file")
     cli.opt("template",nargs=1,help="filename of the template to test")
     cli.set_function( lambda args:
-        HtmlTemplate(BaseConfig._).run_for_test(args.template[0]) )
+        HtmlTemplate(BaseConfig._).run_for_test(args.template[0],args.build_css) )
 
     #$ sws build-css
     cli.sub("build-css",help="rebuild the tailwind.css file")

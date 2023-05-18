@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sweetheart"
-version = "0.1.2b4"
+version = "0.1.2b5"
 description = "innovative foundations for rugged enterprise-grade apps"
 authors = ["Nicolas Champion <champion.nicolas@gmail.com>"]
 license = "CECILL-C"

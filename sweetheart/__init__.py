@@ -291,8 +291,7 @@ def quickstart(*args,_cli_args=None):
 #############################################################################
 
 class HtmlTemplate:
-    """ TODO: new template system leading with security """
-
+    
     pscript  = """
 import json
 from browser import window, document
@@ -339,7 +338,7 @@ def createVueApp(dict):
             raise Exception("html injection using !value is not allowed")
 
         for old,new in self.html_overwrite.items():
-            #TODO: use regex instead of replacements
+            #TODO: use regex instead of str replacements
             template_string= template_string.replace(old,new)
 
         return template(
@@ -571,7 +570,6 @@ def echo(*args,blank:bool=False):
     """ convenient function for printing admin messages
         the mode attribute must be in blank|exit """
 
-    mode = mode.lower()
     if blank: print()
     print("[%s]"% BaseConfig.label.upper(),*args)
     if "exit" in mode: exit()
