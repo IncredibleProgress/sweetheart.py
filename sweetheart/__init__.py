@@ -566,13 +566,11 @@ def install(*packages):
  ## logging functions ########################################################
 #############################################################################
 
-def echo(*args,blank:bool=False):
-    """ convenient function for printing admin messages
-        the mode attribute must be in blank|exit """
+def echo(*args,blank=False):
+    """ convenient function for printing admin messages """
 
     if blank: print()
-    print("[%s]"% BaseConfig.label.upper(),*args)
-    if "exit" in mode: exit()
+    print(f"[{BaseConfig.label.upper()}]",*args)
 
 
 def verbose(*args,level:int=1):
