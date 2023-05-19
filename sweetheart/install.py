@@ -260,7 +260,8 @@ class BaseInstall:
             libs.remove("*unit")
 
         # install other packages
-        return sp.sudo("apt-get","install","-y",*libs,**kwargs)
+        # NOTE: sp.sudo() couldn't work porperly here
+        return sp.shell("sudo","-S","apt-get","install","-y",*libs,**kwargs)
 
     @sudo
     def dnf(self,*libs:str,**kwargs):
