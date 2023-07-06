@@ -597,8 +597,9 @@ def sudo(function):
 
     def wrapper(*args,**kwargs):
         sp._ALLOW_SUDO_ = '__YES__'
-        function(*args,**kwargs)
-        del sp._ALLOW_SUDO_
+        result = function(*args,**kwargs)
+        sp._ALLOW_SUDO_ =  '__NO__'
+        return result
 
     verbose(f"[SUDO] exec: {repr(function)}")
     return wrapper

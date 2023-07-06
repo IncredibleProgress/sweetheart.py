@@ -96,8 +96,10 @@ class os:
         """ provide a direct way for getting the stdout """
         
         assert 'text' not in kwargs
-        assert 'input' not in kwargs
+        assert 'capture_output' not in kwargs
 
         return os.shell(
-            *args,text=True,capture_output=True,
+            *args,
+            text=True,
+            capture_output=True,
             **kwargs).stdout.strip()

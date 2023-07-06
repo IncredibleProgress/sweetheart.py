@@ -167,8 +167,8 @@ def init(config:BaseConfig,add_pylibs="",no_pkg_init=False):
 
     PKG_INIT = {
         # set minimum distro resources
-        'aptlibs': ["*unit","*rethinkdb","*nodejs","cargo"],
-        'dnflibs': [],#TODO: rhel not yet implemented
+        'aptlibs': ["*unit","*rethinkdb","nodejs","cargo"],
+        # 'dnflibs': [],#TODO: rhel not yet implemented
         # set minimum rust resources
         'cargolibs': ["cargo-binstall"],
         'cargobin': ["mdbook"],
@@ -247,9 +247,10 @@ class BaseInstall:
         echo("apt install:",*libs,blank=True)
 
         # specific treatments for subprocesses
-        if "*nodejs" in libs:
-            self.apt_install_nodejs()
-            libs.remove("*nodejs")
+
+        # if "*nodejs" in libs:
+        #     self.apt_install_nodejs()
+        #     libs.remove("*nodejs")
 
         if "*rethinkdb" in libs:
             self.apt_install_rethinkdb()
@@ -259,28 +260,31 @@ class BaseInstall:
             self.apt_install_unit()
             libs.remove("*unit")
 
-        # install other packages
-        # NOTE: sp.sudo() couldn't work porperly here
-        return sp.shell("sudo","-S","apt-get","install","-y",*libs,**kwargs)
-
-    @sudo
-    def dnf(self,*libs:str,**kwargs):
-        """ FIXME: coming soon !
-            install distro packages using 'dnf install'
-            this leads specific treatments for given *libs 
-            dedicated for rhel/almalinux distros branch """
-
-        # specific treatments for subprocesses
-        if "*rethinkdb" in libs:
-            raise NotImplementedError
-            libs.remove("*rethinkdb")
-
-        if "*unit" in libs:
-            raise NotImplementedError
-            libs.remove("*unit")
+        # set enforced sudo
+        # needed here due to nested use of @sudo func
+        su = sudo(sp.sudo)
 
         # install other packages
-        return sp.sudo("dnf","install",*libs,**kwargs)
+        return su("apt-get","install","-y",*libs,**kwargs)
+
+    # @sudo
+    # def dnf(self,*libs:str,**kwargs):
+    #     """ FIXME: coming soon !
+    #         install distro packages using 'dnf install'
+    #         this leads specific treatments for given *libs 
+    #         dedicated for rhel/almalinux distros branch """
+
+    #     # specific treatments for subprocesses
+    #     if "*rethinkdb" in libs:
+    #         raise NotImplementedError
+    #         libs.remove("*rethinkdb")
+
+    #     if "*unit" in libs:
+    #         raise NotImplementedError
+    #         libs.remove("*unit")
+
+    #     # install other packages
+    #     return sp.sudo("dnf","install",*libs,**kwargs)
 
     def cargo(self,*libs:str,bin:bool=False,**kwargs):
         """ install rust crates (given libs) using cargo 
@@ -377,21 +381,21 @@ class BaseInstall:
         for pkg in packages:
             self.install_libs(json_pkg[pkg])
 
-    @sudo
-    def apt_install_nodejs(self):
-        """ install nodejs and npm on debian/ubuntu systems """
+    # @sudo
+    # def apt_install_nodejs(self):
+    #     """ install nodejs and npm on debian/ubuntu systems """
 
-        ver = self.config.node_version
-        exe = sp.list_executables("node npm")
+    #     ver = self.config.node_version
+    #     exe = sp.list_executables("node npm")
 
-        if "node" not in exe and "npm" not in exe:
-            # set official repository and install nodejs
-            script = urlget(f"https://deb.nodesource.com/setup_{ver}")
-            verbose(f"set NodeJS {ver} LTS repository from nodesource.com")
+    #     if "node" not in exe and "npm" not in exe:
+    #         # set official repository and install nodejs
+    #         script = urlget(f"https://deb.nodesource.com/setup_{ver}")
+    #         verbose(f"set NodeJS {ver} LTS repository from nodesource.com")
 
-            assert isinstance(script,bytes)
-            sp.shell("sudo","-E","bash",input=script,stdout=os.DEVNULL)
-            sp.shell("sudo","apt-get","install","-y","nodejs")
+    #         assert isinstance(script,bytes)
+    #         sp.shell("sudo","-E","bash",input=script,stdout=os.DEVNULL)
+    #         sp.shell("sudo","apt-get","install","-y","nodejs")
 
     @sudo
     def apt_install_unit(self):
@@ -404,13 +408,13 @@ class BaseInstall:
         if not sp.stdout("apt policy unit"):
 
             echo("set Nginx Unit repository from nginx.org")
-            key = urlget("https://unit.nginx.org/keys/nginx-keyring.gpg")
+
+            sp.shell("sudo","gpg","--dearmor","-o","/usr/share/keyrings/nginx-keyring.gpg",
+                input=urlget("https://unit.nginx.org/keys/nginx-keyring.gpg"))
 
             sp.shell("sudo","tee","/etc/apt/sources.list.d/unit.list",text=True,
-                input=f"deb https://packages.nginx.org/unit/{os.distrib}/ {os.codename} unit")
-
-            assert isinstance(key,bytes)
-            sp.shell("sudo","apt-key","add",input=key,stdout=os.DEVNULL)
+                input=f"deb [signed-by=/usr/share/keyrings/nginx-keyring.gpg] \
+                    https://packages.nginx.org/unit/{os.distrib}/ {os.codename} unit")
 
         if not sp.is_executable("unitd"):
             # install Nginx Unit packages
@@ -426,13 +430,13 @@ class BaseInstall:
         if not sp.stdout("apt policy rethinkdb"):
 
             echo("set RethinkDB repository from rethinkdb.com")
-            key = urlget("https://download.rethinkdb.com/repository/raw/pubkey.gpg")
+
+            sp.shell("sudo","gpg","--dearmor","-o","/usr/share/keyrings/rethinkdb-archive-keyrings.gpg",
+                input=urlget("https://download.rethinkdb.com/repository/raw/pubkey.gpg"))
 
             sp.shell("sudo","tee","/etc/apt/sources.list.d/rethinkdb.list",text=True,
-                input=f"deb https://download.rethinkdb.com/repository/{os.distrib}-{os.codename} {os.codename} main")
-
-            assert isinstance(key,bytes)
-            sp.shell("sudo","apt-key","add",input=key,stdout=os.DEVNULL)
+                input=f"deb [signed-by=/usr/share/keyrings/rethinkdb-archive-keyrings.gpg] \
+                    https://download.rethinkdb.com/repository/{os.distrib}-{os.codename} {os.codename} main")
 
         if not sp.is_executable("rethinkdb"):
             # install rethinkdb package
