@@ -1,6 +1,6 @@
 !! Sweetheart 0.1.3 coming soon with new enhancements:
-   - basement re-written with Rust, great ideas made with Python remains
-   - new way for building powerfull app using React and Typescript*
+   - *basement re-written with Rust, great ideas made with Python remains*
+   - *new way for building powerfull app using React and Typescript*
     
 # Sweetheart **0.1.2** (deprecated)
 *innovative foundations for rugged and enterprise-grade solutions*
